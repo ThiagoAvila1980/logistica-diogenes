@@ -1,0 +1,97 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { AppSidebar } from "./app-sidebar";
+import { MobileHeader } from "./mobile-header";
+import { MobileBottomNav } from "./mobile-bottom-nav";
+import { cn } from "@/lib/utils";
+
+function getMobileTitle(pathname: string): string {
+  if (pathname.startsWith("/field")) return "Medições";
+  if (pathname.startsWith("/dashboard/kanban")) return "Kanban";
+  if (pathname.startsWith("/dashboard/")) return "Ordem de serviço";
+  if (pathname === "/dashboard") return "Painel";
+  if (pathname.startsWith("/production")) return "Corte";
+  if (pathname.startsWith("/logistics")) return "Transporte";
+  if (pathname.startsWith("/installation")) return "Instalação";
+  if (pathname.startsWith("/quote")) return "Orçamentos";
+  if (pathname.startsWith("/admin/users")) return "Usuários";
+  if (pathname.startsWith("/admin/vehicles")) return "Veículos";
+  return "Fluxo Diógenes";
+}
+
+export function DashboardShell({
+  children,
+  mockMode,
+  session,
+}: {
+  children: React.ReactNode;
+  mockMode: boolean;
+  session?: import("@/lib/auth/session-types").SessionUser;
+}) {
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isField = pathname.startsWith("/field");
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  return (
+    <div className="flex min-h-[100dvh] bg-background">
+      {menuOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          aria-label="Fechar menu"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      <AppSidebar
+        pathname={pathname}
+        mockMode={mockMode}
+        session={session}
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-200 md:relative md:z-auto md:translate-x-0",
+          menuOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+        onNavigate={() => setMenuOpen(false)}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileHeader
+          title={getMobileTitle(pathname)}
+          onMenuOpen={() => setMenuOpen(true)}
+        />
+
+        <main
+          className={cn(
+            "flex-1 overflow-x-hidden overflow-y-auto",
+            "pt-14 md:pt-0",
+            "pb-[calc(3.25rem+env(safe-area-inset-bottom,0px))] md:pb-0",
+            isField && "bg-muted/20",
+          )}
+        >
+          {children}
+        </main>
+
+        <MobileBottomNav pathname={pathname} session={session} />
+      </div>
+    </div>
+  );
+}

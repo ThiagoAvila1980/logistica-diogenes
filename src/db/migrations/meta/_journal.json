@@ -1,0 +1,76 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1779234396252,
+      "tag": "0000_freezing_excalibur",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779236000000,
+      "tag": "0002_user_password_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779237000000,
+      "tag": "0003_vehicles",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779238000000,
+      "tag": "0005_measurement_flow",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779239000000,
+      "tag": "0006_budget_measurement_rename",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779240000000,
+      "tag": "0007_measurement_pdf_reference",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779241000000,
+      "tag": "0008_measurement_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779242000000,
+      "tag": "0009_measurement_header_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779243000000,
+      "tag": "0010_user_roles_array",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779244000000,
+      "tag": "0011_drop_clients",
+      "breakpoints": true
+    }
+  ]
+}

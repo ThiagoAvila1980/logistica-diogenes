@@ -1,0 +1,54 @@
+"use server";
+
+import { z } from "zod";
+import {
+  saveUploadedFiles,
+  parsePhotoFiles,
+} from "@/lib/upload/save-files";
+import type { UploadScope } from "@/lib/upload/config";
+
+const uploadSchema = z.object({
+  osId: z.string().uuid(),
+  scope: z.enum(["measurements", "installation", "advance"]),
+});
+
+export type UploadPhotosResult =
+  | { success: true; urls: string[]; warnings?: string[] }
+  | { success: false; message: string };
+
+export async function uploadPhotos(
+  formData: FormData,
+): Promise<UploadPhotosResult> {
+  const parsed = uploadSchema.safeParse({
+    osId: formData.get("osId"),
+    scope: formData.get("scope"),
+  });
+
+  if (!parsed.success) {
+    return { success: false, message: "Dados de upload inválidos" };
+  }
+
+  const files = parsePhotoFiles(formData);
+  if (files.length === 0) {
+    return { success: false, message: "Nenhuma foto selecionada" };
+  }
+
+  const { urls, errors } = await saveUploadedFiles(
+    files,
+    parsed.data.scope as UploadScope,
+    parsed.data.osId,
+  );
+
+  if (urls.length === 0) {
+    return {
+      success: false,
+      message: errors.join("; ") || "Falha ao salvar fotos",
+    };
+  }
+
+  return {
+    success: true,
+    urls,
+    warnings: errors.length > 0 ? errors : undefined,
+  };
+}

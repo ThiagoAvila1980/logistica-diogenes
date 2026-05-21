@@ -1,0 +1,252 @@
+"use client";
+
+import { useActionState, useCallback, useRef, useState } from "react";
+import { FileText, Loader2, Plus } from "lucide-react";
+import {
+  createMeasurementFromPdf,
+  parseMeasurementPdfPreview,
+  type CreateMeasurementResult,
+  type ParsePdfPreviewResult,
+} from "@/actions/field-actions";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { MeasurementTypeField } from "@/components/field/measurement-type-field";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+export function CreateMeasurementDialog() {
+  const [open, setOpen] = useState(false);
+  const [clientName, setClientName] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [budgetReference, setBudgetReference] = useState("");
+  const [measurementType, setMeasurementType] = useState<"orcamento" | "final">(
+    "final",
+  );
+  const [previewWarning, setPreviewWarning] = useState<string | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  const submitCreate = useCallback(
+    async (
+      _prev: CreateMeasurementResult | null,
+      formData: FormData,
+    ): Promise<CreateMeasurementResult> => createMeasurementFromPdf(formData),
+    [],
+  );
+
+  const [state, formAction, isPending] = useActionState<
+    CreateMeasurementResult | null,
+    FormData
+  >(submitCreate, null);
+
+  async function handlePdfChange(file: File | null) {
+    if (!file) return;
+    setParsing(true);
+    setPreviewWarning(null);
+
+    try {
+      const fd = new FormData();
+      fd.set("pdf", file);
+
+      const result: ParsePdfPreviewResult =
+        await parseMeasurementPdfPreview(fd);
+
+      if (!result.success) {
+        setPreviewWarning(result.message);
+        return;
+      }
+
+      const hasData =
+        Boolean(result.clientName) ||
+        Boolean(result.clientPhone) ||
+        Boolean(result.budgetReference);
+
+      setClientName(result.clientName ?? "");
+      setClientPhone(result.clientPhone ?? "");
+      setBudgetReference(result.budgetReference ?? "");
+
+      if (result.warning) {
+        setPreviewWarning(result.warning);
+      } else if (!hasData) {
+        setPreviewWarning(
+          "PDF lido, mas NOME, TELEFONE ou Nº não foram encontrados. Preencha manualmente.",
+        );
+      }
+    } catch {
+      setPreviewWarning("Erro ao ler o PDF. Preencha os dados manualmente.");
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      setClientName("");
+      setClientPhone("");
+      setBudgetReference("");
+      setMeasurementType("final");
+      setPreviewWarning(null);
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button className="h-11 shrink-0 gap-2">
+          <Plus className="h-4 w-4" />
+          Nova Medição
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nova Medição</DialogTitle>
+          <DialogDescription>
+            Anexe o PDF do orçamento. O sistema lê o cabeçalho e captura o
+            cliente, telefone e número do orçamento como referência.
+          </DialogDescription>
+        </DialogHeader>
+
+        {(state?.success === false || previewWarning) && (
+          <Alert variant={state?.success === false ? "destructive" : "default"}>
+            <AlertDescription>
+              {state?.success === false ? state.message : previewWarning}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <form action={formAction} className="space-y-4">
+          <MeasurementTypeField
+            value={measurementType}
+            onChange={setMeasurementType}
+            disabled={isPending || parsing}
+          />
+
+          <div className="space-y-2">
+            <Label htmlFor="meas-pdf">
+              PDF do orçamento <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              ref={pdfInputRef}
+              id="meas-pdf"
+              name="pdf"
+              type="file"
+              accept="application/pdf,.pdf"
+              required
+              disabled={isPending || parsing}
+              className="h-11"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                void handlePdfChange(file);
+              }}
+            />
+            {parsing && (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Lendo cabeçalho do PDF…
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="meas-client-name">
+              Cliente <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="meas-client-name"
+              name="clientName"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              required
+              disabled={isPending}
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="meas-client-phone">Telefone</Label>
+            <Input
+              id="meas-client-phone"
+              name="clientPhone"
+              value={clientPhone}
+              onChange={(e) => setClientPhone(e.target.value)}
+              placeholder="(11) 99999-9999"
+              disabled={isPending}
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="meas-budget-ref">Nº do orçamento (referência)</Label>
+            <Input
+              id="meas-budget-ref"
+              name="budgetReference"
+              value={budgetReference}
+              onChange={(e) => setBudgetReference(e.target.value)}
+              placeholder="Ex.: ORC-2026-0042"
+              disabled={isPending}
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="meas-desc">Descrição do serviço</Label>
+            <Textarea
+              id="meas-desc"
+              name="description"
+              rows={2}
+              placeholder="Ex.: Sacada envidraçada — 4 folhas"
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="meas-date">Data prevista (opcional)</Label>
+            <Input
+              id="meas-date"
+              name="scheduledDate"
+              type="date"
+              disabled={isPending}
+              className="h-11"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isPending || parsing}>
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Criar medição
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

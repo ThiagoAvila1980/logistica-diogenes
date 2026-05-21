@@ -1,0 +1,104 @@
+import type { OsStatus } from "@/db/schema";
+import { getPrimaryNextStatusForFlow } from "@/lib/workflow/measurement-flow";
+
+export type KanbanPhase = {
+  id: string;
+  title: string;
+  statuses: readonly OsStatus[];
+};
+
+/** 4 colunas do Kanban — cards agrupados por fase; sub-status no card */
+export const KANBAN_PHASES: readonly KanbanPhase[] = [
+  {
+    id: "medicao",
+    title: "MEDIÇÃO",
+    statuses: ["medicao_orcamento", "medicao_final"],
+  },
+  {
+    id: "plano_corte",
+    title: "PLANO DE CORTE",
+    statuses: ["cortes", "embalagem", "acessorios_plano"],
+  },
+  {
+    id: "transporte",
+    title: "TRANSPORTE",
+    statuses: [
+      "transporte_perfil",
+      "transporte_estrutural",
+      "transporte_perfis_total",
+      "transporte_acessorios",
+      "transporte_levar_vidro",
+    ],
+  },
+  {
+    id: "instalacao",
+    title: "INSTALAÇÃO",
+    statuses: ["instalacao_estrutural", "instalacao_vidros", "concluido"],
+  },
+] as const;
+
+/** Todos os sub-status visíveis no Kanban (ordem do pipeline) */
+export const KANBAN_PIPELINE_STATUSES: OsStatus[] = KANBAN_PHASES.flatMap(
+  (phase) => [...phase.statuses],
+);
+
+/** Mapeia status legados para o pipeline atual (exibição / drag) */
+export const LEGACY_STATUS_MAP: Partial<Record<OsStatus, OsStatus>> = {
+  orcamento_enviado: "medicao_orcamento",
+  aprovado_cliente: "medicao_orcamento",
+  os_gerada: "cortes",
+  em_corte: "cortes",
+  corte_concluido: "embalagem",
+  em_transporte: "transporte_perfil",
+  transporte_entregue: "transporte_levar_vidro",
+  instalacao_final: "instalacao_vidros",
+};
+
+export function normalizeKanbanStatus(status: OsStatus): OsStatus {
+  return LEGACY_STATUS_MAP[status] ?? status;
+}
+
+export function getKanbanPhaseForStatus(status: OsStatus): KanbanPhase | null {
+  const normalized = normalizeKanbanStatus(status);
+  return (
+    KANBAN_PHASES.find((phase) => phase.statuses.includes(normalized)) ?? null
+  );
+}
+
+export function isKanbanPipelineStatus(status: OsStatus): boolean {
+  return (
+    KANBAN_PIPELINE_STATUSES.includes(normalizeKanbanStatus(status)) ||
+    status === "revisao"
+  );
+}
+
+export function getPhaseIdForStatus(status: OsStatus): string | null {
+  if (status === "revisao") return "revisao";
+  return getKanbanPhaseForStatus(status)?.id ?? null;
+}
+
+/**
+ * Ao soltar um card na coluna da fase adjacente à frente,
+ * retorna o próximo sub-status permitido (se cair nessa fase).
+ */
+export function resolvePhaseDropTarget(
+  fromStatus: OsStatus,
+  toPhaseId: string,
+): OsStatus | null {
+  const normalized =
+    fromStatus === "revisao" ? fromStatus : normalizeKanbanStatus(fromStatus);
+  const fromPhase = getKanbanPhaseForStatus(normalized);
+  const toPhase = KANBAN_PHASES.find((p) => p.id === toPhaseId);
+
+  if (!fromPhase || !toPhase || fromPhase.id === toPhase.id) return null;
+
+  const fromIdx = KANBAN_PHASES.findIndex((p) => p.id === fromPhase.id);
+  const toIdx = KANBAN_PHASES.findIndex((p) => p.id === toPhaseId);
+
+  if (toIdx !== fromIdx + 1) return null;
+
+  const next = getPrimaryNextStatusForFlow(normalized);
+  if (!next || !toPhase.statuses.includes(next)) return null;
+
+  return next;
+}

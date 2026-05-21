@@ -1,0 +1,122 @@
+"use server";
+
+import { eq, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
+import { getDb } from "@/lib/db";
+import { serviceOrders, statusHistory, type OsStatus } from "@/db/schema";
+import { useMockData } from "@/lib/data/config";
+import { mockRepository } from "@/lib/data/mock-repository";
+import { loadClientNotificationContext } from "@/lib/notifications/order-context";
+import {
+  formatNotificationSummary,
+  notifyKanbanStatusChange,
+} from "@/lib/notifications/notify-client";
+import { isKanbanNotifyStatus } from "@/lib/notifications/types";
+
+import { authErrorMessage, AuthError } from "@/lib/auth/auth-error";
+import { requireRole } from "@/lib/auth/require-role";
+
+export type MoveOSCardResult =
+  | { success: true; notificationSummary?: string }
+  | { success: false; message: string };
+
+export async function moveOSCard(
+  osId: string,
+  targetStatus: string,
+): Promise<MoveOSCardResult> {
+  try {
+    await requireRole(["gerente", "admin"]);
+  } catch (err) {
+    const message = authErrorMessage(err);
+    if (message) {
+      return {
+        success: false,
+        message,
+      };
+    }
+    if (err instanceof AuthError) {
+      return { success: false, message: err.message };
+    }
+    throw err;
+  }
+
+  try {
+    const target = targetStatus as OsStatus;
+
+    if (useMockData()) {
+      const mockResult = mockRepository.moveCard(osId, target);
+      if (!mockResult.success) return mockResult;
+      return finishKanbanMove(osId, target);
+    }
+
+    const db = getDb();
+    const [current] = await db
+      .select({
+        id: serviceOrders.id,
+        status: serviceOrders.status,
+        measurementFlow: serviceOrders.measurementFlow,
+      })
+      .from(serviceOrders)
+      .where(eq(serviceOrders.id, osId))
+      .limit(1);
+
+    if (!current) {
+      return { success: false, message: "OS não encontrada" };
+    }
+
+    const fromStatus = current.status as OsStatus;
+    const allowed = getAllowedTransitions(fromStatus, current.measurementFlow);
+
+    if (!allowed.includes(target)) {
+      return {
+        success: false,
+        message: `Transição não permitida: ${fromStatus} → ${target}`,
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(serviceOrders)
+        .set({ status: target, updatedAt: sql`NOW()` })
+        .where(eq(serviceOrders.id, osId));
+
+      await tx.insert(statusHistory).values({
+        osId,
+        fromStatus,
+        toStatus: target,
+        metadata: { source: "kanban_drag" },
+      });
+    });
+
+    revalidatePath("/dashboard/kanban");
+    revalidatePath("/dashboard");
+    revalidatePath(`/dashboard/${osId}`);
+
+    return finishKanbanMove(osId, target);
+  } catch (error) {
+    console.error("[moveOSCard]", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Erro ao mover OS",
+    };
+  }
+}
+
+async function finishKanbanMove(
+  osId: string,
+  target: OsStatus,
+): Promise<MoveOSCardResult> {
+  let notificationSummary: string | undefined;
+
+  if (isKanbanNotifyStatus(target)) {
+    const ctx = await loadClientNotificationContext(osId, target);
+    if (ctx) {
+      const notifyResult = await notifyKanbanStatusChange(ctx);
+      notificationSummary = formatNotificationSummary(notifyResult);
+    }
+  }
+
+  return { success: true, notificationSummary };
+}

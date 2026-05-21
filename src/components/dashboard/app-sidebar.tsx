@@ -1,0 +1,116 @@
+import Link from "next/link";
+import {
+  LayoutDashboard,
+  LayoutGrid,
+  Ruler,
+  FileText,
+  Scissors,
+  Truck,
+  Hammer,
+  Users,
+  Car,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { SessionUser } from "@/lib/auth/session-types";
+import {
+  formatRolesLabel,
+  getNavItemsForRoles,
+  type NavItem,
+} from "@/lib/auth/permissions";
+import { LogoutButton } from "@/components/auth/logout-button";
+
+const NAV_ICONS: Record<string, LucideIcon> = {
+  "/dashboard": LayoutDashboard,
+  "/dashboard/kanban": LayoutGrid,
+  "/field": Ruler,
+  "/quote": FileText,
+  "/production": Scissors,
+  "/logistics": Truck,
+  "/installation": Hammer,
+  "/admin/users": Users,
+  "/admin/vehicles": Car,
+};
+
+function navHomeHref(roles: SessionUser["roles"]): string {
+  const items = getNavItemsForRoles(roles);
+  return items[0]?.href ?? "/field";
+}
+
+export function AppSidebar({
+  pathname,
+  mockMode,
+  session,
+  className,
+  onNavigate,
+}: {
+  pathname: string;
+  mockMode?: boolean;
+  session?: SessionUser;
+  className?: string;
+  onNavigate?: () => void;
+}) {
+  const navItems: NavItem[] = session
+    ? getNavItemsForRoles(session.roles)
+    : getNavItemsForRoles(["admin"]);
+
+  return (
+    <aside className={cn("flex w-56 flex-col border-r bg-card", className)}>
+      <div className="border-b px-4 py-5">
+        <Link
+          href={session ? navHomeHref(session.roles) : "/dashboard"}
+          className="font-semibold tracking-tight"
+        >
+          Fluxo Diógenes
+        </Link>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Gestão de vidraçaria
+        </p>
+      </div>
+      <nav className="flex flex-1 flex-col gap-1 p-3">
+        {navItems.map(({ href, label, match }) => {
+          const Icon = NAV_ICONS[match] ?? LayoutDashboard;
+          const active =
+            pathname === match ||
+            (match !== "/dashboard" && pathname.startsWith(`${match}/`)) ||
+            (match === "/dashboard" &&
+              pathname.startsWith("/dashboard") &&
+              !pathname.startsWith("/dashboard/kanban"));
+
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+      {session && (
+        <div className="border-t p-3 space-y-2">
+          <div className="text-xs">
+            <p className="font-medium truncate">{session.name}</p>
+            <p className="text-muted-foreground">
+              {formatRolesLabel(session.roles)}
+            </p>
+          </div>
+          <LogoutButton />
+        </div>
+      )}
+      {mockMode && (
+        <div className="border-t p-3 text-xs text-muted-foreground">
+          Modo demo (dados mock)
+        </div>
+      )}
+    </aside>
+  );
+}
