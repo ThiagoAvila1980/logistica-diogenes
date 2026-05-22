@@ -11,7 +11,7 @@ function buildProvider(name: "local" | "supabase" | "r2"): StorageProvider {
   switch (name) {
     case "supabase":
       if (!config.hasSupabase) {
-        throw new Error("Supabase Storage não configurado");
+        return createLocalStorageProvider();
       }
       return createSupabaseStorageProvider(config.supabase!.bucket);
     case "r2":

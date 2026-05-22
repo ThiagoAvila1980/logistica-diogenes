@@ -51,7 +51,17 @@ export async function purgeAllOsFiles(
   osId: string,
   urls: string[],
 ): Promise<void> {
-  await purgeFileUrls(urls);
+  try {
+    await purgeFileUrls(urls);
+  } catch (error) {
+    console.warn("[purgeAllOsFiles] purgeFileUrls", error);
+  }
+
   await purgeLocalOsUploadDirs(osId);
-  await purgeCloudStoragePrefixes(osId);
+
+  try {
+    await purgeCloudStoragePrefixes(osId);
+  } catch (error) {
+    console.warn("[purgeAllOsFiles] purgeCloudStoragePrefixes", error);
+  }
 }

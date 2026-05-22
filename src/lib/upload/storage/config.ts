@@ -1,3 +1,8 @@
+import {
+  getSupabaseServiceRoleKey,
+  normalizeSupabaseUrl,
+} from "@/lib/supabase/url";
+
 export type StorageProviderName = "local" | "supabase" | "r2";
 
 function env(name: string): string | undefined {
@@ -6,8 +11,8 @@ function env(name: string): string | undefined {
 }
 
 export function getStorageConfig() {
-  const supabaseUrl = env("NEXT_PUBLIC_SUPABASE_URL");
-  const supabaseServiceKey = env("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseUrl = normalizeSupabaseUrl(env("NEXT_PUBLIC_SUPABASE_URL"));
+  const supabaseServiceKey = getSupabaseServiceRoleKey();
   const supabaseBucket = env("SUPABASE_STORAGE_BUCKET") ?? "uploads";
 
   const r2AccountId = env("R2_ACCOUNT_ID");
@@ -23,8 +28,10 @@ export function getStorageConfig() {
 
   const primaryEnv = env("STORAGE_PRIMARY") as StorageProviderName | undefined;
   let primary: StorageProviderName = "local";
-  if (primaryEnv === "supabase" || primaryEnv === "local" || primaryEnv === "r2") {
+  if (primaryEnv === "local" || primaryEnv === "r2") {
     primary = primaryEnv;
+  } else if (primaryEnv === "supabase" && hasSupabase) {
+    primary = "supabase";
   } else if (hasSupabase) {
     primary = "supabase";
   }
@@ -33,8 +40,12 @@ export function getStorageConfig() {
   let fallback: StorageProviderName | null = null;
   if (fallbackEnv === "none") {
     fallback = null;
-  } else if (fallbackEnv === "r2" || fallbackEnv === "supabase" || fallbackEnv === "local") {
-    fallback = fallbackEnv;
+  } else if (fallbackEnv === "local") {
+    fallback = "local";
+  } else if (fallbackEnv === "r2" && hasR2) {
+    fallback = "r2";
+  } else if (fallbackEnv === "supabase" && hasSupabase) {
+    fallback = "supabase";
   } else if (primary === "supabase" && hasR2) {
     fallback = "r2";
   }
