@@ -5,6 +5,7 @@ import { Camera, Loader2, X } from "lucide-react";
 import { uploadPhotos } from "@/actions/upload-actions";
 import { UPLOAD_MAX_FILES } from "@/lib/upload/config";
 import type { UploadScope } from "@/lib/upload/config";
+import { ResolvedImage } from "@/components/ui/resolved-image";
 import { cn } from "@/lib/utils";
 
 export type PhotoUploadItem = {
@@ -31,6 +32,7 @@ type PhotoUploadProps = {
    */
   mode?: "form" | "instant";
   disabled?: boolean;
+  showLabel?: boolean;
   onUrlsChange?: (urls: string[]) => void;
   onFilesChange?: (files: File[]) => void;
   className?: string;
@@ -51,6 +53,7 @@ export function PhotoUpload({
   capture = true,
   mode = "form",
   disabled,
+  showLabel = true,
   onUrlsChange,
   onFilesChange,
   className,
@@ -149,7 +152,7 @@ export function PhotoUpload({
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-medium">{label}</p>
+          {showLabel && <p className="text-sm font-medium">{label}</p>}
           {hint && (
             <p className="text-xs text-muted-foreground">{hint}</p>
           )}
@@ -166,12 +169,21 @@ export function PhotoUpload({
               key={item.id}
               className="relative aspect-square overflow-hidden rounded-lg border bg-muted"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.preview ?? item.url}
-                alt=""
-                className="h-full w-full object-cover"
-              />
+              {item.preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.preview}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <ResolvedImage
+                  src={item.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  fallbackClassName="flex h-full items-center justify-center text-xs"
+                />
+              )}
               <button
                 type="button"
                 className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"

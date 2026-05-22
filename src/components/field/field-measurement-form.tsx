@@ -25,6 +25,7 @@ import {
   hasSavedMeasurementForView,
 } from "@/components/field/measurement-item-view";
 import { MeasurementTypeField } from "@/components/field/measurement-type-field";
+import { MeasurementPhotosSection } from "@/components/field/measurement-photos-section";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { PhotoGallery } from "@/components/ui/photo-gallery";
 import { Button } from "@/components/ui/button";
@@ -103,7 +104,7 @@ function applyDraftSnapshot(
   setters.setItems(nextItems);
   setters.setPhotoUrls(filterDisplayableUploadUrls(draft?.photos ?? []));
   setters.setNotes(draft?.notes ?? "");
-  setters.setExpandedItemId(nextItems[0]?.id ?? null);
+  setters.setExpandedItemId(null);
   setters.setPendingFiles([]);
   setters.setDrawingDirtyById({});
 }
@@ -126,10 +127,8 @@ export function FieldMeasurementForm({
   const [items, setItems] = useState<MeasurementLineItem[]>(() =>
     resolveInitialItems(order.id, initialDraft),
   );
-  const [expandedItemId, setExpandedItemId] = useState<string | null>(() => {
-    const initialItems = resolveInitialItems(order.id, initialDraft);
-    return initialItems[0]?.id ?? null;
-  });
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [photosExpanded, setPhotosExpanded] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<string[]>(() =>
     filterDisplayableUploadUrls(initialDraft?.photos ?? []),
   );
@@ -176,6 +175,7 @@ export function FieldMeasurementForm({
         setPendingFiles,
         setDrawingDirtyById,
       });
+      setPhotosExpanded(false);
     },
     [order.id],
   );
@@ -239,6 +239,21 @@ export function FieldMeasurementForm({
     });
   }
 
+  function handleCancelOperation() {
+    if (isPending) return;
+
+    setConfirmOpen(false);
+    setUnsavedDrawingsOpen(false);
+
+    if (isCurrentTypeMeasured) {
+      applyCurrentDraftSnapshot(draftsByType[measurementType]);
+      setViewMode(true);
+      return;
+    }
+
+    router.push("/field");
+  }
+
   function addItem() {
     const newItem = createEmptyMeasurementItem(
       `${order.id}-item-${Date.now()}`,
@@ -272,11 +287,9 @@ export function FieldMeasurementForm({
           return next;
         });
         clearDrawingFullscreenItem(removed.id);
-        setExpandedItemId((current) => {
-          if (current !== removed.id) return current;
-          const remaining = prev.filter((_, i) => i !== index);
-          return remaining[0]?.id ?? null;
-        });
+        setExpandedItemId((current) =>
+          current !== removed.id ? current : null,
+        );
       }
       return prev.filter((_, i) => i !== index);
     });
@@ -327,6 +340,8 @@ export function FieldMeasurementForm({
   );
 
   const currentDraft = draftsByType[measurementType];
+  const isCurrentTypeMeasured = hasSavedMeasurementForView(currentDraft);
+  const showMeasurementTypeSelector = !isCurrentTypeMeasured || !viewMode;
   const displayCliente =
     activeHeaderDraft?.cliente ?? currentDraft?.cliente ?? order.clientName;
   const displayTelefone =
@@ -337,6 +352,9 @@ export function FieldMeasurementForm({
     numeroOrcamento:
       activeHeaderDraft?.numeroOrcamento ?? currentDraft?.numeroOrcamento,
   });
+  const photoCount = viewMode
+    ? filterDisplayableUploadUrls(photoUrls).length
+    : photoUrls.length + pendingFiles.length;
 
   return (
     <div className="flex flex-col gap-4 pb-24">
@@ -354,21 +372,13 @@ export function FieldMeasurementForm({
           </Button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate font-semibold leading-tight">
-                  {displayCliente}
-                </p>
-                <p className="font-mono text-xs tabular-nums text-muted-foreground">
-                  {displayNumeroOrcamento}
-                </p>
-              </div>
-              <MeasurementTypeField
-                variant="status"
-                value={measurementType}
-                onChange={handleMeasurementTypeChange}
-                disabled={isPending || allowedActions.length === 0}
-              />
+            <div className="min-w-0">
+              <p className="truncate font-semibold leading-tight">
+                {displayCliente}
+              </p>
+              <p className="font-mono text-xs tabular-nums text-muted-foreground">
+                {displayNumeroOrcamento}
+              </p>
             </div>
 
             {(displayTelefone || canDelete) && (
@@ -400,6 +410,16 @@ export function FieldMeasurementForm({
           currentStatus={wizardStatus}
           measurementFlow={order.measurementFlow}
         />
+        {showMeasurementTypeSelector && (
+          <div className="mt-3 flex justify-center border-t pt-3">
+            <MeasurementTypeField
+              variant="status"
+              value={measurementType}
+              onChange={handleMeasurementTypeChange}
+              disabled={isPending || allowedActions.length === 0}
+            />
+          </div>
+        )}
       </section>
 
       {state?.success === false && (
@@ -473,6 +493,10 @@ export function FieldMeasurementForm({
                     key={item.id}
                     item={item}
                     index={index}
+                    expanded={expandedItemId === item.id}
+                    onExpandedChange={(expanded) =>
+                      setItemExpanded(item.id, expanded)
+                    }
                   />
                 ))
               : items.map((item, index) => (
@@ -503,23 +527,27 @@ export function FieldMeasurementForm({
           </div>
         </div>
 
-        <section className="rounded-xl border bg-card p-4 shadow-sm space-y-4">
+        <MeasurementPhotosSection
+          expanded={photosExpanded}
+          onExpandedChange={setPhotosExpanded}
+          photoCount={photoCount}
+        >
           {viewMode ? (
-            <PhotoGallery urls={photoUrls} />
+            <PhotoGallery urls={photoUrls} showLabel={false} />
           ) : (
             <PhotoUpload
-              label="Fotos"
               hint="Fotos gerais da visita — vinculadas ao tipo selecionado no cabeçalho ao salvar."
               osId={order.id}
               scope="measurements"
               existingUrls={photoUrls}
               mode="form"
               disabled={isPending}
+              showLabel={false}
               onUrlsChange={setPhotoUrls}
               onFilesChange={setPendingFiles}
             />
           )}
-        </section>
+        </MeasurementPhotosSection>
 
         <section className="rounded-xl border bg-card p-4 shadow-sm">
           <Label htmlFor="notes">Observações</Label>
@@ -542,10 +570,19 @@ export function FieldMeasurementForm({
 
         {allowedActions.length > 0 && !viewMode ? (
           <div className="fixed inset-x-0 bottom-[calc(3.25rem+env(safe-area-inset-bottom,0px))] z-30 border-t bg-card/95 p-3 backdrop-blur md:static md:mt-2 md:rounded-xl md:border md:p-4 md:shadow-sm">
-            <div className="mx-auto max-w-3xl">
+            <div className="mx-auto flex max-w-3xl gap-2">
               <Button
                 type="button"
-                className="h-12 w-full text-base"
+                variant="outline"
+                className="h-12 flex-1 text-base"
+                onClick={handleCancelOperation}
+                disabled={isPending}
+              >
+                Cancelar operação
+              </Button>
+              <Button
+                type="button"
+                className="h-12 flex-1 text-base"
                 onClick={handleRequestSaveMeasurement}
                 disabled={isPending || !hasValidItem}
               >

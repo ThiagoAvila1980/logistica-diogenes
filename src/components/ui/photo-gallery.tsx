@@ -7,12 +7,14 @@ import { cn } from "@/lib/utils";
 type PhotoGalleryProps = {
   urls: string[];
   label?: string;
+  showLabel?: boolean;
   className?: string;
 };
 
 export function PhotoGallery({
   urls,
   label = "Fotos",
+  showLabel = true,
   className,
 }: PhotoGalleryProps) {
   const displayUrls = filterDisplayableUploadUrls(urls);
@@ -20,7 +22,7 @@ export function PhotoGallery({
   if (displayUrls.length === 0) {
     return (
       <div className={cn("space-y-2", className)}>
-        <p className="text-sm font-medium">{label}</p>
+        {showLabel && <p className="text-sm font-medium">{label}</p>}
         <p className="rounded-lg border border-dashed bg-muted/30 px-3 py-6 text-center text-sm text-muted-foreground">
           Nenhuma foto registrada
         </p>
@@ -30,12 +32,14 @@ export function PhotoGallery({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <p className="text-sm font-medium">
-        {label}{" "}
-        <span className="text-xs font-normal text-muted-foreground">
-          ({displayUrls.length})
-        </span>
-      </p>
+      {showLabel && (
+        <p className="text-sm font-medium">
+          {label}{" "}
+          <span className="text-xs font-normal text-muted-foreground">
+            ({displayUrls.length})
+          </span>
+        </p>
+      )}
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {displayUrls.map((url, index) => (
           <li

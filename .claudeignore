@@ -1,0 +1,89 @@
+# =============================================================
+# .claudeignore — economiza tokens excluindo o que não contribui
+# para raciocínio sobre código-fonte, lógica ou arquitetura.
+# =============================================================
+
+
+# ─── DEPENDÊNCIAS ────────────────────────────────────────────
+node_modules/
+
+
+# ─── BUILD / COMPILAÇÃO ──────────────────────────────────────
+# Next.js gera artefatos pesados; o código-fonte está em app/ e src/
+.next/
+out/
+build/
+**/*.js.map
+**/*.d.ts.map
+*.tsbuildinfo
+next-env.d.ts
+
+
+# ─── LOCK FILES (volumosos, raramente necessários) ───────────
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+
+# ─── SEGREDOS E VARIÁVEIS DE AMBIENTE ────────────────────────
+# Ignorar arquivos com valores reais; manter .example como referência
+.env
+.env.*
+!.env.example
+
+
+# ─── MÍDIAS E BINÁRIOS ───────────────────────────────────────
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.bmp
+*.mp4
+*.mp3
+*.wav
+*.pdf
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.otf
+
+# Uploads de usuários (arquivos reais da plataforma)
+public/uploads/
+
+
+# ─── DOCUMENTAÇÃO ────────────────────────────────────────────
+docs/
+
+
+# ─── COBERTURA E RESULTADOS DE TESTES ────────────────────────
+coverage/
+**/.nyc_output/
+
+
+# ─── GIT INTERNALS ───────────────────────────────────────────
+.git/
+
+
+# ─── CACHE DE PLUGINS / FERRAMENTAS (peso alto, zero valor) ──
+.cursor/plugins/
+.cursor/mcp/
+.agents/skills/
+
+
+# ─── LOGS ────────────────────────────────────────────────────
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+
+
+# ─── ARTEFATOS DE CI / DOCKER ────────────────────────────────
+.dockerignore
+docker-compose.override.yml
+
+
+# ─── MISC ────────────────────────────────────────────────────
+skills-lock.json
