@@ -1,9 +1,22 @@
 import path from "path";
+import { createRequire } from "module";
 import { pathToFileURL } from "url";
 
 type PDFParseClass = typeof import("pdf-parse").PDFParse;
 
 let pdfParseClass: PDFParseClass | null = null;
+
+function resolvePdfWorkerPath(): string {
+  const require = createRequire(import.meta.url);
+  const mainPath = require.resolve("pdf-parse");
+  return path.join(
+    path.dirname(mainPath),
+    "..",
+    "..",
+    "worker",
+    "pdf.worker.mjs",
+  );
+}
 
 async function ensureCanvasPolyfills(): Promise<void> {
   if (typeof globalThis.DOMMatrix !== "undefined") return;
@@ -23,14 +36,7 @@ export async function loadPdfParse(): Promise<PDFParseClass> {
   await ensureCanvasPolyfills();
 
   const { PDFParse } = await import("pdf-parse");
-  const workerPath = path.join(
-    process.cwd(),
-    "node_modules",
-    "pdf-parse",
-    "dist",
-    "worker",
-    "pdf.worker.mjs",
-  );
+  const workerPath = resolvePdfWorkerPath();
 
   PDFParse.setWorker(pathToFileURL(workerPath).href);
   pdfParseClass = PDFParse;

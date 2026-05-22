@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
+  outputFileTracingIncludes: {
+    "/field": ["./node_modules/pdf-parse/dist/worker/**/*"],
+    "/field/[osId]": ["./node_modules/pdf-parse/dist/worker/**/*"],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "15mb",

@@ -31,7 +31,26 @@ export async function parsePdfBuffer(
     const PDFParse = await loadPdfParse();
     parser = new PDFParse({ data: buffer });
     const textResult = await parser.getText({ first: 1 });
-    const header = parsePdfHeaderText(textResult.text ?? "");
+    const text = textResult.text ?? "";
+    const header = parsePdfHeaderText(text);
+    if (!text.trim()) {
+      return {
+        header,
+        error:
+          "Não foi possível extrair texto do PDF. Preencha os dados manualmente.",
+      };
+    }
+    if (
+      !header.clientName &&
+      !header.clientPhone &&
+      !header.budgetReference
+    ) {
+      return {
+        header,
+        error:
+          "PDF lido, mas NOME, TELEFONE ou Nº não foram encontrados. Preencha manualmente.",
+      };
+    }
     return { header };
   } catch (err) {
     console.error("[parsePdfBuffer] PDF parse failed:", err);

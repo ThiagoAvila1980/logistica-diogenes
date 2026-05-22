@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { FileText, Loader2, Plus } from "lucide-react";
 import {
   createMeasurementFromPdf,
-  parseMeasurementPdfPreview,
   type CreateMeasurementResult,
-  type ParsePdfPreviewResult,
 } from "@/actions/field-actions";
+import { extractPdfHeaderFromFile } from "@/lib/pdf/extract-pdf-text-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -67,29 +66,18 @@ export function CreateMeasurementDialog() {
     setPreviewWarning(null);
 
     try {
-      const fd = new FormData();
-      fd.set("pdf", file);
-
-      const result: ParsePdfPreviewResult =
-        await parseMeasurementPdfPreview(fd);
-
-      if (!result.success) {
-        setPreviewWarning(result.message);
-        return;
-      }
+      const header = await extractPdfHeaderFromFile(file);
 
       const hasData =
-        Boolean(result.clientName) ||
-        Boolean(result.clientPhone) ||
-        Boolean(result.budgetReference);
+        Boolean(header.clientName) ||
+        Boolean(header.clientPhone) ||
+        Boolean(header.budgetReference);
 
-      setClientName(result.clientName ?? "");
-      setClientPhone(formatBrPhone(result.clientPhone ?? ""));
-      setBudgetReference(result.budgetReference ?? "");
+      setClientName(header.clientName ?? "");
+      setClientPhone(formatBrPhone(header.clientPhone ?? ""));
+      setBudgetReference(header.budgetReference ?? "");
 
-      if (result.warning) {
-        setPreviewWarning(result.warning);
-      } else if (!hasData) {
+      if (!hasData) {
         setPreviewWarning(
           "PDF lido, mas NOME, TELEFONE ou Nº não foram encontrados. Preencha manualmente.",
         );
