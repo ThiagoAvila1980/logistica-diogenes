@@ -119,14 +119,16 @@ export function DrawingBoard({
     const currentTool = toolRef.current;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+    ctx.globalAlpha = 1;
     ctx.globalCompositeOperation =
       currentTool === "eraser" ? "destination-out" : "source-over";
     ctx.lineWidth =
       currentTool === "eraser"
         ? strokeWidthRef.current * 3
         : strokeWidthRef.current;
+    // destination-out usa o alpha do traço; "transparent" tem alpha 0 e não apaga nada.
     ctx.strokeStyle =
-      currentTool === "eraser" ? "transparent" : strokeColorRef.current;
+      currentTool === "eraser" ? "#000000" : strokeColorRef.current;
   }, []);
 
   const syncHistoryUi = useCallback(() => {

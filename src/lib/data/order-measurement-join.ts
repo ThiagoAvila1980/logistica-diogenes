@@ -22,7 +22,7 @@ export const measurementClientPhone = measurements.telefone;
 
 /**
  * Subquery correlacionada: true se ao menos uma medição da OS tem itens registrados.
- * Usada no card da tela de Medições para distinguir "Liberada" de "Medida".
+ * Usada no card da tela de Medições para distinguir "Pendente" de "Medida".
  */
 export const hasMeasurementItems = sql<boolean>`exists (
   select 1 from "measurements" m2

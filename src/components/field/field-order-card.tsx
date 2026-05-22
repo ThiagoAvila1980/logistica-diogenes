@@ -69,7 +69,7 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
                 : "bg-muted text-muted-foreground",
             )}
           >
-            {order.hasMeasurement ? "Medida" : "Liberada"}
+            {order.hasMeasurement ? "Medida" : "Pendente"}
           </span>
 
           <span

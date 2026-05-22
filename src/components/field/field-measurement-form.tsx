@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   Loader2,
   Pencil,
   Phone,
   Plus,
   Ruler,
+  XCircle,
 } from "lucide-react";
 import {
   saveFieldMeasurement,
@@ -135,6 +137,10 @@ export function FieldMeasurementForm({
   const [notes, setNotes] = useState(initialDraft?.notes ?? "");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saveResultOpen, setSaveResultOpen] = useState(false);
+  const [saveResult, setSaveResult] = useState<SaveFieldMeasurementResult | null>(
+    null,
+  );
   const [unsavedDrawingsOpen, setUnsavedDrawingsOpen] = useState(false);
   const [drawingDirtyById, setDrawingDirtyById] = useState<
     Record<string, boolean>
@@ -199,9 +205,10 @@ export function FieldMeasurementForm({
       formData.set("measurementType", measurementType);
       formData.set("notes", notes);
       const result = await saveFieldMeasurement(formData);
+      setConfirmOpen(false);
+      setSaveResult(result);
+      setSaveResultOpen(true);
       if (result.success) {
-        setConfirmOpen(false);
-        setViewMode(true);
         setDrawingDirtyById({});
         setPendingFiles([]);
       }
@@ -210,16 +217,10 @@ export function FieldMeasurementForm({
     [photoUrls, pendingFiles, items, measurementType, notes],
   );
 
-  const [state, formAction, isPending] = useActionState<
+  const [, formAction, isPending] = useActionState<
     SaveFieldMeasurementResult | null,
     FormData
   >(submitWithPhotos, null);
-
-  useEffect(() => {
-    if (state?.success) {
-      router.refresh();
-    }
-  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMeasurementTypeChange = useCallback(
     (nextType: MeasurementDbType) => {
@@ -318,6 +319,15 @@ export function FieldMeasurementForm({
   const unsavedDrawingItems = items
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => drawingDirtyById[item.id]);
+
+  function handleSaveResultDismiss() {
+    const succeeded = saveResult?.success === true;
+    setSaveResultOpen(false);
+    if (succeeded) {
+      router.push("/field");
+      router.refresh();
+    }
+  }
 
   function handleRequestSaveMeasurement() {
     if (unsavedDrawingItems.length > 0) {
@@ -421,20 +431,6 @@ export function FieldMeasurementForm({
           </div>
         )}
       </section>
-
-      {state?.success === false && (
-        <Alert variant="destructive">
-          <AlertTitle>Erro</AlertTitle>
-          <AlertDescription>{state.message}</AlertDescription>
-        </Alert>
-      )}
-
-      {state?.success && (
-        <Alert variant="success">
-          <AlertTitle>Salvo</AlertTitle>
-          <AlertDescription>{state.message}</AlertDescription>
-        </Alert>
-      )}
 
       <form ref={formRef} action={formAction} className="space-y-6">
         <input type="hidden" name="osId" value={order.id} />
@@ -706,6 +702,43 @@ export function FieldMeasurementForm({
               ) : (
                 confirmCopy.confirm
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={saveResultOpen}
+        onOpenChange={(open) => {
+          if (!open) handleSaveResultDismiss();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {saveResult?.success ? (
+                <>
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                  Medição salva
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 shrink-0 text-destructive" />
+                  Não foi possível salvar
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>{saveResult?.message}</DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              variant={saveResult?.success ? "default" : "outline"}
+              onClick={handleSaveResultDismiss}
+            >
+              {saveResult?.success ? "Ir para medições" : "Voltar e corrigir"}
             </Button>
           </DialogFooter>
         </DialogContent>

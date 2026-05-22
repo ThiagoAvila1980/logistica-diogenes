@@ -104,7 +104,7 @@ export function KanbanCard({
                         : "bg-muted text-muted-foreground",
                     )}
                   >
-                    {os.hasMeasurement ? "Medida" : "Liberada"}
+                    {os.hasMeasurement ? "Medida" : "Pendente"}
                   </span>
                   <span
                     className={cn(

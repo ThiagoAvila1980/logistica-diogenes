@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { users } from "@/db/schema";
 import { formatPhoneE164BR } from "./whatsapp";
 import { formatBrDate } from "@/lib/date-format";
+import { buildAppUrl } from "@/lib/navigation/masked-url";
 
 export type MeasurementCreatedPayload = {
   event: "measurement_created";
@@ -22,16 +23,8 @@ export type NotifyMeasurerResult = {
   whatsapp: Array<{ name: string; sent: boolean; error?: string }>;
 };
 
-function getAppBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.WEBAUTHN_ORIGIN ??
-    "http://localhost:3000"
-  );
-}
-
 export function buildMeasurementFieldUrl(osId: string): string {
-  return `${getAppBaseUrl().replace(/\/$/, "")}/field/${osId}`;
+  return buildAppUrl(`/field/${osId}`);
 }
 
 async function postWebhook(payload: MeasurementCreatedPayload): Promise<{
