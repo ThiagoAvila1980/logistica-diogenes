@@ -57,6 +57,7 @@ export function AppSidebar({
       <div className="border-b px-4 py-5">
         <Link
           href={session ? navHomeHref(session.roles) : "/dashboard"}
+          prefetch={false}
           className="font-semibold tracking-tight"
         >
           Fluxo Diógenes
@@ -75,6 +76,7 @@ export function AppSidebar({
             <Link
               key={href}
               href={href}
+              prefetch={false}
               onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import {
   canAccessRoute,
 } from "@/lib/auth/permissions";
+import { isAuthPrefetchRequest } from "@/lib/auth/session-cookie-options";
 import { SESSION_COOKIE } from "@/lib/auth/session-types";
 import { parseSessionFromToken } from "@/lib/auth/session-edge";
 
@@ -33,6 +34,12 @@ export async function middleware(request: NextRequest) {
   const session = await parseSessionFromToken(token);
 
   if (!session) {
+    // Prefetch do App Router costuma ir sem Cookie; redirecionar para /login
+    // faz a navegação real herdar o redirect mesmo com sessão válida.
+    if (isAuthPrefetchRequest(request)) {
+      return new NextResponse(null, { status: 401 });
+    }
+
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);

@@ -192,7 +192,10 @@ export function FieldMeasurementForm({
     ): Promise<SaveFieldMeasurementResult> => {
       photoUrls.forEach((url) => formData.append("existingPhotos", url));
       pendingFiles.forEach((file) => formData.append("photos", file));
-      formData.set("items", JSON.stringify(items));
+      const itemsToSubmit = items.filter(
+        (item) => item.qty > 0 && item.largura > 0 && item.altura > 0,
+      );
+      formData.set("items", JSON.stringify(itemsToSubmit));
       formData.set("measurementType", measurementType);
       formData.set("notes", notes);
       const result = await saveFieldMeasurement(formData);
@@ -201,17 +204,22 @@ export function FieldMeasurementForm({
         setViewMode(true);
         setDrawingDirtyById({});
         setPendingFiles([]);
-        router.refresh();
       }
       return result;
     },
-    [photoUrls, pendingFiles, items, measurementType, notes, router],
+    [photoUrls, pendingFiles, items, measurementType, notes],
   );
 
   const [state, formAction, isPending] = useActionState<
     SaveFieldMeasurementResult | null,
     FormData
   >(submitWithPhotos, null);
+
+  useEffect(() => {
+    if (state?.success) {
+      router.refresh();
+    }
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMeasurementTypeChange = useCallback(
     (nextType: MeasurementDbType) => {
