@@ -4,6 +4,7 @@ import { z } from "zod";
 import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
+import { eqMeasurementType } from "@/lib/data/order-measurement-join";
 import {
   serviceOrders,
   measurements,
@@ -68,7 +69,7 @@ async function loadStepContext(
   const [finalMeas] = await db
     .select({ id: measurements.id })
     .from(measurements)
-    .where(and(eq(measurements.osId, osId), eq(measurements.type, "final")))
+    .where(and(eq(measurements.osId, osId), eqMeasurementType("final")))
     .limit(1);
 
   const [cut] = await db
@@ -125,7 +126,7 @@ async function persistStepData(
       .select({ id: measurements.id })
       .from(measurements)
       .where(
-        and(eq(measurements.osId, osId), eq(measurements.type, "final")),
+        and(eq(measurements.osId, osId), eqMeasurementType("final")),
       )
       .limit(1);
 

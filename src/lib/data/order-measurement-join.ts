@@ -1,5 +1,11 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 import { measurements, serviceOrders } from "@/db/schema";
+import type { MeasurementDbType } from "@/lib/workflow/measurement-actions";
+
+/** Compara `measurements.type` com cast explícito (Postgres não aceita enum = text). */
+export function eqMeasurementType(type: MeasurementDbType): SQL {
+  return sql`${measurements.type} = ${type}::measurement_types`;
+}
 
 /**
  * Junção da medição ativa da OS — fonte dos dados de cliente.

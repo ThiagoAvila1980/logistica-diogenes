@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
+import { eqMeasurementType } from "@/lib/data/order-measurement-join";
 import {
   serviceOrders,
   statusHistory,
@@ -68,7 +69,7 @@ async function loadTransitionContext(
     .select({ id: measurements.id })
     .from(measurements)
     .where(
-      and(eq(measurements.osId, osId), eq(measurements.type, "final")),
+      and(eq(measurements.osId, osId), eqMeasurementType("final")),
     )
     .limit(1);
 
@@ -76,7 +77,7 @@ async function loadTransitionContext(
     .select({ id: measurements.id })
     .from(measurements)
     .where(
-      and(eq(measurements.osId, osId), eq(measurements.type, "orcamento")),
+      and(eq(measurements.osId, osId), eqMeasurementType("orcamento")),
     )
     .limit(1);
 

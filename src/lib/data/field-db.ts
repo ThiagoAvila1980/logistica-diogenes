@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { measurements } from "@/db/schema";
 import type { FieldMeasurementDraft } from "./field";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { eqMeasurementType } from "./order-measurement-join";
 
 export async function getFieldMeasurementDb(
   osId: string,
@@ -20,7 +21,7 @@ export async function getFieldMeasurementDb(
       photos: measurements.photos,
     })
     .from(measurements)
-    .where(and(eq(measurements.osId, osId), eq(measurements.type, type)))
+    .where(and(eq(measurements.osId, osId), eqMeasurementType(type)))
     .limit(1);
 
   if (!row) return undefined;

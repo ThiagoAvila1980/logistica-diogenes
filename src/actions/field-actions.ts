@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { measurements, serviceOrders } from "@/db/schema";
+import { eqMeasurementType } from "@/lib/data/order-measurement-join";
 import { measurementItemsSchema } from "@/lib/workflow/schemas";
 import { notifyMedidorsOnMeasurementCreated } from "@/lib/notifications/notify-measurer";
 import { useMockData } from "@/lib/data/config";
@@ -512,7 +513,7 @@ export async function saveFieldMeasurement(
       .select({ id: measurements.id })
       .from(measurements)
       .where(
-        and(eq(measurements.osId, osId), eq(measurements.type, measurementType)),
+        and(eq(measurements.osId, osId), eqMeasurementType(measurementType)),
       )
       .limit(1);
 
