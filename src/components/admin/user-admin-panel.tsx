@@ -22,7 +22,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -81,6 +80,7 @@ export function UserAdminPanel({
     AdminActionResult | null,
     FormData
   >(createUser, null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
   const [editState, editAction, editPending] = useActionState<
@@ -91,76 +91,12 @@ export function UserAdminPanel({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Novo usuário
-          </CardTitle>
-          <CardDescription>
-            Crie contas internas com um ou mais papéis e senha inicial.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {createState?.success === false && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertTitle>Erro</AlertTitle>
-              <AlertDescription>{createState.message}</AlertDescription>
-            </Alert>
-          )}
-          {createState?.success && (
-            <Alert variant="success" className="mb-4">
-              <AlertDescription>{createState.message}</AlertDescription>
-            </Alert>
-          )}
-          <form action={createAction} className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="new-name">Nome</Label>
-              <Input id="new-name" name="name" required disabled={createPending} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-email">E-mail</Label>
-              <Input
-                id="new-email"
-                name="email"
-                type="email"
-                required
-                disabled={createPending}
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Papéis</Label>
-              <RoleMultiSelect name="roles" disabled={createPending} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-phone">Telefone</Label>
-              <Input id="new-phone" name="phone" disabled={createPending} />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="new-password">Senha inicial</Label>
-              <Input
-                id="new-password"
-                name="password"
-                type="password"
-                minLength={6}
-                required
-                disabled={createPending}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={createPending}>
-                {createPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Criar usuário
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
           <CardTitle>Equipe ({users.length})</CardTitle>
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Criar usuário
+          </Button>
         </CardHeader>
         <CardContent className="space-y-3">
           {users.map((user) => (
@@ -201,6 +137,66 @@ export function UserAdminPanel({
           ))}
         </CardContent>
       </Card>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo usuário</DialogTitle>
+          </DialogHeader>
+          {createState?.success === false && (
+            <Alert variant="destructive">
+              <AlertTitle>Erro</AlertTitle>
+              <AlertDescription>{createState.message}</AlertDescription>
+            </Alert>
+          )}
+          {createState?.success && (
+            <Alert variant="success">
+              <AlertDescription>{createState.message}</AlertDescription>
+            </Alert>
+          )}
+          <form action={createAction} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-name">Nome</Label>
+              <Input id="new-name" name="name" required disabled={createPending} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-email">E-mail</Label>
+              <Input
+                id="new-email"
+                name="email"
+                type="email"
+                required
+                disabled={createPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Papéis</Label>
+              <RoleMultiSelect name="roles" disabled={createPending} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-phone">Telefone</Label>
+              <Input id="new-phone" name="phone" disabled={createPending} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Senha inicial</Label>
+              <Input
+                id="new-password"
+                name="password"
+                type="password"
+                minLength={6}
+                required
+                disabled={createPending}
+              />
+            </div>
+            <Button type="submit" disabled={createPending} className="w-full">
+              {createPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Criar usuário
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
