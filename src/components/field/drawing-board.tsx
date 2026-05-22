@@ -243,8 +243,8 @@ export function DrawingBoard({
     let resizeTimer: ReturnType<typeof setTimeout> | undefined;
 
     const handleResize = () => {
-      window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
         const snapshotIndex = historyIndexRef.current;
         setupCanvas();
         if (snapshotIndex >= 0) {
@@ -256,7 +256,7 @@ export function DrawingBoard({
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
     return () => {
-      window.clearTimeout(resizeTimer);
+      clearTimeout(resizeTimer);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
     };
