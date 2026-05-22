@@ -33,7 +33,7 @@ export function KanbanColumnStats({
 
   return (
     <section
-      className="hidden rounded-md border bg-card px-2 py-1.5 xl:block"
+      className="hidden rounded-md border bg-card px-2 py-1.5 sm:block"
       aria-label="Tempo médio por coluna"
     >
       <div className="mb-1 text-[10px] font-medium text-muted-foreground">

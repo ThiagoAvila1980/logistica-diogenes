@@ -191,7 +191,6 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Painel", match: "/dashboard" },
-  { href: "/dashboard/kanban", label: "Kanban", match: "/dashboard/kanban" },
   { href: "/field", label: "Medições", match: "/field" },
   { href: "/production", label: "Corte", match: "/production" },
   { href: "/logistics", label: "Transporte", match: "/logistics" },
@@ -209,9 +208,6 @@ export function getNavItemsForRoles(roles: readonly UserRole[]): NavItem[] {
 
   for (const role of roles) {
     const items = NAV_ITEMS.filter((item) => {
-      if (item.match === "/dashboard/kanban" && !canUseKanban(roles)) {
-        return false;
-      }
       if (
         item.match === "/dashboard" &&
         !hasAnyRole(roles, ["admin", "gerente"])

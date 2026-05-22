@@ -46,9 +46,10 @@ export const quoteLineSchema = z.object({
 
 export const quoteItemsSchema = z.array(quoteLineSchema);
 
-/** Item de medição em campo (desenho + dimensões por peça) */
+/** Item de medição em campo (desenho + ambiente + dimensões por peça) */
 export const measurementLineItemSchema = z.object({
   id: z.string().min(1),
+  ambiente: z.string().trim().optional(),
   qty: z.coerce.number().int().positive(),
   largura: z.coerce.number().positive(),
   altura: z.coerce.number().positive(),

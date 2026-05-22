@@ -5,6 +5,7 @@ import {
   assertWithinMaxBytes,
   convertDrawingToWebp,
 } from "./image-to-webp";
+import { normalizePersistedUploadUrl } from "./resolve-display-url";
 import { putObject } from "./storage";
 
 const DATA_URL_PATTERN =
@@ -70,7 +71,10 @@ export async function persistMeasurementDrawings(
       const saved = await saveBase64Drawing(url, osId);
       result.push({ id: item.id, drawingUrl: saved });
     } else {
-      result.push({ id: item.id, drawingUrl: url });
+      result.push({
+        id: item.id,
+        drawingUrl: url ? normalizePersistedUploadUrl(url) : url,
+      });
     }
   }
 

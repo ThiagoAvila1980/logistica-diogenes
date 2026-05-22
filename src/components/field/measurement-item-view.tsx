@@ -1,4 +1,5 @@
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { ResolvedImage } from "@/components/ui/resolved-image";
 
 type MeasurementItemViewProps = {
   item: MeasurementLineItem;
@@ -14,11 +15,11 @@ export function MeasurementItemView({ item, index }: MeasurementItemViewProps) {
 
       {hasDrawing ? (
         <div className="overflow-hidden rounded-lg border bg-white">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <ResolvedImage
             src={item.drawingUrl!}
             alt={`Desenho da medição ${index + 1}`}
             className="mx-auto max-h-[min(70vh,480px)] w-full object-contain"
+            fallbackClassName="min-h-[120px]"
           />
         </div>
       ) : (
@@ -39,6 +40,12 @@ export function MeasurementDimensionsSummary({
 }) {
   return (
     <div className="rounded-lg border bg-muted/20 p-4">
+      {item.ambiente?.trim() ? (
+        <div className="mb-3">
+          <dt className="text-xs text-muted-foreground">Ambiente</dt>
+          <dd className="mt-0.5 text-sm font-medium">{item.ambiente.trim()}</dd>
+        </div>
+      ) : null}
       <h4 className="text-sm font-medium">Dimensões (mm)</h4>
       <dl className="mt-3 grid grid-cols-3 gap-3 text-sm">
         <div>
@@ -65,13 +72,21 @@ export function MeasurementDimensionsSummary({
 }
 
 export function hasSavedMeasurementForView(
-  initial?: { items?: MeasurementLineItem[] },
+  draft?: {
+    items?: MeasurementLineItem[];
+    photos?: string[];
+    notes?: string;
+  },
 ): boolean {
-  if (!initial?.items?.length) return false;
-  return initial.items.some(
-    (i) =>
-      i.largura > 0 &&
-      i.altura > 0 &&
-      Boolean(i.drawingUrl),
+  if (!draft) return false;
+  if (draft.photos?.length) return true;
+  if (draft.notes?.trim()) return true;
+  if (!draft.items?.length) return false;
+
+  return draft.items.some(
+    (item) =>
+      Boolean(item.drawingUrl) ||
+      Boolean(item.ambiente?.trim()) ||
+      (item.qty > 0 && item.largura > 0 && item.altura > 0),
   );
 }

@@ -11,9 +11,16 @@ type MeasurementTypeFieldProps = {
   name?: string;
   disabled?: boolean;
   className?: string;
+  /** `status` = alternância compacta (tela de medição); `form` = radios em formulário */
+  variant?: "form" | "status";
 };
 
 const OPTIONS: MeasurementDbType[] = ["orcamento", "final"];
+
+const STATUS_LABELS: Record<MeasurementDbType, string> = {
+  orcamento: "Orçamento",
+  final: "Final",
+};
 
 export function MeasurementTypeField({
   value,
@@ -21,7 +28,44 @@ export function MeasurementTypeField({
   name = "measurementType",
   disabled,
   className,
+  variant = "form",
 }: MeasurementTypeFieldProps) {
+  if (variant === "status") {
+    return (
+      <div
+        className={cn(
+          "inline-flex rounded-lg border bg-muted/40 p-0.5",
+          disabled && "opacity-60",
+          className,
+        )}
+        role="group"
+        aria-label="Tipo de medição"
+      >
+        {OPTIONS.map((type) => {
+          const selected = value === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              disabled={disabled}
+              aria-pressed={selected}
+              onClick={() => onChange?.(type)}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                selected
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+                disabled && "cursor-not-allowed",
+              )}
+            >
+              {STATUS_LABELS[type]}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <fieldset className={cn("space-y-2", className)}>
       <Label asChild>

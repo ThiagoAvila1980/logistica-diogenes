@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   LayoutDashboard,
-  LayoutGrid,
   Ruler,
   FileText,
   Scissors,
@@ -22,7 +21,6 @@ import { LogoutButton } from "@/components/auth/logout-button";
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
-  "/dashboard/kanban": LayoutGrid,
   "/field": Ruler,
   "/quote": FileText,
   "/production": Scissors,
@@ -71,11 +69,7 @@ export function AppSidebar({
         {navItems.map(({ href, label, match }) => {
           const Icon = NAV_ICONS[match] ?? LayoutDashboard;
           const active =
-            pathname === match ||
-            (match !== "/dashboard" && pathname.startsWith(`${match}/`)) ||
-            (match === "/dashboard" &&
-              pathname.startsWith("/dashboard") &&
-              !pathname.startsWith("/dashboard/kanban"));
+            pathname === match || pathname.startsWith(`${match}/`);
 
           return (
             <Link

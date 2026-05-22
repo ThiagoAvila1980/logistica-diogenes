@@ -225,7 +225,7 @@ export const measurements = pgTable(
     telefone: varchar("telefone", { length: 20 }),
     numeroOrcamento: varchar("numero_orcamento", { length: 64 }),
     dimensions: jsonb("dimensions").$type<Dimensions>(),
-    /** Itens de medição (desenho + qty/largura/altura por peça) */
+    /** Itens de medição (desenho + ambiente + qty/largura/altura por peça) */
     items: jsonb("items").$type<MeasurementLineItem[]>(),
     photos: jsonb("photos").$type<string[]>(),
     notes: text("notes"),

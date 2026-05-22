@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { DateInput } from "@/components/ui/date-input";
+import { formatBrPhone } from "@/lib/phone-format";
 import { Textarea } from "@/components/ui/textarea";
 import { MeasurementTypeField } from "@/components/field/measurement-type-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,7 +33,7 @@ export function CreateMeasurementDialog() {
   const [clientPhone, setClientPhone] = useState("");
   const [budgetReference, setBudgetReference] = useState("");
   const [measurementType, setMeasurementType] = useState<"orcamento" | "final">(
-    "final",
+    "orcamento",
   );
   const [previewWarning, setPreviewWarning] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
@@ -72,7 +75,7 @@ export function CreateMeasurementDialog() {
         Boolean(result.budgetReference);
 
       setClientName(result.clientName ?? "");
-      setClientPhone(result.clientPhone ?? "");
+      setClientPhone(formatBrPhone(result.clientPhone ?? ""));
       setBudgetReference(result.budgetReference ?? "");
 
       if (result.warning) {
@@ -95,7 +98,7 @@ export function CreateMeasurementDialog() {
       setClientName("");
       setClientPhone("");
       setBudgetReference("");
-      setMeasurementType("final");
+      setMeasurementType("orcamento");
       setPreviewWarning(null);
       if (pdfInputRef.current) pdfInputRef.current.value = "";
     }
@@ -113,8 +116,9 @@ export function CreateMeasurementDialog() {
         <DialogHeader>
           <DialogTitle>Nova Medição</DialogTitle>
           <DialogDescription>
-            Anexe o PDF do orçamento. O sistema lê o cabeçalho e captura o
-            cliente, telefone e número do orçamento como referência.
+            Preencha os dados manualmente ou anexe o PDF do orçamento — o
+            sistema lê o cabeçalho para preenchimento automático de cliente,
+            telefone e número de referência.
           </DialogDescription>
         </DialogHeader>
 
@@ -134,16 +138,13 @@ export function CreateMeasurementDialog() {
           />
 
           <div className="space-y-2">
-            <Label htmlFor="meas-pdf">
-              PDF do orçamento <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="meas-pdf">PDF do orçamento (opcional)</Label>
             <Input
               ref={pdfInputRef}
               id="meas-pdf"
               name="pdf"
               type="file"
               accept="application/pdf,.pdf"
-              required
               disabled={isPending || parsing}
               className="h-11"
               onChange={(e) => {
@@ -176,12 +177,11 @@ export function CreateMeasurementDialog() {
 
           <div className="space-y-2">
             <Label htmlFor="meas-client-phone">Telefone</Label>
-            <Input
+            <PhoneInput
               id="meas-client-phone"
               name="clientPhone"
               value={clientPhone}
-              onChange={(e) => setClientPhone(e.target.value)}
-              placeholder="(11) 99999-9999"
+              onValueChange={setClientPhone}
               disabled={isPending}
               className="h-11"
             />
@@ -213,10 +213,9 @@ export function CreateMeasurementDialog() {
 
           <div className="space-y-2">
             <Label htmlFor="meas-date">Data prevista (opcional)</Label>
-            <Input
+            <DateInput
               id="meas-date"
               name="scheduledDate"
-              type="date"
               disabled={isPending}
               className="h-11"
             />

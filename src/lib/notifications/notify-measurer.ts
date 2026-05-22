@@ -2,6 +2,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { users } from "@/db/schema";
 import { formatPhoneE164BR } from "./whatsapp";
+import { formatBrDate } from "@/lib/date-format";
 
 export type MeasurementCreatedPayload = {
   event: "measurement_created";
@@ -152,7 +153,7 @@ export async function notifyMedidorsOnMeasurementCreated(input: {
     budgetReference: input.budgetReference,
     description: input.description,
     scheduledDate: input.scheduledDate
-      ? input.scheduledDate.toLocaleDateString("pt-BR")
+      ? formatBrDate(input.scheduledDate)
       : null,
     fieldUrl: buildMeasurementFieldUrl(input.osId),
     createdAt: new Date().toISOString(),

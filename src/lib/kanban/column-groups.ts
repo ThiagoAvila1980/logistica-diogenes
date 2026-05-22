@@ -4,6 +4,8 @@ import { getPrimaryNextStatusForFlow } from "@/lib/workflow/measurement-flow";
 export type KanbanPhase = {
   id: string;
   title: string;
+  /** Rótulo curto para colunas estreitas (mobile) */
+  shortTitle: string;
   statuses: readonly OsStatus[];
 };
 
@@ -12,16 +14,19 @@ export const KANBAN_PHASES: readonly KanbanPhase[] = [
   {
     id: "medicao",
     title: "MEDIÇÃO",
+    shortTitle: "Medição",
     statuses: ["medicao_orcamento", "medicao_final"],
   },
   {
     id: "plano_corte",
     title: "PLANO DE CORTE",
+    shortTitle: "Corte",
     statuses: ["cortes", "embalagem", "acessorios_plano"],
   },
   {
     id: "transporte",
     title: "TRANSPORTE",
+    shortTitle: "Transp.",
     statuses: [
       "transporte_perfil",
       "transporte_estrutural",
@@ -33,6 +38,7 @@ export const KANBAN_PHASES: readonly KanbanPhase[] = [
   {
     id: "instalacao",
     title: "INSTALAÇÃO",
+    shortTitle: "Inst.",
     statuses: ["instalacao_estrutural", "instalacao_vidros", "concluido"],
   },
 ] as const;

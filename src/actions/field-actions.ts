@@ -10,6 +10,7 @@ import { measurementItemsSchema } from "@/lib/workflow/schemas";
 import { notifyMedidorsOnMeasurementCreated } from "@/lib/notifications/notify-measurer";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
+import { parseBrDate } from "@/lib/date-format";
 import {
   parseExistingUrls,
   parsePhotoFiles,
@@ -70,7 +71,12 @@ const createMeasurementSchema = z.object({
   clientPhone: z.string().max(20).optional(),
   budgetReference: z.string().max(64).optional(),
   description: z.string().max(500).optional(),
-  scheduledDate: z.string().optional(),
+  scheduledDate: z
+    .string()
+    .optional()
+    .refine((value) => !value || parseBrDate(value) !== null, {
+      message: "Data inválida. Use DD/MM/AAAA.",
+    }),
   measurementType: z.enum(["orcamento", "final"]).default("final"),
 });
 
@@ -170,9 +176,6 @@ export async function createMeasurementFromPdf(
   }
 
   const pdfFile = parsePdfFileField(formData);
-  if (!pdfFile) {
-    return { success: false, message: "Anexe o PDF do orçamento." };
-  }
 
   const parsed = createMeasurementSchema.safeParse({
     clientName: formData.get("clientName"),
@@ -184,9 +187,13 @@ export async function createMeasurementFromPdf(
   });
 
   if (!parsed.success) {
+    const fieldErrors = parsed.error.flatten().fieldErrors;
     return {
       success: false,
-      message: parsed.error.flatten().fieldErrors.clientName?.[0] ?? "Dados inválidos.",
+      message:
+        fieldErrors.clientName?.[0] ??
+        fieldErrors.scheduledDate?.[0] ??
+        "Dados inválidos.",
     };
   }
 
@@ -199,7 +206,7 @@ export async function createMeasurementFromPdf(
     measurementType,
   } = parsed.data;
   const osStatus = osStatusFromMeasurementType(measurementType);
-  const scheduled = scheduledDate ? new Date(scheduledDate) : null;
+  const scheduled = scheduledDate ? parseBrDate(scheduledDate) : null;
 
   if (useMockData()) {
     const result = mockRepository.createMeasurementFromPdf({
@@ -251,21 +258,31 @@ export async function createMeasurementFromPdf(
       return { success: false, message: "Não foi possível criar a medição." };
     }
 
-    const { header, error: parseWarning } = await savePdfAndParseHeader(
-      pdfFile,
-      created.id,
-      { keepLocalCopy: false },
-    );
+    let pdfHeader: { clientName: string | null; clientPhone: string | null; budgetReference: string | null } = {
+      clientName: null,
+      clientPhone: null,
+      budgetReference: null,
+    };
+
+    if (pdfFile) {
+      const { header, error: parseWarning } = await savePdfAndParseHeader(
+        pdfFile,
+        created.id,
+        { keepLocalCopy: false },
+      );
+      pdfHeader = header;
+      if (parseWarning) {
+        console.warn("[createMeasurementFromPdf]", parseWarning);
+      }
+    }
 
     const finalBudgetRef =
       budgetReference?.trim() ||
-      header.budgetReference?.trim() ||
+      pdfHeader.budgetReference?.trim() ||
       null;
 
-    const finalCliente =
-      clientName.trim() || header.clientName?.trim() || clientName;
-    const finalTelefone =
-      clientPhone?.trim() || header.clientPhone?.trim() || null;
+    const finalCliente = clientName.trim() || pdfHeader.clientName?.trim() || clientName;
+    const finalTelefone = clientPhone?.trim() || pdfHeader.clientPhone?.trim() || null;
 
     await db
       .update(serviceOrders)
@@ -281,10 +298,6 @@ export async function createMeasurementFromPdf(
       telefone: finalTelefone,
       numeroOrcamento: finalBudgetRef,
     });
-
-    if (parseWarning) {
-      console.warn("[createMeasurementFromPdf]", parseWarning);
-    }
 
     void notifyMedidorsOnMeasurementCreated({
       osId: created.id,

@@ -67,7 +67,7 @@ export function getMeasurementDimensionsHint(
 ): string {
   return type === "orcamento"
     ? "Registre medidas preliminares para elaboração do orçamento."
-    : "Registre quantidade, largura e altura de cada peça para produção e instalação.";
+    : "Registre ambiente, quantidade, largura e altura de cada peça para produção e instalação.";
 }
 
 export function getMeasurementConfirmCopy(type: MeasurementDbType): {

@@ -5,6 +5,7 @@ import { STATUS_LABELS } from "@/lib/workflow/status-machine";
 import type { OrderListItem } from "@/lib/data/types";
 import type { LogisticsSummary } from "@/lib/data/logistics";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { formatBrDate } from "@/lib/date-format";
 import { cn } from "@/lib/utils";
 
 type LogisticsOrderCardProps = {
@@ -62,7 +63,7 @@ export function LogisticsOrderCard({
           {order.scheduledDate && (
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="h-3 w-3" />
-              {new Date(order.scheduledDate).toLocaleDateString("pt-BR")}
+              {formatBrDate(order.scheduledDate)}
             </span>
           )}
         </div>

@@ -60,7 +60,7 @@ type MockInstallation = {
   finalCompleted?: boolean;
 };
 
-type MockOrder = OrderDetail;
+type MockOrder = Omit<OrderDetail, "hasMeasurement">;
 
 const DEMO_MEDIDOR = "a1000000-0000-4000-8000-000000000002";
 const DEMO_CORTADOR = "a1000000-0000-4000-8000-000000000003";
@@ -82,7 +82,10 @@ function measurementContactForOs(osId: string): {
 
 function withMeasurementContact(order: MockOrder): OrderDetail {
   const contact = measurementContactForOs(order.id);
-  return { ...order, ...contact };
+  const hasMeasurement = measurements.some(
+    (m) => m.osId === order.id && m.items != null && m.items.length > 0,
+  );
+  return { ...order, ...contact, hasMeasurement };
 }
 
 let orders: MockOrder[] = [
@@ -339,6 +342,9 @@ function loadContext(osId: string, order: MockOrder) {
 
 function toListItem(o: MockOrder): OrderListItem {
   const contact = measurementContactForOs(o.id);
+  const hasMeasurement = measurements.some(
+    (m) => m.osId === o.id && m.items != null && m.items.length > 0,
+  );
   return {
     id: o.id,
     number: o.number,
@@ -350,6 +356,7 @@ function toListItem(o: MockOrder): OrderListItem {
     scheduledDate: o.scheduledDate,
     updatedAt: o.updatedAt,
     budgetReference: o.budgetReference,
+    hasMeasurement,
   };
 }
 
@@ -363,6 +370,9 @@ export const mockRepository = {
   listKanban() {
     return orders.map((o) => {
       const contact = measurementContactForOs(o.id);
+      const hasMeasurement = measurements.some(
+        (m) => m.osId === o.id && m.items != null && m.items.length > 0,
+      );
       return {
         id: o.id,
         number: o.number,
@@ -373,6 +383,7 @@ export const mockRepository = {
         priority: o.priority,
         scheduledDate: o.scheduledDate,
         updatedAt: o.updatedAt,
+        hasMeasurement,
       };
     });
   },

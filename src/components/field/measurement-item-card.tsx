@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { resolveUploadDisplayUrlAction } from "@/actions/upload-actions";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { DrawingBoard } from "@/components/field/drawing-board";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,34 @@ export function MeasurementItemCard({
   onExpandedChange,
   onDrawingDirtyChange,
 }: MeasurementItemCardProps) {
+  const [resolvedDrawingUrl, setResolvedDrawingUrl] = useState<string | null>(
+    item.drawingUrl ?? null,
+  );
+
+  useEffect(() => {
+    if (!item.drawingUrl) {
+      setResolvedDrawingUrl(null);
+      return;
+    }
+
+    if (
+      item.drawingUrl.startsWith("data:") ||
+      item.drawingUrl.startsWith("/uploads/")
+    ) {
+      setResolvedDrawingUrl(item.drawingUrl);
+      return;
+    }
+
+    let cancelled = false;
+    void resolveUploadDisplayUrlAction(item.drawingUrl).then((resolved) => {
+      if (!cancelled) setResolvedDrawingUrl(resolved);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item.drawingUrl]);
+
   function updateField<K extends keyof MeasurementLineItem>(
     field: K,
     value: MeasurementLineItem[K],
@@ -38,7 +68,10 @@ export function MeasurementItemCard({
   }
 
   const hasDimensions =
-    item.qty > 0 || item.largura > 0 || item.altura > 0;
+    Boolean(item.ambiente?.trim()) ||
+    item.qty > 0 ||
+    item.largura > 0 ||
+    item.altura > 0;
 
   return (
     <article
@@ -86,12 +119,17 @@ export function MeasurementItemCard({
       </div>
 
       {!expanded && hasDimensions && (
-        <p className="mt-2 text-xs text-muted-foreground tabular-nums">
-          {item.qty > 0 ? `${item.qty} × ` : ""}
-          {item.largura > 0 || item.altura > 0
-            ? `${item.largura || "—"} × ${item.altura || "—"} mm`
-            : null}
-        </p>
+        <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+          {item.ambiente?.trim() ? (
+            <p className="font-medium text-foreground">{item.ambiente.trim()}</p>
+          ) : null}
+          <p className="tabular-nums">
+            {item.qty > 0 ? `${item.qty} × ` : ""}
+            {item.largura > 0 || item.altura > 0
+              ? `${item.largura || "—"} × ${item.altura || "—"} mm`
+              : null}
+          </p>
+        </div>
       )}
 
       {expanded && (
@@ -100,7 +138,8 @@ export function MeasurementItemCard({
           className="mt-3 space-y-3"
         >
           <DrawingBoard
-            initialImageUrl={item.drawingUrl}
+            key={resolvedDrawingUrl ?? item.id}
+            initialImageUrl={resolvedDrawingUrl}
             disabled={disabled}
             onDirtyChange={onDrawingDirtyChange}
             onSave={(base64Image) => updateField("drawingUrl", base64Image)}
@@ -113,7 +152,19 @@ export function MeasurementItemCard({
           </p>
 
           <div className="rounded-lg border bg-muted/20 p-4">
-            <h4 className="text-sm font-medium">Dimensões (mm)</h4>
+            <div className="space-y-2">
+              <Label htmlFor={`ambiente-${item.id}`}>Ambiente</Label>
+              <Input
+                id={`ambiente-${item.id}`}
+                type="text"
+                placeholder="ex: Sala, Quarto, Varanda"
+                value={item.ambiente ?? ""}
+                onChange={(e) => updateField("ambiente", e.target.value)}
+                disabled={disabled}
+                className="h-12 text-base"
+              />
+            </div>
+            <h4 className="mt-4 text-sm font-medium">Dimensões (mm)</h4>
             <div className="mt-3 grid grid-cols-1 gap-4 min-[400px]:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor={`qty-${item.id}`}>Quantidade</Label>
@@ -183,6 +234,7 @@ export function MeasurementItemCard({
 export function createEmptyMeasurementItem(id: string): MeasurementLineItem {
   return {
     id,
+    ambiente: "",
     qty: 0,
     largura: 0,
     altura: 0,

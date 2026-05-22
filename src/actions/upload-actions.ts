@@ -5,6 +5,7 @@ import {
   saveUploadedFiles,
   parsePhotoFiles,
 } from "@/lib/upload/save-files";
+import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
 import type { UploadScope } from "@/lib/upload/config";
 
 const uploadSchema = z.object({
@@ -51,4 +52,11 @@ export async function uploadPhotos(
     urls,
     warnings: errors.length > 0 ? errors : undefined,
   };
+}
+
+export async function resolveUploadDisplayUrlAction(
+  url: string,
+): Promise<string> {
+  if (!url.trim()) return url;
+  return resolveUploadDisplayUrl(url);
 }

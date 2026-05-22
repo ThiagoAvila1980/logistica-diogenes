@@ -22,13 +22,17 @@ export function KanbanPhaseColumn({
   onKeyboardAdvance,
 }: KanbanPhaseColumnProps) {
   return (
-    <div className="flex h-full min-w-0 flex-col rounded-md border bg-muted/30 p-1.5">
-      <div className="mb-1.5 rounded-sm bg-muted px-2 py-2">
-        <div className="flex items-center justify-between gap-1">
-          <span className="truncate text-xs font-bold tracking-wide">
-            {phase.title}
+    <div className="flex h-full min-w-0 flex-col rounded-md border bg-muted/30 p-1 sm:p-1.5">
+      <div className="mb-1 rounded-sm bg-muted px-1 py-1.5 sm:mb-1.5 sm:px-2 sm:py-2">
+        <div className="flex items-center justify-between gap-0.5 sm:gap-1">
+          <span
+            className="truncate text-[9px] font-bold leading-tight tracking-wide sm:text-xs"
+            title={phase.title}
+          >
+            <span className="sm:hidden">{phase.shortTitle}</span>
+            <span className="hidden sm:inline">{phase.title}</span>
           </span>
-          <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+          <span className="shrink-0 rounded-full bg-primary/15 px-1 py-px text-[9px] font-semibold tabular-nums text-primary sm:px-2 sm:py-0.5 sm:text-[10px]">
             {items.length}
           </span>
         </div>
@@ -36,7 +40,7 @@ export function KanbanPhaseColumn({
 
       <Droppable droppableId={phase.id} isDropDisabled={isDropDisabled}>
         {(provided, snapshot) => (
-          <ScrollArea className="h-[min(360px,calc(100dvh-11rem))] lg:h-[calc(100dvh-12rem)]">
+          <ScrollArea className="h-[min(320px,calc(100dvh-13rem))] sm:h-[min(360px,calc(100dvh-12rem))] lg:h-[calc(100dvh-12rem)]">
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
@@ -65,8 +69,9 @@ export function KanbanPhaseColumn({
               })}
               {provided.placeholder}
               {items.length === 0 && (
-                <div className="flex h-24 items-center justify-center rounded-md border border-dashed text-[10px] text-muted-foreground">
-                  Nenhuma OS
+                <div className="flex h-16 items-center justify-center rounded-md border border-dashed text-[9px] text-muted-foreground sm:h-24 sm:text-[10px]">
+                  <span className="hidden sm:inline">Nenhuma OS</span>
+                  <span className="sm:hidden">—</span>
                 </div>
               )}
             </div>

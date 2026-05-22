@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function KanbanError({
+export default function DashboardError({
   error,
   reset,
 }: {
@@ -11,12 +11,12 @@ export default function KanbanError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[kanban] Erro na rota:", error);
+    console.error("[dashboard] Erro na rota:", error);
   }, [error]);
 
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-6 text-center">
-      <h2 className="text-lg font-semibold">Erro ao carregar o kanban</h2>
+      <h2 className="text-lg font-semibold">Erro ao carregar o painel</h2>
       <p className="max-w-md text-sm text-muted-foreground">
         Isso pode acontecer após salvar alterações no código durante o
         desenvolvimento. Tente recarregar; se persistir, reinicie o servidor com{" "}

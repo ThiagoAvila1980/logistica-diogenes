@@ -12,6 +12,8 @@ export type OrderListItem = {
   scheduledDate: Date | null;
   updatedAt: Date;
   budgetReference: string | null;
+  /** true quando o medidor já registrou itens de medição (items não vazio). */
+  hasMeasurement: boolean;
 };
 
 export type OrderDetail = OrderListItem & {

@@ -14,6 +14,7 @@ import {
   isPersistedUploadUrl,
   putObject,
 } from "./storage";
+import { normalizePersistedUploadUrl } from "./resolve-display-url";
 
 export function validateImageFile(file: File): string | null {
   if (!file.size) return "Arquivo vazio";
@@ -74,8 +75,11 @@ export function parseExistingUrls(
   const raw = formData.getAll(field);
   const urls: string[] = [];
   for (const item of raw) {
-    if (typeof item === "string" && isPersistedUploadUrl(item)) {
-      urls.push(item);
+    if (typeof item === "string") {
+      const normalized = normalizePersistedUploadUrl(item);
+      if (isPersistedUploadUrl(normalized)) {
+        urls.push(normalized);
+      }
     }
   }
   return urls;

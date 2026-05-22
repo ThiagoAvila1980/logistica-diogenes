@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Phone } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { formatBrDate } from "@/lib/date-format";
 import { useMockData } from "@/lib/data/config";
 import { StatusWizardAdvance } from "@/components/workflow/status-wizard-advance";
 import { OsStatusBadge } from "@/components/dashboard/os-status-badge";
@@ -91,7 +92,7 @@ export default async function ServiceOrderDetailPage({ params }: Props) {
             {order.scheduledDate && (
               <p>
                 <span className="text-muted-foreground">Agendado: </span>
-                {order.scheduledDate.toLocaleDateString("pt-BR")}
+                {formatBrDate(order.scheduledDate)}
               </p>
             )}
           </CardContent>

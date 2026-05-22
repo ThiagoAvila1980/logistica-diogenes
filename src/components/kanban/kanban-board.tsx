@@ -356,7 +356,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
       />
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 pb-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid min-h-0 flex-1 grid-cols-4 gap-1 pb-2 sm:gap-2">
           {KANBAN_PHASES.map((phase) => (
             <KanbanPhaseColumn
               key={phase.id}

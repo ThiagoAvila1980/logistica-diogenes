@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   LayoutDashboard,
-  LayoutGrid,
   Ruler,
   Scissors,
   Truck,
@@ -16,7 +15,6 @@ import { getNavItemsForRoles } from "@/lib/auth/permissions";
 
 const MOBILE_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
-  "/dashboard/kanban": LayoutGrid,
   "/field": Ruler,
   "/production": Scissors,
   "/logistics": Truck,
@@ -25,7 +23,6 @@ const MOBILE_ICONS: Record<string, LucideIcon> = {
 
 const MOBILE_LABELS: Record<string, string> = {
   "/dashboard": "Painel",
-  "/dashboard/kanban": "Kanban",
   "/field": "Medições",
   "/production": "Corte",
   "/logistics": "Transp.",
@@ -56,11 +53,7 @@ export function MobileBottomNav({
           const Icon = MOBILE_ICONS[match] ?? LayoutDashboard;
           const label = MOBILE_LABELS[match] ?? match.replace("/", "");
           const active =
-            pathname === match ||
-            (match !== "/dashboard" && pathname.startsWith(`${match}/`)) ||
-            (match === "/dashboard" &&
-              pathname.startsWith("/dashboard") &&
-              !pathname.startsWith("/dashboard/kanban"));
+            pathname === match || pathname.startsWith(`${match}/`);
 
           return (
             <li key={href}>

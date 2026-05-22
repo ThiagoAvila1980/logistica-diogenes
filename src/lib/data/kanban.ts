@@ -13,6 +13,8 @@ export type KanbanOrderItem = {
   scheduledDate: Date | null;
   /** Momento em que a OS entrou no status atual (proxy para tempo na coluna) */
   updatedAt: Date;
+  /** true quando o medidor já registrou itens de medição (items não vazio). */
+  hasMeasurement: boolean;
 };
 
 export async function listKanbanOrders(): Promise<KanbanOrderItem[]> {
