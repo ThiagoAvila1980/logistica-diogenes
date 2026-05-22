@@ -24,6 +24,9 @@ export type DrawingBoardProps = {
   onSave: (base64Image: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
   initialImageUrl?: string | null;
+  initialFullscreen?: boolean;
+  onInitialFullscreenApplied?: () => void;
+  onFullscreenChange?: (fullscreen: boolean) => void;
   disabled?: boolean;
   className?: string;
 };
@@ -32,6 +35,9 @@ export function DrawingBoard({
   onSave,
   onDirtyChange,
   initialImageUrl,
+  initialFullscreen = false,
+  onInitialFullscreenApplied,
+  onFullscreenChange,
   disabled,
   className,
 }: DrawingBoardProps) {
@@ -42,17 +48,19 @@ export function DrawingBoard({
   const historyIndexRef = useRef(-1);
   const toolRef = useRef<Tool>("pen");
   const strokeColorRef = useRef("#000000");
-  const strokeWidthRef = useRef(4);
+  const strokeWidthRef = useRef(2);
   const initialLoadedRef = useRef(false);
+  const disabledRef = useRef(disabled);
 
   const [tool, setTool] = useState<Tool>("pen");
   const [strokeColor, setStrokeColor] = useState("#000000");
-  const [strokeWidth, setStrokeWidth] = useState(4);
+  const [strokeWidth, setStrokeWidth] = useState(2);
   const [historyUI, setHistoryUI] = useState({ canUndo: false, canRedo: false });
   const [savedHint, setSavedHint] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreen, setFullscreen] = useState(initialFullscreen);
   const [mounted, setMounted] = useState(false);
+  const initialFullscreenAppliedRef = useRef(false);
 
   const setDirtyState = useCallback(
     (next: boolean) => {
@@ -75,6 +83,14 @@ export function DrawingBoard({
   }, []);
 
   useEffect(() => {
+    if (!initialFullscreen || initialFullscreenAppliedRef.current) return;
+    initialFullscreenAppliedRef.current = true;
+    setFullscreen(true);
+    onFullscreenChange?.(true);
+    onInitialFullscreenApplied?.();
+  }, [initialFullscreen, onFullscreenChange, onInitialFullscreenApplied]);
+
+  useEffect(() => {
     toolRef.current = tool;
   }, [tool]);
 
@@ -85,6 +101,10 @@ export function DrawingBoard({
   useEffect(() => {
     strokeWidthRef.current = strokeWidth;
   }, [strokeWidth]);
+
+  useEffect(() => {
+    disabledRef.current = disabled ?? false;
+  }, [disabled]);
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -220,15 +240,26 @@ export function DrawingBoard({
       saveToHistory();
     }
 
+    let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+
     const handleResize = () => {
-      setupCanvas();
-      if (historyIndexRef.current >= 0) {
-        restoreFromHistory(historyIndexRef.current);
-      }
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        const snapshotIndex = historyIndexRef.current;
+        setupCanvas();
+        if (snapshotIndex >= 0) {
+          restoreFromHistory(snapshotIndex);
+        }
+      }, 120);
     };
 
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+    return () => {
+      window.clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
   }, [
     setupCanvas,
     saveToHistory,
@@ -248,42 +279,113 @@ export function DrawingBoard({
     return () => window.cancelAnimationFrame(id);
   }, [fullscreen, mounted, setupCanvas, restoreFromHistory]);
 
-  const getPos = (
-    e: React.MouseEvent | React.TouchEvent,
-  ): { x: number; y: number } => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0]!.clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0]!.clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
-  };
+  const getPosFromNativeEvent = useCallback(
+    (e: MouseEvent | TouchEvent): { x: number; y: number } => {
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
 
-  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    if (disabled) return;
-    e.preventDefault();
-    isDrawingRef.current = true;
-    const { x, y } = getPos(e);
-    const ctx = canvasRef.current!.getContext("2d")!;
-    applyStrokeSettings(ctx);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
+      const rect = canvas.getBoundingClientRect();
+      const point =
+        "touches" in e
+          ? e.touches[0] ?? e.changedTouches[0]
+          : e;
+      if (!point) return { x: 0, y: 0 };
 
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawingRef.current || disabled) return;
-    e.preventDefault();
-    const { x, y } = getPos(e);
-    const ctx = canvasRef.current!.getContext("2d")!;
+      return {
+        x: point.clientX - rect.left,
+        y: point.clientY - rect.top,
+      };
+    },
+    [],
+  );
+
+  const beginStroke = useCallback(
+    (x: number, y: number) => {
+      isDrawingRef.current = true;
+      const ctx = canvasRef.current?.getContext("2d");
+      if (!ctx) return;
+      applyStrokeSettings(ctx);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    },
+    [applyStrokeSettings],
+  );
+
+  const continueStroke = useCallback((x: number, y: number) => {
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
     ctx.lineTo(x, y);
     ctx.stroke();
-  };
+  }, []);
 
-  const stopDrawing = () => {
+  const endStroke = useCallback(() => {
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
     canvasRef.current?.getContext("2d")?.closePath();
     saveToHistory();
     markDirty();
+  }, [saveToHistory, markDirty]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (disabledRef.current) return;
+      e.preventDefault();
+      if (!e.touches[0]) return;
+      const { x, y } = getPosFromNativeEvent(e);
+      beginStroke(x, y);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDrawingRef.current || disabledRef.current) return;
+      e.preventDefault();
+      if (!e.touches[0]) return;
+      const { x, y } = getPosFromNativeEvent(e);
+      continueStroke(x, y);
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!isDrawingRef.current) return;
+      e.preventDefault();
+      endStroke();
+    };
+
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd, { passive: false });
+    canvas.addEventListener("touchcancel", onTouchEnd, { passive: false });
+
+    return () => {
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+      canvas.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [
+    beginStroke,
+    continueStroke,
+    endStroke,
+    fullscreen,
+    getPosFromNativeEvent,
+    mounted,
+  ]);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (disabledRef.current) return;
+    const { x, y } = getPosFromNativeEvent(e.nativeEvent);
+    beginStroke(x, y);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current || disabledRef.current) return;
+    const { x, y } = getPosFromNativeEvent(e.nativeEvent);
+    continueStroke(x, y);
+  };
+
+  const handleMouseUp = () => {
+    endStroke();
   };
 
   const undo = () => {
@@ -332,7 +434,13 @@ export function DrawingBoard({
   const toolbar = (
     <div className="flex w-12 shrink-0 flex-col items-center gap-1.5 overflow-y-auto border-l bg-slate-800 p-1.5 sm:w-14">
       <ToolbarButton
-        onClick={() => setFullscreen((f) => !f)}
+        onClick={() => {
+          setFullscreen((current) => {
+            const next = !current;
+            onFullscreenChange?.(next);
+            return next;
+          });
+        }}
         title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
         disabled={disabled}
         active={fullscreen}
@@ -438,13 +546,10 @@ export function DrawingBoard({
           ref={canvasRef}
           className="block h-full w-full touch-none"
           style={{ touchAction: "none" }}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
         />
       </div>
       {toolbar}

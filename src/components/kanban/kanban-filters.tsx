@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Filter, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
 import {
   countActiveKanbanFilters,
@@ -111,7 +112,7 @@ export function KanbanFiltersBar({
             >
               Prioridade
             </label>
-            <select
+            <Select
               id="kanban-priority"
               value={filters.priority}
               onChange={(event) =>
@@ -120,14 +121,14 @@ export function KanbanFiltersBar({
                   priority: event.target.value as KanbanFilters["priority"],
                 })
               }
-              className="flex h-7 w-full rounded-md border border-input bg-transparent px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-7 px-2 text-xs"
             >
               {PRIORITY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="min-w-[7rem] flex-1 basis-[7rem]">

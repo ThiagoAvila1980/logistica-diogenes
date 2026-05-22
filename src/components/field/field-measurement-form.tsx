@@ -56,6 +56,7 @@ import {
 } from "@/lib/workflow/measurement-actions";
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
 import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
+import { useScreenOrientationLock } from "@/hooks/use-screen-orientation-lock";
 
 type FieldMeasurementFormProps = {
   order: OrderDetail;
@@ -139,10 +140,23 @@ export function FieldMeasurementForm({
   const [drawingDirtyById, setDrawingDirtyById] = useState<
     Record<string, boolean>
   >({});
+  const [drawingFullscreenItemIds, setDrawingFullscreenItemIds] = useState<
+    Set<string>
+  >(() => new Set());
   const [viewMode, setViewMode] = useState(() =>
     hasSavedMeasurementForView(initialDraft),
   );
   const formRef = useRef<HTMLFormElement>(null);
+
+  const { relockPage, lockLandscape } = useScreenOrientationLock(!viewMode);
+
+  function handleDrawingFullscreenChange(fullscreen: boolean) {
+    if (fullscreen) {
+      lockLandscape();
+      return;
+    }
+    relockPage();
+  }
 
   const orderContext = { status: order.status };
   const allowedActions = getAllowedMeasurementActions(orderContext);
@@ -223,6 +237,16 @@ export function FieldMeasurementForm({
     );
     setItems((prev) => [newItem, ...prev]);
     setExpandedItemId(newItem.id);
+    setDrawingFullscreenItemIds((prev) => new Set(prev).add(newItem.id));
+  }
+
+  function clearDrawingFullscreenItem(itemId: string) {
+    setDrawingFullscreenItemIds((prev) => {
+      if (!prev.has(itemId)) return prev;
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
+    });
   }
 
   function updateItem(index: number, next: MeasurementLineItem) {
@@ -239,6 +263,7 @@ export function FieldMeasurementForm({
           delete next[removed.id];
           return next;
         });
+        clearDrawingFullscreenItem(removed.id);
         setExpandedItemId((current) => {
           if (current !== removed.id) return current;
           const remaining = prev.filter((_, i) => i !== index);
@@ -362,7 +387,7 @@ export function FieldMeasurementForm({
         </div>
       </section>
 
-      <section className="rounded-xl border bg-card p-4 shadow-sm">
+      <section className="overflow-hidden rounded-xl border bg-card p-3 shadow-sm md:p-4">
         <StatusWizard
           currentStatus={wizardStatus}
           measurementFlow={order.measurementFlow}
@@ -450,6 +475,13 @@ export function FieldMeasurementForm({
                     expanded={expandedItemId === item.id}
                     canRemove={items.length > 1}
                     disabled={isPending}
+                    initialDrawingFullscreen={drawingFullscreenItemIds.has(
+                      item.id,
+                    )}
+                    onDrawingFullscreenApplied={() =>
+                      clearDrawingFullscreenItem(item.id)
+                    }
+                    onDrawingFullscreenChange={handleDrawingFullscreenChange}
                     onChange={(next) => updateItem(index, next)}
                     onRemove={() => removeItem(index)}
                     onExpandedChange={(expanded) =>

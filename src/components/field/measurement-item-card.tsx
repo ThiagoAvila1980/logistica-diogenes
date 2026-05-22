@@ -15,6 +15,9 @@ type MeasurementItemCardProps = {
   expanded: boolean;
   canRemove: boolean;
   disabled?: boolean;
+  initialDrawingFullscreen?: boolean;
+  onDrawingFullscreenApplied?: () => void;
+  onDrawingFullscreenChange?: (fullscreen: boolean) => void;
   onChange: (item: MeasurementLineItem) => void;
   onRemove: () => void;
   onExpandedChange: (expanded: boolean) => void;
@@ -27,6 +30,9 @@ export function MeasurementItemCard({
   expanded,
   canRemove,
   disabled,
+  initialDrawingFullscreen = false,
+  onDrawingFullscreenApplied,
+  onDrawingFullscreenChange,
   onChange,
   onRemove,
   onExpandedChange,
@@ -140,15 +146,17 @@ export function MeasurementItemCard({
           <DrawingBoard
             key={resolvedDrawingUrl ?? item.id}
             initialImageUrl={resolvedDrawingUrl}
+            initialFullscreen={initialDrawingFullscreen}
+            onInitialFullscreenApplied={onDrawingFullscreenApplied}
+            onFullscreenChange={onDrawingFullscreenChange}
             disabled={disabled}
             onDirtyChange={onDrawingDirtyChange}
             onSave={(base64Image) => updateField("drawingUrl", base64Image)}
           />
           <p className="text-xs text-muted-foreground">
-            Desenhe no quadro, use{" "}
-            <span className="font-medium">tela cheia</span> para ampliar (celular
-            deitado) e toque em <span className="font-medium">Salvar</span> antes
-            de registrar a medição.
+            Desenhe no quadro e toque em{" "}
+            <span className="font-medium">Salvar</span> na barra lateral antes de
+            registrar a medição.
           </p>
 
           <div className="rounded-lg border bg-muted/20 p-4">

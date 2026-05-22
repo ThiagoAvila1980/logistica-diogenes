@@ -1,11 +1,13 @@
 import { and, eq, sql } from "drizzle-orm";
 import { measurements, serviceOrders } from "@/db/schema";
-import { FINAL_MEASUREMENT_TYPE } from "@/lib/workflow/measurement-actions";
 
-/** Junção da medição principal (final) da OS — fonte dos dados de cliente. */
+/**
+ * Junção da medição ativa da OS — fonte dos dados de cliente.
+ * Em `medicao_orcamento` usa a medição de orçamento; demais fases usam a final.
+ */
 export const primaryMeasurementJoin = and(
   eq(measurements.osId, serviceOrders.id),
-  eq(measurements.type, FINAL_MEASUREMENT_TYPE),
+  sql`${measurements.type} = case when ${serviceOrders.status} = 'medicao_orcamento' then 'orcamento'::measurement_types else 'final'::measurement_types end`,
 );
 
 export const measurementClientName = sql<string>`coalesce(${measurements.cliente}, 'Cliente não informado')`;
