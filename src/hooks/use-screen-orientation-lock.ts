@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
-function resolveLockOrientation(): OrientationLockType {
+type OrientationLock =
+  | "any"
+  | "landscape"
+  | "landscape-primary"
+  | "landscape-secondary"
+  | "natural"
+  | "portrait"
+  | "portrait-primary"
+  | "portrait-secondary";
+
+function resolveLockOrientation(): OrientationLock {
   if (typeof window === "undefined") return "portrait";
 
   const type = screen.orientation?.type ?? "";
@@ -10,13 +20,14 @@ function resolveLockOrientation(): OrientationLockType {
 }
 
 async function tryLockOrientation(
-  orientation: OrientationLockType,
+  orientation: OrientationLock,
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
-  if (!screen.orientation?.lock) return false;
+  const lockFn = (screen.orientation as unknown as { lock?: (o: string) => Promise<void> })?.lock;
+  if (!lockFn) return false;
 
   try {
-    await screen.orientation.lock(orientation);
+    await lockFn.call(screen.orientation, orientation);
     return true;
   } catch {
     return false;
@@ -40,7 +51,7 @@ type ScreenOrientationLockControls = {
 export function useScreenOrientationLock(
   enabled = true,
 ): ScreenOrientationLockControls {
-  const pageOrientationRef = useRef<OrientationLockType>("portrait");
+  const pageOrientationRef = useRef<OrientationLock>("portrait");
 
   const relockPage = useCallback(() => {
     void tryLockOrientation(pageOrientationRef.current);
