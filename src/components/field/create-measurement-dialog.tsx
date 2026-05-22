@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useCallback, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FileText, Loader2, Plus } from "lucide-react";
 import {
   createMeasurementFromPdf,
@@ -28,6 +29,7 @@ import { MeasurementTypeField } from "@/components/field/measurement-type-field"
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function CreateMeasurementDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
@@ -51,6 +53,13 @@ export function CreateMeasurementDialog() {
     CreateMeasurementResult | null,
     FormData
   >(submitCreate, null);
+
+  useEffect(() => {
+    if (state?.success) {
+      setOpen(false);
+      router.push(`/field/${state.osId}`);
+    }
+  }, [state, router]);
 
   async function handlePdfChange(file: File | null) {
     if (!file) return;

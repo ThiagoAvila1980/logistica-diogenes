@@ -1,7 +1,7 @@
 import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
-import { ensurePdfParseWorker, PDFParse } from "@/lib/pdf/pdf-parse-server";
+import { loadPdfParse } from "@/lib/pdf/pdf-parse-server";
 import {
   PDF_ALLOWED_MIME,
   PDF_MAX_FILE_BYTES,
@@ -25,9 +25,10 @@ export function validatePdfFile(file: File): string | null {
 export async function parsePdfBuffer(
   buffer: Buffer,
 ): Promise<{ header: PdfHeaderData; error?: string }> {
-  let parser: PDFParse | null = null;
+  let parser: InstanceType<Awaited<ReturnType<typeof loadPdfParse>>> | null =
+    null;
   try {
-    ensurePdfParseWorker();
+    const PDFParse = await loadPdfParse();
     parser = new PDFParse({ data: buffer });
     const textResult = await parser.getText({ first: 1 });
     const header = parsePdfHeaderText(textResult.text ?? "");
@@ -118,10 +119,4 @@ export async function savePdfAndParseHeader(
 
   const url = `/uploads/measurements/${osId}/${filename}`;
   return { url, header, error };
-}
-
-export function parsePdfFileField(formData: FormData, field = "pdf"): File | null {
-  const file = formData.get(field);
-  if (file instanceof File && file.size > 0) return file;
-  return null;
 }

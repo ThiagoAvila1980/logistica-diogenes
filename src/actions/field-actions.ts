@@ -2,7 +2,6 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { measurements, serviceOrders } from "@/db/schema";
@@ -18,10 +17,7 @@ import {
   saveUploadedFiles,
 } from "@/lib/upload/save-files";
 import { persistMeasurementDrawings } from "@/lib/upload/save-base64-image";
-import {
-  parsePdfFileField,
-  savePdfAndParseHeader,
-} from "@/lib/upload/save-pdf";
+import { parsePdfFileField } from "@/lib/upload/pdf-file-field";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import {
   collectMeasurementFileUrls,
@@ -235,7 +231,11 @@ export async function createMeasurementFromPdf(
     }).catch((err) => console.error("[createMeasurementFromPdf:notify]", err));
 
     revalidatePath("/field");
-    redirect(`/field/${result.osId}`);
+    return {
+      success: true,
+      osId: result.osId,
+      number: result.number,
+    };
   }
 
   try {
@@ -266,6 +266,7 @@ export async function createMeasurementFromPdf(
     };
 
     if (pdfFile) {
+      const { savePdfAndParseHeader } = await import("@/lib/upload/save-pdf");
       const { header, error: parseWarning } = await savePdfAndParseHeader(
         pdfFile,
         created.id,
@@ -316,11 +317,12 @@ export async function createMeasurementFromPdf(
     );
 
     revalidatePath("/field");
-    redirect(`/field/${created.id}`);
+    return {
+      success: true,
+      osId: created.id,
+      number: created.number,
+    };
   } catch (error) {
-    if (error instanceof Error && error.message === "NEXT_REDIRECT") {
-      throw error;
-    }
     console.error("[createMeasurementFromPdf]", error);
     return {
       success: false,

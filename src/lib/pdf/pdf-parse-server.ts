@@ -1,13 +1,28 @@
 import path from "path";
 import { pathToFileURL } from "url";
-import { PDFParse } from "pdf-parse";
 
-let workerConfigured = false;
+type PDFParseClass = typeof import("pdf-parse").PDFParse;
 
-/** Configura o worker do pdf.js para rodar em Server Actions / API (Next.js). */
-export function ensurePdfParseWorker(): void {
-  if (workerConfigured) return;
+let pdfParseClass: PDFParseClass | null = null;
 
+async function ensureCanvasPolyfills(): Promise<void> {
+  if (typeof globalThis.DOMMatrix !== "undefined") return;
+
+  const canvas = await import("@napi-rs/canvas");
+  globalThis.DOMMatrix =
+    canvas.DOMMatrix as unknown as typeof globalThis.DOMMatrix;
+  globalThis.ImageData =
+    canvas.ImageData as unknown as typeof globalThis.ImageData;
+  globalThis.Path2D = canvas.Path2D as unknown as typeof globalThis.Path2D;
+}
+
+/** Carrega pdf-parse sob demanda com polyfills de canvas para Node/serverless. */
+export async function loadPdfParse(): Promise<PDFParseClass> {
+  if (pdfParseClass) return pdfParseClass;
+
+  await ensureCanvasPolyfills();
+
+  const { PDFParse } = await import("pdf-parse");
   const workerPath = path.join(
     process.cwd(),
     "node_modules",
@@ -18,7 +33,6 @@ export function ensurePdfParseWorker(): void {
   );
 
   PDFParse.setWorker(pathToFileURL(workerPath).href);
-  workerConfigured = true;
+  pdfParseClass = PDFParse;
+  return PDFParse;
 }
-
-export { PDFParse };
