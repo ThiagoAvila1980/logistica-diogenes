@@ -19,7 +19,7 @@ type DrawingPreviewProps = {
   variant?: "drawing" | "thumbnail";
 };
 
-function getTouchDistance(touches: TouchList) {
+function getTouchDistance(touches: React.TouchList) {
   if (touches.length < 2) return 0;
   const [a, b] = [touches[0]!, touches[1]!];
   return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
