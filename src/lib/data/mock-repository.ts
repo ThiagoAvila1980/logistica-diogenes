@@ -44,6 +44,9 @@ type MockCutting = {
   cuts?: Array<{ item: string; length: number; width: number; qty: number }>;
   packaging: Record<string, boolean> | null;
   accessories?: Record<string, number> | null;
+  corteFeito?: boolean;
+  embalagemFeita?: boolean;
+  acessoriosFeitos?: boolean;
 };
 
 type MockTransport = {
@@ -80,12 +83,31 @@ function measurementContactForOs(osId: string): {
   };
 }
 
+function resolvedBudgetReferenceForOs(order: MockOrder): string | null {
+  const fromOs = order.budgetReference?.trim();
+  if (fromOs) return fromOs;
+
+  const withOrcamento = measurements
+    .filter((m) => m.osId === order.id && m.numeroOrcamento?.trim())
+    .sort(
+      (a, b) =>
+        (a.type === "orcamento" ? 0 : 1) - (b.type === "orcamento" ? 0 : 1),
+    );
+
+  return withOrcamento[0]?.numeroOrcamento?.trim() ?? null;
+}
+
 function withMeasurementContact(order: MockOrder): OrderDetail {
   const contact = measurementContactForOs(order.id);
   const hasMeasurement = measurements.some(
     (m) => m.osId === order.id && m.items != null && m.items.length > 0,
   );
-  return { ...order, ...contact, hasMeasurement };
+  return {
+    ...order,
+    ...contact,
+    budgetReference: resolvedBudgetReferenceForOs(order),
+    hasMeasurement,
+  };
 }
 
 let orders: MockOrder[] = [
@@ -241,12 +263,16 @@ let measurements: MockMeasurement[] = [
     id: "m1111111-1111-4111-8111-111111111102",
     osId: "a1111111-1111-4111-8111-111111111103",
     type: "final",
+    cliente: "Condomínio Horizonte",
+    telefone: "(11) 99876-5432",
+    numeroOrcamento: "ORC-2026-0003",
     dimensions: { largura: 900, altura: 2100 },
   },
   {
     id: "m1111111-1111-4111-8111-111111111103",
     osId: "a1111111-1111-4111-8111-111111111104",
     type: "orcamento",
+    numeroOrcamento: "ORC-2026-0004",
   },
   {
     id: "m1111111-1111-4111-8111-111111111104",
@@ -257,6 +283,14 @@ let measurements: MockMeasurement[] = [
 
 let cuttingPlans: MockCutting[] = [
   {
+    osId: "a1111111-1111-4111-8111-111111111103",
+    status: "em_andamento",
+    packaging: null,
+    corteFeito: true,
+    embalagemFeita: false,
+    acessoriosFeitos: false,
+  },
+  {
     osId: "a1111111-1111-4111-8111-111111111104",
     status: "concluido",
     packaging: {
@@ -265,6 +299,9 @@ let cuttingPlans: MockCutting[] = [
       accessories: true,
       glass: true,
     },
+    corteFeito: true,
+    embalagemFeita: true,
+    acessoriosFeitos: true,
   },
 ];
 
@@ -355,7 +392,7 @@ function toListItem(o: MockOrder): OrderListItem {
     assignedUserId: o.assignedUserId,
     scheduledDate: o.scheduledDate,
     updatedAt: o.updatedAt,
-    budgetReference: o.budgetReference,
+    budgetReference: resolvedBudgetReferenceForOs(o),
     hasMeasurement,
   };
 }
@@ -373,10 +410,11 @@ export const mockRepository = {
       const hasMeasurement = measurements.some(
         (m) => m.osId === o.id && m.items != null && m.items.length > 0,
       );
+      const cut = cuttingPlans.find((c) => c.osId === o.id);
       return {
         id: o.id,
         number: o.number,
-        budgetReference: o.budgetReference,
+        budgetReference: resolvedBudgetReferenceForOs(o),
         status: o.status,
         measurementFlow: o.measurementFlow,
         clientName: contact.clientName,
@@ -384,8 +422,68 @@ export const mockRepository = {
         scheduledDate: o.scheduledDate,
         updatedAt: o.updatedAt,
         hasMeasurement,
+        cuttingSteps: cut
+          ? {
+              corte: cut.corteFeito ?? false,
+              embalagem: cut.embalagemFeita ?? false,
+              acessorios: cut.acessoriosFeitos ?? false,
+            }
+          : null,
       };
     });
+  },
+
+  getCuttingDetail(osId: string) {
+    const m =
+      measurements.find((x) => x.osId === osId && x.type === "final") ??
+      measurements.find((x) => x.osId === osId);
+    const cut = cuttingPlans.find((c) => c.osId === osId);
+    return {
+      measurement: m
+        ? {
+            cliente: m.cliente ?? null,
+            items: m.items ?? [],
+            photos: m.photos ?? [],
+            notes: m.notes ?? null,
+            dimensions: m.dimensions ?? null,
+          }
+        : null,
+      cuttingSteps: {
+        corte: cut?.corteFeito ?? false,
+        embalagem: cut?.embalagemFeita ?? false,
+        acessorios: cut?.acessoriosFeitos ?? false,
+      },
+    };
+  },
+
+  updateCuttingStep(
+    osId: string,
+    step: "corte" | "embalagem" | "acessorios",
+    done: boolean,
+  ): { success: true } | { success: false; message: string } {
+    const order = orders.find((x) => x.id === osId);
+    if (!order) return { success: false, message: "OS não encontrada" };
+
+    const CUTTING_STATUSES = ["cortes", "embalagem", "acessorios_plano"];
+    if (!CUTTING_STATUSES.includes(order.status)) {
+      return { success: false, message: "OS não está em etapa de corte" };
+    }
+
+    let cut = cuttingPlans.find((c) => c.osId === osId);
+    if (!cut) {
+      cut = { osId, status: "em_andamento", packaging: null };
+      cuttingPlans.push(cut);
+    }
+
+    if (step === "corte") cut.corteFeito = done;
+    else if (step === "embalagem") cut.embalagemFeita = done;
+    else cut.acessoriosFeitos = done;
+
+    const allDone = cut.corteFeito && cut.embalagemFeita && cut.acessoriosFeitos;
+    cut.status = allDone ? "concluido" : "em_andamento";
+    order.updatedAt = new Date();
+
+    return { success: true };
   },
 
   getFieldMeasurement(osId: string, type: "orcamento" | "final") {
@@ -698,6 +796,9 @@ export const mockRepository = {
         accessories: true,
         glass: true,
       },
+      corteFeito: true,
+      embalagemFeita: true,
+      acessoriosFeitos: true,
     };
     if (existing) Object.assign(existing, data);
     else cuttingPlans.push(data);

@@ -18,6 +18,8 @@ import {
   type NavItem,
 } from "@/lib/auth/permissions";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { hasAnyRole } from "@/lib/auth/permissions";
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
@@ -51,20 +53,32 @@ export function AppSidebar({
   const navItems: NavItem[] = session
     ? getNavItemsForRoles(session.roles)
     : getNavItemsForRoles(["admin"]);
+  const showNotifications = session
+    ? hasAnyRole(session.roles, ["admin", "gerente"])
+    : false;
 
   return (
-    <aside className={cn("flex w-56 flex-col border-r bg-card", className)}>
+    <aside className={cn("flex w-56 flex-col overflow-visible border-r bg-card", className)}>
       <div className="border-b px-4 py-5">
-        <Link
-          href={session ? navHomeHref(session.roles) : "/dashboard"}
-          prefetch={false}
-          className="font-semibold tracking-tight"
-        >
-          Fluxo Diógenes
-        </Link>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Gestão de vidraçaria
-        </p>
+        <div className="flex items-start justify-between gap-2 overflow-visible">
+          <div className="min-w-0">
+            <Link
+              href={session ? navHomeHref(session.roles) : "/dashboard"}
+              prefetch={false}
+              className="font-semibold tracking-tight"
+            >
+              Fluxo Diógenes
+            </Link>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Gestão de vidraçaria
+            </p>
+          </div>
+          <NotificationBell
+            enabled={showNotifications}
+            panelAlign="sidebar"
+            className="hidden md:block"
+          />
+        </div>
       </div>
       <nav className="flex flex-1 flex-col gap-1 p-3">
         {navItems.map(({ href, label, match }) => {

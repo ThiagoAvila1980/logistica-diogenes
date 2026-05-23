@@ -33,6 +33,9 @@ export function DashboardShell({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const isField = pathname.startsWith("/field");
+  const showNotifications = session
+    ? session.roles.some((role) => role === "admin" || role === "gerente")
+    : false;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -77,6 +80,7 @@ export function DashboardShell({
         <MobileHeader
           title={getMobileTitle(pathname)}
           onMenuOpen={() => setMenuOpen(true)}
+          showNotifications={showNotifications}
         />
 
         <main

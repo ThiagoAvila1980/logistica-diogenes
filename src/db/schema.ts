@@ -310,6 +310,9 @@ export const cuttingPlans = pgTable(
       onDelete: "set null",
     }),
     status: cuttingStatus("status").default("pendente").notNull(),
+    corteFeito: boolean("corte_feito").default(false).notNull(),
+    embalagemFeita: boolean("embalagem_feita").default(false).notNull(),
+    acessoriosFeitos: boolean("acessorios_feitos").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -420,6 +423,30 @@ export const installationLogs = pgTable(
   ],
 );
 
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    type: varchar("type", { length: 64 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    body: text("body").notNull(),
+    href: text("href"),
+    osId: uuid("os_id").references(() => serviceOrders.id, {
+      onDelete: "set null",
+    }),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("idx_notifications_user_created").on(t.userId, t.createdAt),
+  ],
+);
+
 // ─── KPIs / alertas de prazo (Fase 3) ─────────────────────────────────────────
 
 export const stageSlaConfig = pgTable(
@@ -469,6 +496,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   installationLogs: many(installationLogs),
   statusChanges: many(statusHistory),
   passkeys: many(userPasskeys),
+  notifications: many(notifications),
 }));
 
 export const vehiclesRelations = relations(vehicles, ({ many }) => ({

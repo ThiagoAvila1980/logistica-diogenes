@@ -34,3 +34,20 @@ export function isKanbanNotifyStatus(
 ): status is "transporte_perfil" | "transporte_levar_vidro" {
   return status === "transporte_perfil" || status === "transporte_levar_vidro";
 }
+
+export type AppNotification = {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  href: string | null;
+  osId: string | null;
+  readAt: Date | null;
+  createdAt: Date;
+};
+
+export type NotificationListResult = {
+  items: AppNotification[];
+  unreadCount: number;
+};

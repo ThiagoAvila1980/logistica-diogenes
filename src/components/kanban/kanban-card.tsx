@@ -10,6 +10,7 @@ import type { KanbanOrderItem } from "@/lib/data/kanban";
 import { KanbanStatusBadge } from "./kanban-status-badge";
 
 const MEASUREMENT_STATUSES = new Set(["medicao_orcamento", "medicao_final"]);
+const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
 
 const PRIORITY_BORDER: Record<string, string> = {
   baixa: "border-l-blue-500",
@@ -48,6 +49,7 @@ export function KanbanCard({
   const displayNumber = getOrderDisplayNumber(os);
   const isMeasurementColumn = MEASUREMENT_STATUSES.has(os.status);
   const isFinal = os.status === "medicao_final";
+  const isCuttingColumn = CUTTING_STATUSES.has(os.status);
 
   return (
     <Draggable draggableId={os.id} index={index}>
@@ -116,6 +118,31 @@ export function KanbanCard({
                   >
                     {isFinal ? "Final" : "Orçamento"}
                   </span>
+                </div>
+              ) : isCuttingColumn ? (
+                <div className="flex gap-1">
+                  {(
+                    [
+                      { key: "corte", label: "Corte" },
+                      { key: "embalagem", label: "Embal." },
+                      { key: "acessorios", label: "Acess." },
+                    ] as const
+                  ).map(({ key, label }) => {
+                    const done = os.cuttingSteps?.[key] ?? false;
+                    return (
+                      <span
+                        key={key}
+                        className={cn(
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          done
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {label}
+                      </span>
+                    );
+                  })}
                 </div>
               ) : (
                 <>

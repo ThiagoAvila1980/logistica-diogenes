@@ -21,6 +21,22 @@ export const measurementClientName = sql<string>`coalesce(${measurements.cliente
 export const measurementClientPhone = measurements.telefone;
 
 /**
+ * Nº do orçamento para exibição: prioriza `service_orders.budget_reference`,
+ * depois `measurements.numero_orcamento` (preferindo medição de orçamento).
+ */
+export const resolvedBudgetReference = sql<string | null>`coalesce(
+  nullif(btrim(${serviceOrders.budgetReference}), ''),
+  (
+    select nullif(btrim(m_ref."numero_orcamento"), '')
+    from "measurements" m_ref
+    where m_ref."os_id" = ${serviceOrders.id}
+      and nullif(btrim(m_ref."numero_orcamento"), '') is not null
+    order by case when m_ref."type" = 'orcamento'::measurement_types then 0 else 1 end
+    limit 1
+  )
+)`;
+
+/**
  * Subquery correlacionada: true se ao menos uma medição da OS tem itens registrados.
  * Usada no card da tela de Medições para distinguir "Pendente" de "Medida".
  */

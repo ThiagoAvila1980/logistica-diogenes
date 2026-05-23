@@ -71,6 +71,20 @@
       "when": 1779244000000,
       "tag": "0011_drop_clients",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1748000000000,
+      "tag": "0014_cutting_steps",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1748100000000,
+      "tag": "0015_notifications",
+      "breakpoints": true
     }
   ]
 }

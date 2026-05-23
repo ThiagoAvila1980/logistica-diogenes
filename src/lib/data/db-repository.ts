@@ -11,6 +11,7 @@ import {
   measurementClientName,
   measurementClientPhone,
   primaryMeasurementJoin,
+  resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
 import type { OrderDetail, OrderListItem } from "./types";
 
@@ -47,7 +48,7 @@ export async function listServiceOrdersDb(
       updatedAt: serviceOrders.updatedAt,
       assignedUserId: serviceOrders.assignedUserId,
       clientName: measurementClientName,
-      budgetReference: serviceOrders.budgetReference,
+      budgetReference: resolvedBudgetReference,
       hasMeasurement: hasMeasurementItems,
     })
     .from(serviceOrders)
@@ -95,7 +96,7 @@ export async function getServiceOrderByIdDb(
       assignedUserId: serviceOrders.assignedUserId,
       clientName: measurementClientName,
       clientPhone: measurementClientPhone,
-      budgetReference: serviceOrders.budgetReference,
+      budgetReference: resolvedBudgetReference,
       sourcePdfUrl: serviceOrders.sourcePdfUrl,
     })
     .from(serviceOrders)

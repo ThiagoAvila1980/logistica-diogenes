@@ -2,6 +2,12 @@ import type { OsStatus, MeasurementFlow } from "@/db/schema";
 import { useMockData } from "./config";
 import { mockRepository } from "./mock-repository";
 
+export type CuttingSteps = {
+  corte: boolean;
+  embalagem: boolean;
+  acessorios: boolean;
+};
+
 export type KanbanOrderItem = {
   id: string;
   number: string;
@@ -15,6 +21,8 @@ export type KanbanOrderItem = {
   updatedAt: Date;
   /** true quando o medidor já registrou itens de medição (items não vazio). */
   hasMeasurement: boolean;
+  /** Presente quando a OS está no plano de corte */
+  cuttingSteps: CuttingSteps | null;
 };
 
 export async function listKanbanOrders(): Promise<KanbanOrderItem[]> {

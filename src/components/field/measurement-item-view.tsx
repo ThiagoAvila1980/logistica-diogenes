@@ -97,9 +97,44 @@ export function MeasurementItemView({
 
 export function MeasurementDimensionsSummary({
   item,
+  variant = "stacked",
 }: {
   item: MeasurementLineItem;
+  variant?: "stacked" | "inline";
 }) {
+  if (variant === "inline") {
+    const ambiente = item.ambiente?.trim();
+
+    return (
+      <dl className="grid grid-cols-3 gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,1fr))] sm:items-start sm:gap-x-10">
+        {ambiente ? (
+          <div className="col-span-3 min-w-0 sm:col-span-1">
+            <dt className="text-xs text-muted-foreground">Ambiente</dt>
+            <dd className="mt-0.5 text-sm font-medium">{ambiente}</dd>
+          </div>
+        ) : null}
+        <div className="min-w-0">
+          <dt className="text-xs text-muted-foreground">Quantidade</dt>
+          <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
+            {item.qty > 0 ? item.qty : "—"}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs text-muted-foreground">Largura</dt>
+          <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
+            {item.largura > 0 ? `${item.largura} mm` : "—"}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs text-muted-foreground">Altura</dt>
+          <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
+            {item.altura > 0 ? `${item.altura} mm` : "—"}
+          </dd>
+        </div>
+      </dl>
+    );
+  }
+
   return (
     <div className="rounded-lg border bg-muted/20 p-4">
       {item.ambiente?.trim() ? (

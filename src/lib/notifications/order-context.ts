@@ -18,6 +18,8 @@ import {
 
   primaryMeasurementJoin,
 
+  resolvedBudgetReference,
+
 } from "@/lib/data/order-measurement-join";
 
 import type { ClientNotificationContext } from "./types";
@@ -70,7 +72,7 @@ export async function loadClientNotificationContext(
 
       number: serviceOrders.number,
 
-      budgetReference: serviceOrders.budgetReference,
+      budgetReference: resolvedBudgetReference,
 
       clientName: measurementClientName,
 

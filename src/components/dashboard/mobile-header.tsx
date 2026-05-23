@@ -2,13 +2,19 @@
 
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 type MobileHeaderProps = {
   title?: string;
   onMenuOpen: () => void;
+  showNotifications?: boolean;
 };
 
-export function MobileHeader({ title = "Fluxo Diógenes", onMenuOpen }: MobileHeaderProps) {
+export function MobileHeader({
+  title = "Fluxo Diógenes",
+  onMenuOpen,
+  showNotifications = false,
+}: MobileHeaderProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-3 border-b bg-card/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden safe-top">
       <Button
@@ -21,7 +27,10 @@ export function MobileHeader({ title = "Fluxo Diógenes", onMenuOpen }: MobileHe
       >
         <Menu className="h-5 w-5" />
       </Button>
-      <span className="truncate text-sm font-semibold">{title}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+        {title}
+      </span>
+      <NotificationBell enabled={showNotifications} />
     </header>
   );
 }
