@@ -1,4 +1,4 @@
-import type { OsStatus, MeasurementFlow } from "@/db/schema";
+import type { OsStatus } from "@/db/schema";
 import {
   canTransitionWithFlow,
   getAllowedTransitions,
@@ -64,50 +64,40 @@ export const STATUS_LABELS: Record<OsStatus, string> = {
 /** Ordem visual padrão do pipeline */
 export const WIZARD_STEPS: OsStatus[] = getWizardStepsForFlow();
 
-export function canTransition(
-  from: OsStatus,
-  to: OsStatus,
-  flow?: MeasurementFlow,
-): boolean {
-  return canTransitionWithFlow(from, to, flow);
+export function canTransition(from: OsStatus, to: OsStatus): boolean {
+  return canTransitionWithFlow(from, to);
 }
 
-export function getStepIndex(
-  status: OsStatus,
-  flow?: MeasurementFlow,
-): number {
-  return getStepIndexForFlow(status, flow);
+export function getStepIndex(status: OsStatus): number {
+  return getStepIndexForFlow(status);
 }
 
 /** Próximo status no fluxo linear (exclui revisão) */
-export function getNextLinearStatus(
-  current: OsStatus,
-  flow?: MeasurementFlow,
-): OsStatus | null {
+export function getNextLinearStatus(current: OsStatus): OsStatus | null {
   if (current === "revisao" || current === "concluido") return null;
-  const steps = getWizardStepsForFlow(flow);
+  const steps = getWizardStepsForFlow();
   const idx = steps.indexOf(current);
   if (idx < 0 || idx >= steps.length - 1) return null;
   return steps[idx + 1] ?? null;
 }
 
 /** Transições de avanço (primeira do fluxo, sem revisão) */
-export function getPrimaryNextStatus(
-  current: OsStatus,
-  flow?: MeasurementFlow,
-): OsStatus | null {
-  return getPrimaryNextStatusForFlow(current, flow);
+export function getPrimaryNextStatus(current: OsStatus): OsStatus | null {
+  return getPrimaryNextStatusForFlow(current);
 }
 
 export { getAllowedTransitions, getWizardStepsForFlow };
 
+export type CuttingSteps = {
+  corteFeito: boolean;
+  embalagemFeita: boolean;
+  acessoriosFeitos: boolean;
+};
+
 export type TransitionContext = {
-  measurementFlow?: MeasurementFlow;
   hasFinalMeasurement: boolean;
   hasBudgetMeasurement?: boolean;
-  cuttingPlanStatus: string | null;
-  packagingComplete: boolean;
-  accessoriesComplete: boolean;
+  cuttingSteps: CuttingSteps;
   transportItemsChecked: Record<string, boolean> | null;
   installationHasPhotos: boolean;
   revisionFromStatus: OsStatus | null;
@@ -144,10 +134,8 @@ export function assertTransitionGuards(
   to: OsStatus,
   ctx: TransitionContext,
 ): void {
-  const flow = ctx.measurementFlow;
-
   if (
-    !canTransition(from, to, flow) &&
+    !canTransition(from, to) &&
     !(from === "revisao" && to !== "revisao")
   ) {
     throw new TransitionValidationError(
@@ -184,29 +172,25 @@ export function assertTransitionGuards(
     );
   }
 
-  if (to === "embalagem") {
-    if (ctx.cuttingPlanStatus !== "concluido" && ctx.cuttingPlanStatus !== "em_andamento") {
-      throw new TransitionValidationError(
-        "CUTTING_NOT_COMPLETE",
-        "Conclua os cortes antes da embalagem.",
-      );
-    }
+  if (to === "embalagem" && !ctx.cuttingSteps.corteFeito) {
+    throw new TransitionValidationError(
+      "CUTTING_NOT_COMPLETE",
+      "Conclua os cortes antes da embalagem.",
+    );
   }
 
-  if (to === "acessorios_plano" && !ctx.packagingComplete) {
+  if (to === "acessorios_plano" && !ctx.cuttingSteps.embalagemFeita) {
     throw new TransitionValidationError(
       "PACKAGING_INCOMPLETE",
       "Preencha o checklist de embalagem antes dos acessórios.",
     );
   }
 
-  if (to === "transporte_perfil") {
-    if (!ctx.accessoriesComplete) {
-      throw new TransitionValidationError(
-        "ACCESSORIES_INCOMPLETE",
-        "Registre os acessórios do plano de corte antes do transporte.",
-      );
-    }
+  if (to === "transporte_perfil" && !ctx.cuttingSteps.acessoriosFeitos) {
+    throw new TransitionValidationError(
+      "ACCESSORIES_INCOMPLETE",
+      "Registre os acessórios do plano de corte antes do transporte.",
+    );
   }
 
   if (to === "concluido" && !ctx.installationHasPhotos) {

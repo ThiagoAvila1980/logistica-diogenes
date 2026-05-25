@@ -35,9 +35,6 @@ export const ROLE_ROUTE_ACCESS: Record<UserRole, readonly string[]> = {
   instalador: ["/installation"],
 };
 
-const OS_DETAIL_PATTERN =
-  /^\/dashboard\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 const DEFAULT_ROUTE_PRIORITY: readonly UserRole[] = [
   "admin",
   "gerente",
@@ -107,21 +104,12 @@ export function isAdminOnlyPath(pathname: string): boolean {
   );
 }
 
-/** Detalhe de OS no painel — operadores precisam avançar etapas via pipeline. */
-export function isOsDetailPath(pathname: string): boolean {
-  return OS_DETAIL_PATTERN.test(pathname);
-}
-
 function canAccessRouteForRole(role: UserRole, pathname: string): boolean {
   if (isAdminOnlyPath(pathname)) {
     return role === "admin";
   }
 
   if (role === "admin" || role === "gerente") {
-    return true;
-  }
-
-  if (isOsDetailPath(pathname)) {
     return true;
   }
 
@@ -199,8 +187,25 @@ export const NAV_ITEMS: NavItem[] = [
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: "/admin/users", label: "Usuários", match: "/admin/users" },
-  { href: "/admin/vehicles", label: "Veículos", match: "/admin/vehicles" },
 ];
+
+export const SETTINGS_NAV_ITEMS: NavItem[] = [
+  { href: "/admin/vehicles", label: "Veículos", match: "/admin/vehicles" },
+  { href: "/admin/cores", label: "Cores", match: "/admin/cores" },
+  { href: "/admin/tipo-vidro", label: "Tipo de vidro", match: "/admin/tipo-vidro" },
+  {
+    href: "/admin/tipo-envidracamento",
+    label: "Tipo de envidraçamento",
+    match: "/admin/tipo-envidracamento",
+  },
+];
+
+export function isSettingsPath(pathname: string): boolean {
+  return SETTINGS_NAV_ITEMS.some(
+    (item) =>
+      pathname === item.match || pathname.startsWith(`${item.match}/`),
+  );
+}
 
 export function getNavItemsForRoles(roles: readonly UserRole[]): NavItem[] {
   const seen = new Set<string>();

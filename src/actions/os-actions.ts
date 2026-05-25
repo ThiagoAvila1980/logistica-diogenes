@@ -1,12 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
-import { eqMeasurementType } from "@/lib/data/order-measurement-join";
 import {
-  serviceOrders,
   measurements,
   cuttingPlans,
   transportLogs,
@@ -27,8 +25,6 @@ import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import type {
   Dimensions,
-  CutItem,
-  PackagingChecklist,
   InstallationPhotos,
 } from "@/lib/workflow/schemas";
 import {
@@ -66,27 +62,35 @@ async function loadStepContext(
   db: ReturnType<typeof getDb>,
   osId: string,
 ): Promise<AdvanceStepContext> {
-  const [finalMeas] = await db
-    .select({ id: measurements.id })
+  const [meas] = await db
+    .select({
+      status: measurements.status,
+      items: measurements.items,
+      type: measurements.type,
+    })
     .from(measurements)
-    .where(and(eq(measurements.osId, osId), eqMeasurementType("final")))
+    .where(eq(measurements.id, osId))
     .limit(1);
+
+  const hasItems =
+    !!meas?.items && Array.isArray(meas.items) && meas.items.length > 0;
+  const hasFinalMeasurement =
+    meas?.type === "final" && (meas.status === "medida" || hasItems);
 
   const [cut] = await db
     .select({
-      cuts: cuttingPlans.cuts,
-      status: cuttingPlans.status,
-      packaging: cuttingPlans.packaging,
-      accessories: cuttingPlans.accessories,
+      corteFeito: cuttingPlans.corteFeito,
+      embalagemFeita: cuttingPlans.embalagemFeita,
+      acessoriosFeitos: cuttingPlans.acessoriosFeitos,
     })
     .from(cuttingPlans)
-    .where(eq(cuttingPlans.osId, osId))
+    .where(eq(cuttingPlans.idMedicao, osId))
     .limit(1);
 
   const [trans] = await db
     .select({ itemsChecked: transportLogs.itemsChecked })
     .from(transportLogs)
-    .where(eq(transportLogs.osId, osId))
+    .where(eq(transportLogs.idMedicao, osId))
     .limit(1);
 
   const [inst] = await db
@@ -94,17 +98,16 @@ async function loadStepContext(
       photos: installationLogs.photos,
     })
     .from(installationLogs)
-    .where(eq(installationLogs.osId, osId))
+    .where(eq(installationLogs.idMedicao, osId))
     .limit(1);
 
   return {
-    hasFinalMeasurement: !!finalMeas,
+    hasFinalMeasurement,
     cuttingPlan: cut
       ? {
-          cuts: cut.cuts ?? null,
-          status: cut.status,
-          packaging: cut.packaging as Record<string, boolean> | null,
-          accessories: cut.accessories as Record<string, number> | null,
+          corteFeito: cut.corteFeito,
+          embalagemFeita: cut.embalagemFeita,
+          acessoriosFeitos: cut.acessoriosFeitos,
         }
       : null,
     transportItemsChecked: trans?.itemsChecked ?? null,
@@ -122,33 +125,15 @@ async function persistStepData(
   payload: Record<string, unknown>,
 ) {
   if (nextStatus === "medicao_final") {
-    const [existing] = await tx
-      .select({ id: measurements.id })
-      .from(measurements)
-      .where(
-        and(eq(measurements.osId, osId), eqMeasurementType("final")),
-      )
-      .limit(1);
-
-    const values = {
-      dimensions: (payload.dimensions as Dimensions) ?? {},
-      photos: (payload.photos as string[]) ?? [],
-      notes: (payload.notes as string) ?? null,
-      updatedAt: new Date(),
-    };
-
-    if (existing) {
-      await tx
-        .update(measurements)
-        .set(values)
-        .where(eq(measurements.id, existing.id));
-    } else {
-      await tx.insert(measurements).values({
-        osId,
-        type: "final",
-        ...values,
-      });
-    }
+    await tx
+      .update(measurements)
+      .set({
+        dimensions: (payload.dimensions as Dimensions) ?? {},
+        photos: (payload.photos as string[]) ?? [],
+        notes: (payload.notes as string) ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(measurements.id, osId));
   }
 
   if (
@@ -159,21 +144,12 @@ async function persistStepData(
     const [existing] = await tx
       .select({ id: cuttingPlans.id })
       .from(cuttingPlans)
-      .where(eq(cuttingPlans.osId, osId))
+      .where(eq(cuttingPlans.idMedicao, osId))
       .limit(1);
 
-    const cuttingComplete =
-      nextStatus === "embalagem" || nextStatus === "acessorios_plano";
-
     const values = {
-      cuts: (payload.cuts as CutItem[]) ?? [],
-      packaging: (payload.packaging as PackagingChecklist) ?? {},
-      accessories: (payload.accessories as Record<string, number>) ?? {},
       notes: (payload.notes as string) ?? null,
-      status: (cuttingComplete ? "concluido" : "em_andamento") as
-        | "concluido"
-        | "em_andamento",
-      completedAt: cuttingComplete ? new Date() : null,
+      operatorId: (payload.operatorId as string) ?? null,
     };
 
     if (existing) {
@@ -182,7 +158,7 @@ async function persistStepData(
         .set(values)
         .where(eq(cuttingPlans.id, existing.id));
     } else {
-      await tx.insert(cuttingPlans).values({ osId, ...values });
+      await tx.insert(cuttingPlans).values({ idMedicao: osId, ...values });
     }
   }
 
@@ -197,7 +173,7 @@ async function persistStepData(
     const [existing] = await tx
       .select({ id: transportLogs.id })
       .from(transportLogs)
-      .where(eq(transportLogs.osId, osId))
+      .where(eq(transportLogs.idMedicao, osId))
       .limit(1);
 
     const values = {
@@ -215,7 +191,7 @@ async function persistStepData(
         .set(values)
         .where(eq(transportLogs.id, existing.id));
     } else {
-      await tx.insert(transportLogs).values({ osId, ...values });
+      await tx.insert(transportLogs).values({ idMedicao: osId, ...values });
     }
   }
 
@@ -228,7 +204,7 @@ async function persistStepData(
     const [existing] = await tx
       .select({ id: transportLogs.id, vehicleId: transportLogs.vehicleId })
       .from(transportLogs)
-      .where(eq(transportLogs.osId, osId))
+      .where(eq(transportLogs.idMedicao, osId))
       .limit(1);
 
     const vehicleId =
@@ -265,7 +241,7 @@ async function persistStepData(
         .set(values)
         .where(eq(transportLogs.id, existing.id));
     } else {
-      await tx.insert(transportLogs).values({ osId, ...values });
+      await tx.insert(transportLogs).values({ idMedicao: osId, ...values });
     }
   }
 
@@ -275,7 +251,7 @@ async function persistStepData(
     const [existing] = await tx
       .select()
       .from(installationLogs)
-      .where(eq(installationLogs.osId, osId))
+      .where(eq(installationLogs.idMedicao, osId))
       .limit(1);
 
     const patch = {
@@ -301,7 +277,7 @@ async function persistStepData(
         .set(patch)
         .where(eq(installationLogs.id, existing.id));
     } else {
-      await tx.insert(installationLogs).values({ osId, ...patch });
+      await tx.insert(installationLogs).values({ idMedicao: osId, ...patch });
     }
   }
 
@@ -313,7 +289,7 @@ async function persistStepData(
         status: "concluido",
         completedAt: new Date(),
       })
-      .where(eq(installationLogs.osId, osId));
+      .where(eq(installationLogs.idMedicao, osId));
   }
 }
 
@@ -357,7 +333,6 @@ export async function advanceOSStatus(
         notificationSummary = formatNotificationSummary(notifyResult);
       }
     }
-    revalidatePath(`/dashboard/${osId}`);
     revalidatePath("/dashboard");
     return {
       success: true,
@@ -372,7 +347,7 @@ export async function advanceOSStatus(
 
     const fromStatus = accessibleOrder.status as OsStatus;
 
-    if (!isAllowedAdvance(fromStatus, nextStatus, accessibleOrder.measurementFlow)) {
+    if (!isAllowedAdvance(fromStatus, nextStatus)) {
       return {
         success: false,
         message: `Transição inválida: ${fromStatus} → ${nextStatus}`,
@@ -398,12 +373,12 @@ export async function advanceOSStatus(
       }
 
       await tx
-        .update(serviceOrders)
-        .set({ status: nextStatus, updatedAt: sql`NOW()` })
-        .where(eq(serviceOrders.id, osId));
+        .update(measurements)
+        .set({ etapa: nextStatus, updatedAt: sql`NOW()` })
+        .where(eq(measurements.id, osId));
 
       await tx.insert(statusHistory).values({
-        osId,
+        measurementId: osId,
         fromStatus,
         toStatus: nextStatus,
         changedById: session?.userId ?? null,
@@ -418,7 +393,6 @@ export async function advanceOSStatus(
       });
     });
 
-    revalidatePath(`/dashboard/${osId}`);
     revalidatePath("/dashboard");
 
     let notificationSummary: string | undefined;

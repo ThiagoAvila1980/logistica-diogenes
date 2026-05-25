@@ -15,11 +15,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { MeasurementFlow, OsStatus } from "@/db/schema";
+import type { OsStatus } from "@/db/schema";
 import {
-  getStepIndexForFlow,
-  getWizardStepsForFlow,
-} from "@/lib/workflow/measurement-flow";
+  getStepIndex,
+  WIZARD_STEPS,
+} from "@/lib/workflow/status-machine";
 import {
   kanbanColumnTitle,
   kanbanColumnTooltip,
@@ -53,7 +53,6 @@ const STEP_ICONS: Record<OsStatus, LucideIcon> = {
 
 export type StatusWizardProps = {
   currentStatus: OsStatus;
-  measurementFlow?: MeasurementFlow;
   className?: string;
   overdueSteps?: OsStatus[];
   /** Indica atualização otimista em andamento */
@@ -62,16 +61,13 @@ export type StatusWizardProps = {
 
 export function StatusWizard({
   currentStatus,
-  measurementFlow = "cliente_informou",
   className,
   overdueSteps = [],
   pending = false,
 }: StatusWizardProps) {
-  const steps = getWizardStepsForFlow(measurementFlow);
+  const steps = WIZARD_STEPS;
   const currentIndex =
-    currentStatus === "revisao"
-      ? -1
-      : getStepIndexForFlow(currentStatus, measurementFlow);
+    currentStatus === "revisao" ? -1 : getStepIndex(currentStatus);
 
   return (
     <div className={cn("w-full", className)}>
@@ -159,4 +155,4 @@ export function StatusWizard({
     </div>
   );
 }
-
+

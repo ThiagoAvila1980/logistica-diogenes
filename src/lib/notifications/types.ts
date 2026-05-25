@@ -1,7 +1,7 @@
 import type { OsStatus } from "@/db/schema";
 
 export type ClientNotificationContext = {
-  osId: string;
+  measurementId: string;
   osNumber: string;
   clientName: string;
   clientEmail: string | null;
@@ -42,7 +42,10 @@ export type AppNotification = {
   title: string;
   body: string;
   href: string | null;
-  osId: string | null;
+  measurementId: string | null;
+  cuttingPlanId: string | null;
+  transportLogId: string | null;
+  installationLogId: string | null;
   readAt: Date | null;
   createdAt: Date;
 };

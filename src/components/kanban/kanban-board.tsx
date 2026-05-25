@@ -7,7 +7,7 @@ import { KanbanColumn } from "./kanban-column";
 import { KanbanFiltersBar } from "./kanban-filters";
 import { KanbanColumnStats } from "./kanban-column-stats";
 import { moveOSCard } from "@/actions/kanban-actions";
-import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
+import { getAllowedTransitions } from "@/lib/workflow/status-machine";
 import {
   KANBAN_PHASES,
   getPhaseIdForStatus,
@@ -105,11 +105,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         return;
       }
 
-      if (
-        !getAllowedTransitions(sourceStatus, order.measurementFlow).includes(
-          destStatus,
-        )
-      ) {
+      if (!getAllowedTransitions(sourceStatus).includes(destStatus)) {
         setDragError(
           `Não é possível mover de "${STATUS_LABELS[sourceStatus]}" para "${STATUS_LABELS[destStatus]}".`,
         );
@@ -147,11 +143,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         return;
       }
 
-      if (
-        !getAllowedTransitions(sourceStatus, order.measurementFlow).includes(
-          destStatus,
-        )
-      ) {
+      if (!getAllowedTransitions(sourceStatus).includes(destStatus)) {
         setDragError(
           `Não é possível mover de "${STATUS_LABELS[sourceStatus]}" para "${STATUS_LABELS[destStatus]}".`,
         );
@@ -273,10 +265,9 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
       if (!order) return;
 
       const sourceStatus = order.status;
-      const next = getAllowedTransitions(
-        sourceStatus,
-        order.measurementFlow,
-      ).find((s) => s !== "revisao");
+      const next = getAllowedTransitions(sourceStatus).find(
+        (s) => s !== "revisao",
+      );
 
       if (!next) {
         setDragError("Não há próxima etapa permitida para esta OS.");
@@ -377,9 +368,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
               items={revisaoItems}
               isDropDisabled={isPending}
               canAdvanceCards={revisaoItems.some((item) =>
-                getAllowedTransitions(item.status, item.measurementFlow).some(
-                  (s) => s !== "revisao",
-                ),
+                getAllowedTransitions(item.status).some((s) => s !== "revisao"),
               )}
               onKeyboardAdvance={handleKeyboardAdvance}
             />

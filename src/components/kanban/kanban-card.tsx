@@ -5,6 +5,7 @@ import { Draggable } from "@hello-pangea/dnd";
 import { GripVertical } from "lucide-react";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { formatBrDate } from "@/lib/date-format";
+import { getOsModuleHref } from "@/lib/os-module-href";
 import { cn } from "@/lib/utils";
 import type { KanbanOrderItem } from "@/lib/data/kanban";
 import { KanbanStatusBadge } from "./kanban-status-badge";
@@ -13,7 +14,6 @@ const MEASUREMENT_STATUSES = new Set(["medicao_orcamento", "medicao_final"]);
 const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
 
 const PRIORITY_BORDER: Record<string, string> = {
-  baixa: "border-l-blue-500",
   normal: "border-l-border",
   alta: "border-l-orange-500",
   urgente: "border-l-red-500",
@@ -47,8 +47,9 @@ export function KanbanCard({
   const priorityClass =
     PRIORITY_BORDER[os.priority] ?? PRIORITY_BORDER.normal;
   const displayNumber = getOrderDisplayNumber(os);
+  const detailHref = getOsModuleHref(os.id, os.status);
   const isMeasurementColumn = MEASUREMENT_STATUSES.has(os.status);
-  const isFinal = os.status === "medicao_final";
+  const isFinal = os.type === "final";
   const isCuttingColumn = CUTTING_STATUSES.has(os.status);
 
   return (
@@ -82,7 +83,7 @@ export function KanbanCard({
             <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
               <div className="flex items-start justify-between gap-1">
                 <Link
-                  href={`/dashboard/${os.id}`}
+                  href={detailHref}
                   className="truncate font-mono text-[10px] font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring sm:text-[11px]"
                   tabIndex={snapshot.isDragging ? -1 : 0}
                 >
@@ -90,7 +91,7 @@ export function KanbanCard({
                 </Link>
               </div>
               <Link
-                href={`/dashboard/${os.id}`}
+                href={detailHref}
                 className="hidden truncate text-[11px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring sm:block"
                 tabIndex={snapshot.isDragging ? -1 : 0}
               >

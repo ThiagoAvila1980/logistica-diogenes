@@ -21,7 +21,7 @@ export async function getFieldMeasurementDb(
       photos: measurements.photos,
     })
     .from(measurements)
-    .where(and(eq(measurements.osId, osId), eqMeasurementType(type)))
+    .where(and(eq(measurements.id, osId), eqMeasurementType(type)))
     .limit(1);
 
   if (!row) return undefined;

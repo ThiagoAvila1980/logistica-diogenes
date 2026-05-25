@@ -15,17 +15,17 @@ export async function getLogisticsSummariesDb(
   const db = getDb();
   const rows = await db
     .select({
-      osId: transportLogs.osId,
+      idMedicao: transportLogs.idMedicao,
       vehiclePlate: transportLogs.vehiclePlate,
       vehicleDescription: vehicles.description,
     })
     .from(transportLogs)
     .leftJoin(vehicles, eq(transportLogs.vehicleId, vehicles.id))
-    .where(inArray(transportLogs.osId, osIds));
+    .where(inArray(transportLogs.idMedicao, osIds));
 
   return Object.fromEntries(
     rows.map((r) => [
-      r.osId,
+      r.idMedicao,
       {
         vehiclePlate: r.vehiclePlate,
         vehicleDescription: r.vehicleDescription,

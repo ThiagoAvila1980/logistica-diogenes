@@ -1,6 +1,6 @@
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
-import { vehicles, transportLogs, serviceOrders } from "@/db/schema";
+import { vehicles, transportLogs, measurements } from "@/db/schema";
 import type { VehicleRow } from "./admin-mock-store";
 
 const ACTIVE_TRANSPORT_STATUSES = [
@@ -27,8 +27,8 @@ export async function listVehiclesDb(): Promise<VehicleRow[]> {
   const inUseRows = await db
     .select({ vehicleId: transportLogs.vehicleId })
     .from(transportLogs)
-    .innerJoin(serviceOrders, eq(transportLogs.osId, serviceOrders.id))
-    .where(inArray(serviceOrders.status, [...ACTIVE_TRANSPORT_STATUSES]));
+    .innerJoin(measurements, eq(transportLogs.idMedicao, measurements.id))
+    .where(inArray(measurements.etapa, [...ACTIVE_TRANSPORT_STATUSES]));
 
   const inUseSet = new Set(
     inUseRows.map((r) => r.vehicleId).filter(Boolean) as string[],
@@ -72,11 +72,11 @@ export async function isVehicleInUseDb(vehicleId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: transportLogs.id })
     .from(transportLogs)
-    .innerJoin(serviceOrders, eq(transportLogs.osId, serviceOrders.id))
+    .innerJoin(measurements, eq(transportLogs.idMedicao, measurements.id))
     .where(
       and(
         eq(transportLogs.vehicleId, vehicleId),
-        inArray(serviceOrders.status, [...ACTIVE_TRANSPORT_STATUSES]),
+        inArray(measurements.etapa, [...ACTIVE_TRANSPORT_STATUSES]),
       ),
     )
     .limit(1);
@@ -133,7 +133,7 @@ export async function assignVehicleToTransportDb(
   const [existing] = await db
     .select({ id: transportLogs.id })
     .from(transportLogs)
-    .where(eq(transportLogs.osId, osId))
+    .where(eq(transportLogs.idMedicao, osId))
     .limit(1);
 
   const values = {
@@ -151,6 +151,6 @@ export async function assignVehicleToTransportDb(
       .set(values)
       .where(eq(transportLogs.id, existing.id));
   } else {
-    await db.insert(transportLogs).values({ osId, ...values });
+    await db.insert(transportLogs).values({ idMedicao: osId, ...values });
   }
 }

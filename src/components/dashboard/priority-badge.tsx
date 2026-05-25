@@ -1,18 +1,18 @@
 import { Badge } from "@/components/ui/badge";
+import type { MeasurementPriority } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-const LABELS = {
-  baixa: "Baixa",
+const LABELS: Record<MeasurementPriority, string> = {
   normal: "Normal",
   alta: "Alta",
   urgente: "Urgente",
-} as const;
+};
 
 export function PriorityBadge({
   priority,
   className,
 }: {
-  priority: keyof typeof LABELS;
+  priority: MeasurementPriority;
   className?: string;
 }) {
   return (

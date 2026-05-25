@@ -19,7 +19,6 @@ const PRIORITY_OPTIONS: {
   label: string;
 }[] = [
   { value: "all", label: "Todas" },
-  { value: "baixa", label: "Baixa" },
   { value: "normal", label: "Normal" },
   { value: "alta", label: "Alta" },
   { value: "urgente", label: "Urgente" },

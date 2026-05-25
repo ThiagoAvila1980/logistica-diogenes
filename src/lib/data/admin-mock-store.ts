@@ -137,6 +137,84 @@ export type AdminUserRow = {
   active: boolean;
 };
 
+export type LookupMockRow = {
+  id: string;
+  descricao: string;
+};
+
+function normalizeLookupDescricao(descricao: string): string {
+  return descricao.trim();
+}
+
+function createLookupMockStore(seed: LookupMockRow[]) {
+  let items = seed.map((item) => ({ ...item }));
+
+  return {
+    list(): LookupMockRow[] {
+      return items
+        .map((item) => ({ ...item }))
+        .sort((a, b) => a.descricao.localeCompare(b.descricao, "pt-BR"));
+    },
+
+    create(descricao: string): LookupMockRow {
+      const value = normalizeLookupDescricao(descricao);
+      if (!value) throw new Error("Descrição obrigatória");
+      const normalized = value.toLowerCase();
+      if (items.some((item) => item.descricao.toLowerCase() === normalized)) {
+        throw new Error("Descrição já cadastrada");
+      }
+      const row: LookupMockRow = { id: crypto.randomUUID(), descricao: value };
+      items.push(row);
+      return row;
+    },
+
+    update(id: string, descricao: string): LookupMockRow {
+      const idx = items.findIndex((item) => item.id === id);
+      if (idx < 0) throw new Error("Registro não encontrado");
+      const value = normalizeLookupDescricao(descricao);
+      if (!value) throw new Error("Descrição obrigatória");
+      const normalized = value.toLowerCase();
+      if (
+        items.some(
+          (item) =>
+            item.id !== id && item.descricao.toLowerCase() === normalized,
+        )
+      ) {
+        throw new Error("Descrição já cadastrada");
+      }
+      items[idx].descricao = value;
+      return { ...items[idx] };
+    },
+
+    delete(id: string): void {
+      const idx = items.findIndex((item) => item.id === id);
+      if (idx < 0) throw new Error("Registro não encontrado");
+      items = items.filter((item) => item.id !== id);
+    },
+  };
+}
+
+export const corMockStore = createLookupMockStore([
+  { id: "mock-cor-branco", descricao: "Branco" },
+  { id: "mock-cor-preto", descricao: "Preto" },
+  { id: "mock-cor-bronze", descricao: "Bronze" },
+  { id: "mock-cor-natural", descricao: "Natural" },
+]);
+
+export const tipoVidroMockStore = createLookupMockStore([
+  { id: "mock-vidro-8", descricao: "Temperado 8mm" },
+  { id: "mock-vidro-10", descricao: "Temperado 10mm" },
+  { id: "mock-vidro-lam", descricao: "Laminado" },
+  { id: "mock-vidro-comum", descricao: "Comum" },
+]);
+
+export const tipoEnvidracamentoMockStore = createLookupMockStore([
+  { id: "mock-env-correr", descricao: "Correr" },
+  { id: "mock-env-abrir", descricao: "Abrir" },
+  { id: "mock-env-pivot", descricao: "Pivotante" },
+  { id: "mock-env-fixo", descricao: "Fixo" },
+]);
+
 let mockAdminUsers: AdminUserRow[] = [];
 
 export function initMockAdminUsers(seed: AdminUserRow[]) {

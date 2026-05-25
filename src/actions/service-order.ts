@@ -1,13 +1,11 @@
 "use server";
 
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
-import { eqMeasurementType } from "@/lib/data/order-measurement-join";
 import {
-  serviceOrders,
   statusHistory,
   measurements,
   cuttingPlans,
@@ -18,8 +16,6 @@ import {
 import {
   assertTransitionGuards,
   canTransition,
-  isAccessoriesComplete,
-  isPackagingComplete,
   TransitionValidationError,
 } from "@/lib/workflow/status-machine";
 import { getSession } from "@/lib/auth/session";
@@ -65,36 +61,34 @@ async function loadTransitionContext(
   osId: string,
   db: Awaited<ReturnType<typeof import("@/db").getDb>>,
 ) {
-  const [finalMeas] = await db
-    .select({ id: measurements.id })
+  const [meas] = await db
+    .select({
+      type: measurements.type,
+      status: measurements.status,
+      items: measurements.items,
+    })
     .from(measurements)
-    .where(
-      and(eq(measurements.osId, osId), eqMeasurementType("final")),
-    )
+    .where(eq(measurements.id, osId))
     .limit(1);
 
-  const [initialMeas] = await db
-    .select({ id: measurements.id })
-    .from(measurements)
-    .where(
-      and(eq(measurements.osId, osId), eqMeasurementType("orcamento")),
-    )
-    .limit(1);
+  const hasItems =
+    !!meas?.items && Array.isArray(meas.items) && meas.items.length > 0;
+  const isMeasured = meas?.status === "medida" || hasItems;
 
   const [cut] = await db
     .select({
-      status: cuttingPlans.status,
-      packaging: cuttingPlans.packaging,
-      accessories: cuttingPlans.accessories,
+      corteFeito: cuttingPlans.corteFeito,
+      embalagemFeita: cuttingPlans.embalagemFeita,
+      acessoriosFeitos: cuttingPlans.acessoriosFeitos,
     })
     .from(cuttingPlans)
-    .where(eq(cuttingPlans.osId, osId))
+    .where(eq(cuttingPlans.idMedicao, osId))
     .limit(1);
 
   const [trans] = await db
     .select({ itemsChecked: transportLogs.itemsChecked })
     .from(transportLogs)
-    .where(eq(transportLogs.osId, osId))
+    .where(eq(transportLogs.idMedicao, osId))
     .limit(1);
 
   const [inst] = await db
@@ -102,7 +96,7 @@ async function loadTransitionContext(
       photos: installationLogs.photos,
     })
     .from(installationLogs)
-    .where(eq(installationLogs.osId, osId))
+    .where(eq(installationLogs.idMedicao, osId))
     .limit(1);
 
   const photos = inst?.photos;
@@ -114,15 +108,13 @@ async function loadTransitionContext(
     photos.after.length > 0;
 
   return {
-    hasFinalMeasurement: !!finalMeas,
-    hasBudgetMeasurement: !!initialMeas,
-    cuttingPlanStatus: cut?.status ?? null,
-    packagingComplete: isPackagingComplete(
-      cut?.packaging as Record<string, boolean> | undefined,
-    ),
-    accessoriesComplete: isAccessoriesComplete(
-      cut?.accessories as Record<string, number> | undefined,
-    ),
+    hasFinalMeasurement: meas?.type === "final" && isMeasured,
+    hasBudgetMeasurement: meas?.type === "orcamento" && isMeasured,
+    cuttingSteps: {
+      corteFeito: cut?.corteFeito ?? false,
+      embalagemFeita: cut?.embalagemFeita ?? false,
+      acessoriosFeitos: cut?.acessoriosFeitos ?? false,
+    },
     transportItemsChecked:
       (trans?.itemsChecked as Record<string, boolean> | null) ?? null,
     installationHasPhotos: hasBeforeAfter,
@@ -167,7 +159,6 @@ export async function transitionServiceOrderStatus(
     const result = mockRepository.transition(osId, toStatus, reason);
     if (result.success) {
       revalidatePath("/dashboard");
-      revalidatePath(`/dashboard/${osId}`);
     }
     return result;
   }
@@ -177,16 +168,15 @@ export async function transitionServiceOrderStatus(
     const db = getDb();
     const [order] = await db
       .select()
-      .from(serviceOrders)
-      .where(eq(serviceOrders.id, osId))
+      .from(measurements)
+      .where(eq(measurements.id, osId))
       .limit(1);
 
     if (!order) {
       return { success: false, code: "NOT_FOUND", message: "OS não encontrada." };
     }
 
-    const fromStatus = order.status as OsStatus;
-    const measurementFlow = order.measurementFlow;
+    const fromStatus = order.etapa as OsStatus;
 
     if (fromStatus === "revisao") {
       try {
@@ -204,7 +194,7 @@ export async function transitionServiceOrderStatus(
       }
     }
 
-    if (!canTransition(fromStatus, toStatus, measurementFlow) && toStatus !== "revisao") {
+    if (!canTransition(fromStatus, toStatus) && toStatus !== "revisao") {
       if (fromStatus !== "revisao") {
         return {
           success: false,
@@ -218,12 +208,11 @@ export async function transitionServiceOrderStatus(
 
     const ctx = {
       ...ctxBase,
-      measurementFlow,
       revisionFromStatus:
         toStatus === "revisao"
           ? fromStatus
           : fromStatus === "revisao"
-            ? (order.revisionFromStatus as OsStatus | null)
+            ? (order.revisionFromEtapa as OsStatus | null)
             : null,
     };
 
@@ -238,29 +227,29 @@ export async function transitionServiceOrderStatus(
     assertTransitionGuards(fromStatus, toStatus, ctx);
 
     const now = new Date();
-    const updatePayload: Partial<typeof serviceOrders.$inferInsert> = {
-      status: toStatus,
+    const updatePayload: Partial<typeof measurements.$inferInsert> = {
+      etapa: toStatus,
       updatedAt: now,
     };
 
     if (toStatus === "revisao") {
       updatePayload.revisionReason = reason;
-      updatePayload.revisionFromStatus = fromStatus;
+      updatePayload.revisionFromEtapa = fromStatus;
     } else if (fromStatus === "revisao") {
       updatePayload.revisionReason = null;
-      updatePayload.revisionFromStatus = null;
+      updatePayload.revisionFromEtapa = null;
     }
 
     const session = await getSession();
 
     await db.transaction(async (tx) => {
       await tx
-        .update(serviceOrders)
+        .update(measurements)
         .set(updatePayload)
-        .where(eq(serviceOrders.id, osId));
+        .where(eq(measurements.id, osId));
 
       await tx.insert(statusHistory).values({
-        osId,
+        measurementId: osId,
         fromStatus,
         toStatus,
         reason: reason ?? null,
@@ -273,7 +262,6 @@ export async function transitionServiceOrderStatus(
     });
 
     revalidatePath("/dashboard");
-    revalidatePath(`/dashboard/${osId}`);
 
     return { success: true, status: toStatus };
   } catch (err) {
@@ -289,11 +277,30 @@ export async function transitionServiceOrderStatus(
   }
 }
 
-/** Gera número único de OS ao aprovar orçamento (exemplo auxiliar) */
-export async function generateServiceOrderNumber(): Promise<string> {
+/** Gera número único consultando a tabela measurements */
+export async function generateMeasurementNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const seq = Math.floor(Math.random() * 99999)
-    .toString()
-    .padStart(5, "0");
-  return `OS-${year}-${seq}`;
+  const { getDb } = await import("@/db");
+  const db = getDb();
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const seq = Math.floor(Math.random() * 99999)
+      .toString()
+      .padStart(5, "0");
+    const number = `OS-${year}-${seq}`;
+
+    const [existing] = await db
+      .select({ id: measurements.id })
+      .from(measurements)
+      .where(eq(measurements.number, number))
+      .limit(1);
+
+    if (!existing) return number;
+  }
+
+  const fallback = `OS-${year}-${Date.now().toString().slice(-5)}`;
+  return fallback;
 }
+
+/** @deprecated Use generateMeasurementNumber — alias mantido durante migração */
+export const generateServiceOrderNumber = generateMeasurementNumber;

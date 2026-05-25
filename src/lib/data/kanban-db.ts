@@ -1,10 +1,9 @@
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "@/db";
-import { serviceOrders, measurements, cuttingPlans } from "@/db/schema";
+import { measurements, cuttingPlans } from "@/db/schema";
 import {
   hasMeasurementItems,
   measurementClientName,
-  primaryMeasurementJoin,
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
 import type { KanbanOrderItem } from "./kanban";
@@ -13,24 +12,24 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
   const db = getDb();
   const rows = await db
     .select({
-      id: serviceOrders.id,
-      number: serviceOrders.number,
+      id: measurements.id,
+      number: measurements.number,
       budgetReference: resolvedBudgetReference,
-      status: serviceOrders.status,
-      measurementFlow: serviceOrders.measurementFlow,
+      status: measurements.etapa,
+      type: measurements.type,
+      measurementStatus: measurements.status,
       clientName: measurementClientName,
-      priority: serviceOrders.priority,
-      scheduledDate: serviceOrders.scheduledDate,
-      updatedAt: serviceOrders.updatedAt,
+      priority: measurements.priority,
+      scheduledDate: measurements.scheduledDate,
+      updatedAt: measurements.updatedAt,
       hasMeasurement: hasMeasurementItems,
       corteFeito: cuttingPlans.corteFeito,
       embalagemFeita: cuttingPlans.embalagemFeita,
       acessoriosFeitos: cuttingPlans.acessoriosFeitos,
     })
-    .from(serviceOrders)
-    .leftJoin(measurements, primaryMeasurementJoin)
-    .leftJoin(cuttingPlans, eq(cuttingPlans.osId, serviceOrders.id))
-    .orderBy(desc(serviceOrders.updatedAt));
+    .from(measurements)
+    .leftJoin(cuttingPlans, eq(cuttingPlans.idMedicao, measurements.id))
+    .orderBy(desc(measurements.updatedAt));
 
   return rows.map((r) => {
     const isCortePhase =
@@ -43,7 +42,8 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       number: r.number,
       budgetReference: r.budgetReference,
       status: r.status,
-      measurementFlow: r.measurementFlow,
+      type: r.type,
+      measurementStatus: r.measurementStatus,
       clientName: r.clientName,
       priority: r.priority,
       scheduledDate: r.scheduledDate,

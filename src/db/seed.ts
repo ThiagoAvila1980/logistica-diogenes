@@ -6,7 +6,6 @@ import { getDirectDatabaseUrl } from "./env";
 import * as schema from "./schema";
 import { hashPassword } from "@/lib/auth/password";
 import { DEMO_DEFAULT_PASSWORD } from "@/lib/auth/demo-password";
-import { FINAL_MEASUREMENT_TYPE } from "@/lib/workflow/measurement-actions";
 
 const connectionString = getDirectDatabaseUrl();
 const client = postgres(connectionString, {
@@ -21,17 +20,15 @@ async function main() {
 
   await db.execute(sql`
     TRUNCATE TABLE
+      notifications,
       status_history,
-      measurements,
-      quotes,
       cutting_plans,
       transport_logs,
       installation_logs,
+      measurements,
       user_passkeys,
       vehicles,
-      service_orders,
-      users,
-      stage_sla_config
+      users
     RESTART IDENTITY CASCADE;
   `);
 
@@ -75,113 +72,133 @@ async function main() {
 
   const [admin, medidor, cortador, motorista, instalador] = users;
 
-  const [osMedicao, osCorte, osTransporte, osInstalacao, osPool] = await db
-    .insert(schema.serviceOrders)
+  const [medMedicao, medCorte, medTransporte, medInstalacao, medPool] =
+    await db
+      .insert(schema.measurements)
+      .values([
+        {
+          number: "OS-2026-SEED01",
+          type: "orcamento",
+          status: "medida",
+          etapa: "medicao_orcamento",
+          priority: "alta",
+          assignedUserId: medidor.id,
+          cliente: "Construtora Horizonte",
+          telefone: "(11) 99999-8888",
+          numeroOrcamento: "ORC-2026-SEED01",
+          budgetReference: "ORC-2026-SEED01",
+          description: "Porta de vidro temperado 10mm + esquadria alumínio",
+          dimensions: { largura: 900, altura: 2100, espessura: 10 },
+          technicianId: medidor.id,
+          notes: "Local plano, sem obstáculos aparentes",
+        },
+        {
+          number: "OS-2026-SEED02",
+          type: "final",
+          status: "medida",
+          etapa: "cortes",
+          priority: "normal",
+          assignedUserId: cortador.id,
+          cliente: "Comercial Vidro & Cia",
+          telefone: "(11) 91234-5678",
+          numeroOrcamento: "ORC-2026-SEED02",
+          budgetReference: "ORC-2026-SEED02",
+          description: "Fachada comercial — perfil estruturado",
+        },
+        {
+          number: "OS-2026-SEED03",
+          type: "final",
+          status: "medida",
+          etapa: "transporte_perfil",
+          priority: "urgente",
+          assignedUserId: motorista.id,
+          cliente: "Condomínio Horizonte",
+          telefone: "(11) 99876-5432",
+          numeroOrcamento: "ORC-2026-SEED03",
+          budgetReference: "ORC-2026-SEED03",
+          description: "Entrega esquadrias — bloco B",
+        },
+        {
+          number: "OS-2026-SEED04",
+          type: "final",
+          status: "medida",
+          etapa: "instalacao_estrutural",
+          priority: "normal",
+          assignedUserId: instalador.id,
+          cliente: "Construtora Horizonte",
+          telefone: "(11) 99999-8888",
+          numeroOrcamento: "ORC-2026-SEED04",
+          budgetReference: "ORC-2026-SEED04",
+          description: "Instalação estrutural sacada",
+        },
+        {
+          number: "OS-2026-SEED05",
+          type: "final",
+          status: "pendente",
+          etapa: "medicao_final",
+          priority: "normal",
+          assignedUserId: null,
+          cliente: "Residencial Solar",
+          telefone: "(11) 98765-4321",
+          numeroOrcamento: "ORC-2026-SEED05",
+          budgetReference: "ORC-2026-SEED05",
+          description: "Guarda-corpo varanda — pool sem técnico",
+        },
+      ])
+      .returning();
+
+  await db.insert(schema.cuttingPlans).values([
+    {
+      idMedicao: medCorte.id,
+      corteFeito: true,
+      embalagemFeita: false,
+      acessoriosFeitos: false,
+      operatorId: cortador.id,
+    },
+  ]);
+
+  const vehicles = await db
+    .insert(schema.vehicles)
     .values([
       {
-        number: "OS-2026-SEED01",
-        assignedUserId: medidor.id,
-        status: "medicao_orcamento",
-        priority: "alta",
-        description: "Porta de vidro temperado 10mm + esquadria alumínio",
-        budgetReference: "ORC-2026-SEED01",
+        description: "Fiorino — carga leve",
+        plate: "ABC1D23",
       },
       {
-        number: "OS-2026-SEED02",
-        assignedUserId: cortador.id,
-        status: "cortes",
-        priority: "normal",
-        description: "Fachada comercial — perfil estruturado",
-        budgetReference: "ORC-2026-SEED02",
-      },
-      {
-        number: "OS-2026-SEED03",
-        assignedUserId: motorista.id,
-        status: "transporte_perfil",
-        priority: "urgente",
-        description: "Entrega esquadrias — bloco B",
-        budgetReference: "ORC-2026-SEED03",
-      },
-      {
-        number: "OS-2026-SEED04",
-        assignedUserId: instalador.id,
-        status: "instalacao_estrutural",
-        priority: "normal",
-        description: "Instalação estrutural sacada",
-        budgetReference: "ORC-2026-SEED04",
-      },
-      {
-        number: "OS-2026-SEED05",
-        assignedUserId: null,
-        status: "medicao_final",
-        priority: "baixa",
-        description: "Guarda-corpo varanda — pool sem técnico",
-        budgetReference: "ORC-2026-SEED05",
+        description: "Sprinter — esquadrias",
+        plate: "XYZ9E87",
       },
     ])
     .returning();
 
-  await db.insert(schema.measurements).values([
+  await db.insert(schema.transportLogs).values([
     {
-      osId: osMedicao.id,
-      type: FINAL_MEASUREMENT_TYPE,
-      cliente: "Construtora Horizonte",
-      telefone: "(11) 99999-8888",
-      numeroOrcamento: "ORC-2026-SEED01",
-      dimensions: { largura: 900, altura: 2100, espessura: 10 },
-      technicianId: medidor.id,
-      notes: "Local plano, sem obstáculos aparentes",
-    },
-    {
-      osId: osCorte.id,
-      type: FINAL_MEASUREMENT_TYPE,
-      cliente: "Comercial Vidro & Cia",
-      telefone: "(11) 91234-5678",
-      numeroOrcamento: "ORC-2026-SEED02",
-    },
-    {
-      osId: osTransporte.id,
-      type: FINAL_MEASUREMENT_TYPE,
-      cliente: "Condomínio Horizonte",
-      telefone: "(11) 99876-5432",
-      numeroOrcamento: "ORC-2026-SEED03",
-    },
-    {
-      osId: osInstalacao.id,
-      type: FINAL_MEASUREMENT_TYPE,
-      cliente: "Construtora Horizonte",
-      telefone: "(11) 99999-8888",
-      numeroOrcamento: "ORC-2026-SEED04",
-    },
-    {
-      osId: osPool.id,
-      type: FINAL_MEASUREMENT_TYPE,
-      cliente: "Residencial Solar",
-      telefone: "(11) 98765-4321",
-      numeroOrcamento: "ORC-2026-SEED05",
+      idMedicao: medTransporte.id,
+      driverId: motorista.id,
+      vehicleId: vehicles[0].id,
+      vehiclePlate: vehicles[0].plate,
+      status: "em_transito",
     },
   ]);
 
-  await db.insert(schema.vehicles).values([
+  await db.insert(schema.installationLogs).values([
     {
-      description: "Fiorino — carga leve",
-      plate: "ABC1D23",
-    },
-    {
-      description: "Sprinter — esquadrias",
-      plate: "XYZ9E87",
+      idMedicao: medInstalacao.id,
+      installerId: instalador.id,
+      status: "estrutural",
     },
   ]);
 
   console.log("✅ Seed completed:", {
-    orders: [
-      osMedicao.number,
-      osCorte.number,
-      osTransporte.number,
-      osInstalacao.number,
-      osPool.number,
+    measurements: [
+      medMedicao.number,
+      medCorte.number,
+      medTransporte.number,
+      medInstalacao.number,
+      medPool.number,
     ].join(", "),
     demoPassword: DEMO_DEFAULT_PASSWORD,
+    adminEmail: admin.email,
   });
   await client.end();
   process.exit(0);

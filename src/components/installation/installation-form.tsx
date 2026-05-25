@@ -15,6 +15,8 @@ import {
   type SaveInstallationDraftResult,
 } from "@/actions/installation-actions";
 import { StatusWizardAdvance } from "@/components/workflow/status-wizard-advance";
+import { StageProblemReport } from "@/components/workflow/stage-problem-report";
+import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -106,6 +108,18 @@ export function InstallationForm({
           {STATUS_LABELS[order.status]}
         </Badge>
       </div>
+
+      <StageProblemReport osId={order.id} stage="installation" />
+
+      <section className="rounded-xl border bg-card p-4 shadow-sm">
+        <h2 className="text-sm font-medium">Prioridade</h2>
+        <div className="mt-3">
+          <MeasurementSpecFields
+            values={{ priority: order.priority }}
+            readOnly
+          />
+        </div>
+      </section>
 
       <section className="rounded-xl border bg-card p-4 shadow-sm">
         <h2 className="text-sm font-medium">Fases da instalação</h2>

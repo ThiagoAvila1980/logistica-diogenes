@@ -67,9 +67,9 @@ export async function ModuleOsPage({
           <CardDescription>{order.clientName}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button asChild>
-            <Link href={`/dashboard/${order.id}`}>Gerenciar no painel</Link>
-          </Button>
+          <p className="text-sm text-muted-foreground">
+            Módulo em desenvolvimento.
+          </p>
         </CardContent>
       </Card>
     </div>

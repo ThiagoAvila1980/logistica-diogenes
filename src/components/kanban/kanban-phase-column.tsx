@@ -4,7 +4,7 @@ import { Droppable } from "@hello-pangea/dnd";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { KanbanCard } from "./kanban-card";
-import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
+import { getAllowedTransitions } from "@/lib/workflow/status-machine";
 import type { KanbanOrderItem } from "@/lib/data/kanban";
 import type { KanbanPhase } from "@/lib/kanban/column-groups";
 
@@ -52,10 +52,9 @@ export function KanbanPhaseColumn({
               )}
             >
               {items.map((os, idx) => {
-                const canAdvance = getAllowedTransitions(
-                  os.status,
-                  os.measurementFlow,
-                ).some((s) => s !== "revisao");
+                const canAdvance = getAllowedTransitions(os.status).some(
+                  (s) => s !== "revisao",
+                );
 
                 return (
                   <KanbanCard

@@ -20,7 +20,7 @@ export default async function AdminLayout({
           <h1 className="text-xl font-bold sm:text-2xl">Administração</h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cadastros restritos ao administrador.
+          Cadastros e configurações restritas ao administrador.
         </p>
       </header>
       {children}

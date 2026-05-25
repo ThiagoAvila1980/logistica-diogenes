@@ -53,6 +53,9 @@ export const measurementLineItemSchema = z.object({
   qty: z.coerce.number().int().positive(),
   largura: z.coerce.number().positive(),
   altura: z.coerce.number().positive(),
+  idCor: z.string().uuid().nullish(),
+  idTipoVidro: z.string().uuid().nullish(),
+  idTipoEnvidracamento: z.string().uuid().nullish(),
   drawingUrl: z.string().nullable().optional(),
 });
 

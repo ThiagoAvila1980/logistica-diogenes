@@ -7,7 +7,7 @@ export const ORCAMENTO_MEASUREMENT_TYPE: MeasurementDbType = "orcamento";
 export const FINAL_MEASUREMENT_TYPE: MeasurementDbType = "final";
 
 export type MeasurementOrderContext = {
-  status: OsStatus;
+  etapa: OsStatus;
 };
 
 export function osStatusFromMeasurementType(
@@ -31,7 +31,7 @@ export function isMedicaoPhaseStatus(status: OsStatus): boolean {
 export function getAllowedMeasurementActions(
   order: MeasurementOrderContext,
 ): MeasurementDbType[] {
-  if (isMedicaoPhaseStatus(order.status)) {
+  if (isMedicaoPhaseStatus(order.etapa)) {
     return [ORCAMENTO_MEASUREMENT_TYPE, FINAL_MEASUREMENT_TYPE];
   }
   return [];
@@ -47,7 +47,7 @@ export function isMeasurementActionAllowed(
 export function getDraftMeasurementType(
   order: MeasurementOrderContext,
 ): MeasurementDbType | null {
-  return measurementTypeFromOsStatus(order.status);
+  return measurementTypeFromOsStatus(order.etapa);
 }
 
 export function getMeasurementActionLabel(type: MeasurementDbType): string {
@@ -89,5 +89,5 @@ export function getMeasurementConfirmCopy(type: MeasurementDbType): {
 export function getMeasurementActionErrorMessage(
   type: MeasurementDbType,
 ): string {
-  return `${getMeasurementActionLabel(type)} só é permitida enquanto a OS está em etapa de medição.`;
+  return `${getMeasurementActionLabel(type)} só é permitida enquanto a medição está em etapa de medição.`;
 }

@@ -21,5 +21,5 @@ export async function setupDemoPrerequisites(
     mockRepository.ensureInstallationComplete(osId);
   }
 
-  revalidatePath(`/dashboard/${osId}`);
+  revalidatePath("/dashboard");
 }

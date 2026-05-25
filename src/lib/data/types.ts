@@ -1,18 +1,23 @@
-import type { OsStatus } from "@/db/schema";
-import type { MeasurementFlow } from "@/db/schema";
+import type {
+  MeasurementDbStatus,
+  MeasurementDbType,
+  MeasurementPriority,
+  OsStatus,
+} from "@/db/schema";
 
 export type OrderListItem = {
   id: string;
   number: string;
+  /** Etapa operacional do fluxo (antigo status da OS) */
   status: OsStatus;
-  measurementFlow: MeasurementFlow;
-  priority: "baixa" | "normal" | "alta" | "urgente";
+  type: MeasurementDbType;
+  measurementStatus: MeasurementDbStatus;
+  priority: MeasurementPriority;
   clientName: string;
   assignedUserId: string | null;
   scheduledDate: Date | null;
   updatedAt: Date;
   budgetReference: string | null;
-  /** true quando o medidor já registrou itens de medição (items não vazio). */
   hasMeasurement: boolean;
 };
 

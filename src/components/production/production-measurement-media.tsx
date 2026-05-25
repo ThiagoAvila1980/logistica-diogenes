@@ -2,6 +2,7 @@
 
 import { Images, StickyNote } from "lucide-react";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import {
   Card,
   CardContent,
@@ -16,6 +17,7 @@ type ProductionMeasurementMediaProps = {
   items: MeasurementLineItem[];
   photos: string[];
   notes: string | null;
+  lookups?: MeasurementLookups;
 };
 
 type MediaSlide =
@@ -26,6 +28,7 @@ export function ProductionMeasurementMedia({
   items,
   photos,
   notes,
+  lookups,
 }: ProductionMeasurementMediaProps) {
   const slides: MediaSlide[] = [
     ...items.map((item, index) => ({ kind: "drawing" as const, item, index })),
@@ -78,6 +81,7 @@ export function ProductionMeasurementMedia({
                     </p>
                     <MeasurementDimensionsSummary
                       item={slide.item}
+                      lookups={lookups}
                       variant="inline"
                     />
                   </CardContent>

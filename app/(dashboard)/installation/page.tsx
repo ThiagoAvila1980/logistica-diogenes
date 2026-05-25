@@ -24,7 +24,7 @@ export default async function InstallationIndexPage() {
       {installationOrders.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Nenhuma OS em instalação no momento.
+            Nenhuma medição em instalação no momento.
           </p>
         </div>
       ) : (

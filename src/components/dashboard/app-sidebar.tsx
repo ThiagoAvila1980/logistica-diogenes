@@ -7,7 +7,6 @@ import {
   Truck,
   Hammer,
   Users,
-  Car,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,11 +14,13 @@ import type { SessionUser } from "@/lib/auth/session-types";
 import {
   formatRolesLabel,
   getNavItemsForRoles,
+  hasAnyRole,
+  hasRole,
   type NavItem,
 } from "@/lib/auth/permissions";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { hasAnyRole } from "@/lib/auth/permissions";
+import { SettingsNavSection } from "@/components/dashboard/settings-nav-section";
 
 const NAV_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
@@ -29,7 +30,6 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/logistics": Truck,
   "/installation": Hammer,
   "/admin/users": Users,
-  "/admin/vehicles": Car,
 };
 
 function navHomeHref(roles: SessionUser["roles"]): string {
@@ -56,6 +56,7 @@ export function AppSidebar({
   const showNotifications = session
     ? hasAnyRole(session.roles, ["admin", "gerente"])
     : false;
+  const showSettings = session ? hasRole(session.roles, "admin") : false;
 
   return (
     <aside className={cn("flex w-56 flex-col overflow-visible border-r bg-card", className)}>
@@ -104,6 +105,9 @@ export function AppSidebar({
             </Link>
           );
         })}
+        {showSettings && (
+          <SettingsNavSection pathname={pathname} onNavigate={onNavigate} />
+        )}
       </nav>
       {session && (
         <div className="border-t p-3 space-y-2">

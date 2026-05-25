@@ -38,13 +38,6 @@ type OSAdvanceFormProps = {
   onError?: () => void;
 };
 
-const PACKAGING_FIELDS = [
-  { key: "structuralProfile", label: "Perfil estrutural" },
-  { key: "totalProfiles", label: "Total de perfis" },
-  { key: "packagingAccessories", label: "Acessórios embalados" },
-  { key: "glass", label: "Vidros" },
-] as const;
-
 const TRANSPORT_FIELDS = [
   { key: "perfil", label: "Perfil" },
   { key: "estrutural", label: "Estrutural" },
@@ -164,55 +157,10 @@ export function OSAdvanceForm({
           {(nextStatus === "cortes" ||
             nextStatus === "embalagem" ||
             nextStatus === "acessorios_plano") && (
-            <>
-              {(nextStatus === "cortes" || nextStatus === "embalagem") && (
-                <div className="space-y-2">
-                  <Label htmlFor="cuts">Cortes (JSON array)</Label>
-                  <Textarea
-                    id="cuts"
-                    placeholder='[{"item":"Perfil 30x30","length":2500,"width":50,"qty":4}]'
-                    value={(formData.cuts as string) ?? ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, cuts: e.target.value }))
-                    }
-                  />
-                </div>
-              )}
-              {nextStatus === "embalagem" && (
-                <div className="grid grid-cols-2 gap-3">
-                  {PACKAGING_FIELDS.map(({ key, label: fieldLabel }) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <Checkbox
-                        id={key}
-                        checked={!!formData[key]}
-                        onCheckedChange={(v) =>
-                          setFormData((prev) => ({ ...prev, [key]: v === true }))
-                        }
-                      />
-                      <Label htmlFor={key} className="text-sm font-normal">
-                        {fieldLabel}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {nextStatus === "acessorios_plano" && (
-                <div className="space-y-2">
-                  <Label htmlFor="accessories">Acessórios (JSON)</Label>
-                  <Textarea
-                    id="accessories"
-                    placeholder='{"dobradica": 8}'
-                    value={(formData.accessories as string) ?? ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        accessories: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              )}
-            </>
+            <p className="text-sm text-muted-foreground">
+              Conclua as etapas no checklist de produção (corte, embalagem e
+              acessórios) antes de avançar.
+            </p>
           )}
 
           {nextStatus === "transporte_perfil" && (

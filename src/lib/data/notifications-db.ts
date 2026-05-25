@@ -1,14 +1,23 @@
 import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { isSupabaseConfigured } from "@/db/env";
-import { notifications, users } from "@/db/schema";
+import {
+  cuttingPlans,
+  installationLogs,
+  notifications,
+  transportLogs,
+  users,
+} from "@/db/schema";
 import { useMockData } from "@/lib/data/config";
 import { mockNotificationStore } from "@/lib/data/mock-notifications";
+import {
+  getStageAlertMeta,
+  type StageAlertType,
+} from "@/lib/notifications/stage-alerts";
 import type {
   AppNotification,
   NotificationListResult,
 } from "@/lib/notifications/types";
-
 function useInMemoryNotifications() {
   return useMockData() && !isSupabaseConfigured();
 }
@@ -20,7 +29,10 @@ function mapRow(row: {
   title: string;
   body: string;
   href: string | null;
-  osId: string | null;
+  measurementId: string | null;
+  cuttingPlanId: string | null;
+  transportLogId: string | null;
+  installationLogId: string | null;
   readAt: Date | null;
   createdAt: Date;
 }): AppNotification {
@@ -31,7 +43,10 @@ function mapRow(row: {
     title: row.title,
     body: row.body,
     href: row.href,
-    osId: row.osId,
+    measurementId: row.measurementId,
+    cuttingPlanId: row.cuttingPlanId,
+    transportLogId: row.transportLogId,
+    installationLogId: row.installationLogId,
     readAt: row.readAt,
     createdAt: row.createdAt,
   };
@@ -59,7 +74,10 @@ export async function listNotificationsForUser(
         title: notifications.title,
         body: notifications.body,
         href: notifications.href,
-        osId: notifications.osId,
+        measurementId: notifications.measurementId,
+        cuttingPlanId: notifications.cuttingPlanId,
+        transportLogId: notifications.transportLogId,
+        installationLogId: notifications.installationLogId,
         readAt: notifications.readAt,
         createdAt: notifications.createdAt,
       })
@@ -142,30 +160,38 @@ export async function deleteNotification(
   return Boolean(deleted);
 }
 
-export async function createCuttingProblemNotifications(input: {
-  osId: string;
+export async function createStageProblemNotifications(input: {
+  stage: StageAlertType;
+  measurementId: string;
   osNumber: string;
   clientName: string;
   senderName: string;
   message: string;
+  cuttingPlanId?: string | null;
+  transportLogId?: string | null;
+  installationLogId?: string | null;
 }): Promise<number> {
-  const title = `Problema no corte — ${input.osNumber}`;
+  const meta = getStageAlertMeta(input.stage);
+  const title = `${meta.titlePrefix} — ${input.osNumber}`;
   const body = `${input.senderName} reportou: ${input.message}`;
-  const href = `/production/${input.osId}`;
+  const href = meta.href(input.measurementId);
 
   if (useInMemoryNotifications()) {
     const recipientIds = ["mock-admin", "mock-gerente"];
     mockNotificationStore.insertMany(
       recipientIds.map((userId) => ({
         userId,
-        type: "cutting_alert",
+        type: meta.type,
         title,
         body,
         href,
-        osId: input.osId,
+        measurementId: input.measurementId,
+        cuttingPlanId: input.cuttingPlanId ?? null,
+        transportLogId: input.transportLogId ?? null,
+        installationLogId: input.installationLogId ?? null,
       })),
     );
-    console.info("[cutting-alert:push]", title, input.message);
+    console.info(`[${meta.type}:push]`, title, input.message);
     return recipientIds.length;
   }
 
@@ -185,13 +211,100 @@ export async function createCuttingProblemNotifications(input: {
   await db.insert(notifications).values(
     recipients.map((recipient) => ({
       userId: recipient.id,
-      type: "cutting_alert",
+      type: meta.type,
       title,
       body,
       href,
-      osId: input.osId,
+      measurementId: input.measurementId,
+      cuttingPlanId: input.cuttingPlanId ?? null,
+      transportLogId: input.transportLogId ?? null,
+      installationLogId: input.installationLogId ?? null,
     })),
   );
 
   return recipients.length;
+}
+
+/** @deprecated Use createStageProblemNotifications with stage: "cutting" */
+export async function createCuttingProblemNotifications(input: {
+  osId: string;
+  osNumber: string;
+  clientName: string;
+  senderName: string;
+  message: string;
+  cuttingPlanId?: string | null;
+}): Promise<number> {
+  return createStageProblemNotifications({
+    stage: "cutting",
+    measurementId: input.osId,
+    osNumber: input.osNumber,
+    clientName: input.clientName,
+    senderName: input.senderName,
+    message: input.message,
+    cuttingPlanId: input.cuttingPlanId ?? null,
+  });
+}
+
+export async function resolveStageRecordIds(
+  measurementId: string,
+  stage: StageAlertType,
+): Promise<{
+  cuttingPlanId: string | null;
+  transportLogId: string | null;
+  installationLogId: string | null;
+}> {
+  if (useMockData()) {
+    return {
+      cuttingPlanId: null,
+      transportLogId: null,
+      installationLogId: null,
+    };
+  }
+
+  const db = getDb();
+
+  if (stage === "cutting") {
+    const [row] = await db
+      .select({ id: cuttingPlans.id })
+      .from(cuttingPlans)
+      .where(eq(cuttingPlans.idMedicao, measurementId))
+      .limit(1);
+    return {
+      cuttingPlanId: row?.id ?? null,
+      transportLogId: null,
+      installationLogId: null,
+    };
+  }
+
+  if (stage === "transport") {
+    const [row] = await db
+      .select({ id: transportLogs.id })
+      .from(transportLogs)
+      .where(eq(transportLogs.idMedicao, measurementId))
+      .limit(1);
+    return {
+      cuttingPlanId: null,
+      transportLogId: row?.id ?? null,
+      installationLogId: null,
+    };
+  }
+
+  if (stage === "installation") {
+    const [row] = await db
+      .select({ id: installationLogs.id })
+      .from(installationLogs)
+      .where(eq(installationLogs.idMedicao, measurementId))
+      .limit(1);
+    return {
+      cuttingPlanId: null,
+      transportLogId: null,
+      installationLogId: row?.id ?? null,
+    };
+  }
+
+  return {
+    cuttingPlanId: null,
+    transportLogId: null,
+    installationLogId: null,
+  };
 }

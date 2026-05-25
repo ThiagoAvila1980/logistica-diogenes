@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
 import { getDb } from "@/lib/db";
-import { serviceOrders, statusHistory, type OsStatus } from "@/db/schema";
+import { measurements, statusHistory, type OsStatus } from "@/db/schema";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { loadClientNotificationContext } from "@/lib/notifications/order-context";
@@ -53,20 +53,19 @@ export async function moveOSCard(
     const db = getDb();
     const [current] = await db
       .select({
-        id: serviceOrders.id,
-        status: serviceOrders.status,
-        measurementFlow: serviceOrders.measurementFlow,
+        id: measurements.id,
+        etapa: measurements.etapa,
       })
-      .from(serviceOrders)
-      .where(eq(serviceOrders.id, osId))
+      .from(measurements)
+      .where(eq(measurements.id, osId))
       .limit(1);
 
     if (!current) {
       return { success: false, message: "OS não encontrada" };
     }
 
-    const fromStatus = current.status as OsStatus;
-    const allowed = getAllowedTransitions(fromStatus, current.measurementFlow);
+    const fromStatus = current.etapa as OsStatus;
+    const allowed = getAllowedTransitions(fromStatus);
 
     if (!allowed.includes(target)) {
       return {
@@ -77,12 +76,12 @@ export async function moveOSCard(
 
     await db.transaction(async (tx) => {
       await tx
-        .update(serviceOrders)
-        .set({ status: target, updatedAt: sql`NOW()` })
-        .where(eq(serviceOrders.id, osId));
+        .update(measurements)
+        .set({ etapa: target, updatedAt: sql`NOW()` })
+        .where(eq(measurements.id, osId));
 
       await tx.insert(statusHistory).values({
-        osId,
+        measurementId: osId,
         fromStatus,
         toStatus: target,
         metadata: { source: "kanban_drag" },
@@ -91,7 +90,7 @@ export async function moveOSCard(
 
     revalidatePath("/dashboard/kanban");
     revalidatePath("/dashboard");
-    revalidatePath(`/dashboard/${osId}`);
+    revalidatePath("/dashboard");
 
     return finishKanbanMove(osId, target);
   } catch (error) {

@@ -9,7 +9,6 @@ const PRIORITY_BORDER: Record<string, string> = {
   urgente: "border-l-[3px] border-l-red-500",
   alta: "border-l-[3px] border-l-amber-500",
   normal: "border-l-[3px] border-l-transparent",
-  baixa: "border-l-[3px] border-l-transparent",
 };
 
 const PRIORITY_PILL: Record<string, string | undefined> = {
@@ -29,7 +28,7 @@ type FieldOrderCardProps = {
 
 export function FieldOrderCard({ order }: FieldOrderCardProps) {
   const displayNumber = getOrderDisplayNumber(order);
-  const isFinal = order.status === "medicao_final";
+  const isFinal = order.type === "final";
   const priorityPill = PRIORITY_PILL[order.priority];
 
   return (

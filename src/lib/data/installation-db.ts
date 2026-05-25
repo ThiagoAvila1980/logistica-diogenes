@@ -16,7 +16,7 @@ export async function getInstallationDraftDb(
       finalCompleted: installationLogs.finalCompleted,
     })
     .from(installationLogs)
-    .where(eq(installationLogs.osId, osId))
+    .where(eq(installationLogs.idMedicao, osId))
     .limit(1);
 
   if (!row) return undefined;
@@ -43,7 +43,7 @@ export async function upsertInstallationDraftDb(
   const [existing] = await db
     .select({ id: installationLogs.id })
     .from(installationLogs)
-    .where(eq(installationLogs.osId, osId))
+    .where(eq(installationLogs.idMedicao, osId))
     .limit(1);
 
   const values = {
@@ -58,6 +58,6 @@ export async function upsertInstallationDraftDb(
       .set(values)
       .where(eq(installationLogs.id, existing.id));
   } else {
-    await db.insert(installationLogs).values({ osId, ...values });
+    await db.insert(installationLogs).values({ idMedicao: osId, ...values });
   }
 }

@@ -29,6 +29,10 @@ export default async function InstallationOsPage({ params }: Props) {
   const userRoles = session?.roles ?? ["instalador"];
 
   return (
-    <InstallationForm order={order} initial={initial} userRoles={userRoles} />
+    <InstallationForm
+      order={order}
+      initial={initial}
+      userRoles={userRoles}
+    />
   );
 }

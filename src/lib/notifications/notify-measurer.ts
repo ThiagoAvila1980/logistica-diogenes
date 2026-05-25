@@ -7,7 +7,7 @@ import { buildAppUrl } from "@/lib/navigation/masked-url";
 
 export type MeasurementCreatedPayload = {
   event: "measurement_created";
-  osId: string;
+  measurementId: string;
   osNumber: string;
   clientName: string;
   clientPhone: string | null;
@@ -139,7 +139,7 @@ export async function notifyMedidorsOnMeasurementCreated(input: {
 }): Promise<NotifyMeasurerResult> {
   const payload: MeasurementCreatedPayload = {
     event: "measurement_created",
-    osId: input.osId,
+    measurementId: input.osId,
     osNumber: input.osNumber,
     clientName: input.clientName,
     clientPhone: input.clientPhone,

@@ -58,8 +58,12 @@ import {
   type MeasurementDbType,
 } from "@/lib/workflow/measurement-actions";
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
+import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
+import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
 import { useScreenOrientationLock } from "@/hooks/use-screen-orientation-lock";
+import type { MeasurementLookups } from "@/lib/data/lookup-types";
+import type { MeasurementPriority } from "@/db/schema";
 
 type FieldMeasurementFormProps = {
   order: OrderDetail;
@@ -67,6 +71,7 @@ type FieldMeasurementFormProps = {
     orcamento?: FieldMeasurementDraft;
     final?: FieldMeasurementDraft;
   };
+  lookups: MeasurementLookups;
   canDelete?: boolean;
 };
 
@@ -114,6 +119,7 @@ function applyDraftSnapshot(
 export function FieldMeasurementForm({
   order,
   draftsByType,
+  lookups,
   canDelete = false,
 }: FieldMeasurementFormProps) {
   const router = useRouter();
@@ -151,6 +157,9 @@ export function FieldMeasurementForm({
   const [viewMode, setViewMode] = useState(() =>
     hasSavedMeasurementForView(initialDraft),
   );
+  const [specValues, setSpecValues] = useState({
+    priority: order.priority,
+  });
   const formRef = useRef<HTMLFormElement>(null);
 
   const { relockPage, lockLandscape } = useScreenOrientationLock(!viewMode);
@@ -163,7 +172,7 @@ export function FieldMeasurementForm({
     relockPage();
   }
 
-  const orderContext = { status: order.status };
+  const orderContext = { etapa: order.status };
   const allowedActions = getAllowedMeasurementActions(orderContext);
   const confirmCopy = getMeasurementConfirmCopy(measurementType);
   const wizardStatus = osStatusFromMeasurementType(measurementType);
@@ -411,15 +420,25 @@ export function FieldMeasurementForm({
                 )}
               </div>
             )}
+
+            <div className="mt-3">
+              <MeasurementSpecFields
+                values={specValues}
+                onChange={setSpecValues}
+                readOnly={viewMode}
+                disabled={isPending}
+              />
+            </div>
+
+            <div className="mt-3">
+              <StageProblemReport osId={order.id} stage="measurement" />
+            </div>
           </div>
         </div>
       </section>
 
       <section className="overflow-hidden rounded-xl border bg-card p-3 shadow-sm md:p-4">
-        <StatusWizard
-          currentStatus={wizardStatus}
-          measurementFlow={order.measurementFlow}
-        />
+        <StatusWizard currentStatus={wizardStatus} />
         {showMeasurementTypeSelector && (
           <div className="mt-3 flex justify-center border-t pt-3">
             <MeasurementTypeField
@@ -435,6 +454,7 @@ export function FieldMeasurementForm({
       <form ref={formRef} action={formAction} className="space-y-6">
         <input type="hidden" name="osId" value={order.id} />
         <input type="hidden" name="measurementType" value={measurementType} />
+        <input type="hidden" name="priority" value={specValues.priority} />
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -489,6 +509,7 @@ export function FieldMeasurementForm({
                     key={item.id}
                     item={item}
                     index={index}
+                    lookups={lookups}
                     expanded={expandedItemId === item.id}
                     onExpandedChange={(expanded) =>
                       setItemExpanded(item.id, expanded)
@@ -500,6 +521,7 @@ export function FieldMeasurementForm({
                     key={item.id}
                     item={item}
                     index={index}
+                    lookups={lookups}
                     expanded={expandedItemId === item.id}
                     canRemove={items.length > 1}
                     disabled={isPending}

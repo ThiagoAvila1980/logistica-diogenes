@@ -1,11 +1,10 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { measurements, serviceOrders } from "@/db/schema";
-import { eqMeasurementType } from "@/lib/data/order-measurement-join";
+import { measurements } from "@/db/schema";
 import { measurementItemsSchema } from "@/lib/workflow/schemas";
 import { notifyMedidorsOnMeasurementCreated } from "@/lib/notifications/notify-measurer";
 import { useMockData } from "@/lib/data/config";
@@ -75,7 +74,24 @@ const createMeasurementSchema = z.object({
       message: "Data inválida. Use DD/MM/AAAA.",
     }),
   measurementType: z.enum(["orcamento", "final"]).default("final"),
+  priority: z.enum(["normal", "alta", "urgente"]).default("normal"),
 });
+
+function parsePriorityField(formData: FormData) {
+  const parsed = z
+    .object({
+      priority: z.enum(["normal", "alta", "urgente"]).default("normal"),
+    })
+    .safeParse({
+      priority: formData.get("priority") || "normal",
+    });
+
+  if (!parsed.success) {
+    return { priority: "normal" as const };
+  }
+
+  return parsed.data;
+}
 
 async function resolvePhotoUrls(
   osId: string,
@@ -97,26 +113,6 @@ async function resolvePhotoUrls(
     photos: [...existing, ...urls],
     error: errors.length > 0 ? errors.join("; ") : undefined,
   };
-}
-
-async function createMeasurementShell(
-  db: ReturnType<typeof getDb>,
-  osId: string,
-  type: "orcamento" | "final",
-  header: {
-    cliente: string;
-    telefone: string | null;
-    numeroOrcamento: string | null;
-  },
-) {
-  await db.insert(measurements).values({
-    osId,
-    type,
-    cliente: header.cliente,
-    telefone: header.telefone,
-    numeroOrcamento: header.numeroOrcamento,
-    photos: [],
-  });
 }
 
 /** Pré-visualiza dados extraídos do cabeçalho do PDF (sem criar OS). */
@@ -181,6 +177,7 @@ export async function createMeasurementFromPdf(
     description: formData.get("description") || undefined,
     scheduledDate: formData.get("scheduledDate") || undefined,
     measurementType: formData.get("measurementType") || "final",
+    priority: formData.get("priority") || "normal",
   });
 
   if (!parsed.success) {
@@ -201,8 +198,9 @@ export async function createMeasurementFromPdf(
     description,
     scheduledDate,
     measurementType,
+    priority,
   } = parsed.data;
-  const osStatus = osStatusFromMeasurementType(measurementType);
+  const etapa = osStatusFromMeasurementType(measurementType);
   const scheduled = scheduledDate ? parseBrDate(scheduledDate) : null;
 
   if (useMockData()) {
@@ -214,6 +212,7 @@ export async function createMeasurementFromPdf(
       scheduledDate: scheduled,
       assignedUserId: null,
       measurementType,
+      priority,
     });
     if (!result.success) return result;
 
@@ -242,28 +241,42 @@ export async function createMeasurementFromPdf(
     const db = getDb();
     const number = await generateServiceOrderNumber();
 
-    const [created] = await db
-      .insert(serviceOrders)
-      .values({
-        number,
-        status: osStatus,
-        measurementFlow: "profissional_mediu",
-        assignedUserId: null,
-        description: description ?? "Medição",
-        scheduledDate: scheduled,
-        budgetReference: budgetReference?.trim() || null,
-      })
-      .returning({ id: serviceOrders.id, number: serviceOrders.number });
-
-    if (!created) {
-      return { success: false, message: "Não foi possível criar a medição." };
-    }
-
-    let pdfHeader: { clientName: string | null; clientPhone: string | null; budgetReference: string | null } = {
+    let pdfHeader: {
+      clientName: string | null;
+      clientPhone: string | null;
+      budgetReference: string | null;
+    } = {
       clientName: null,
       clientPhone: null,
       budgetReference: null,
     };
+
+    const finalBudgetRefInitial = budgetReference?.trim() || null;
+    const finalClienteInitial = clientName.trim();
+    const finalTelefoneInitial = clientPhone?.trim() || null;
+
+    const [created] = await db
+      .insert(measurements)
+      .values({
+        number,
+        type: measurementType,
+        status: "pendente",
+        etapa,
+        priority,
+        assignedUserId: null,
+        description: description ?? "Medição",
+        scheduledDate: scheduled,
+        budgetReference: finalBudgetRefInitial,
+        cliente: finalClienteInitial,
+        telefone: finalTelefoneInitial,
+        numeroOrcamento: finalBudgetRefInitial,
+        photos: [],
+      })
+      .returning({ id: measurements.id, number: measurements.number });
+
+    if (!created) {
+      return { success: false, message: "Não foi possível criar a medição." };
+    }
 
     if (pdfFile) {
       const { savePdfAndParseHeader } = await import("@/lib/upload/save-pdf");
@@ -283,23 +296,22 @@ export async function createMeasurementFromPdf(
       pdfHeader.budgetReference?.trim() ||
       null;
 
-    const finalCliente = clientName.trim() || pdfHeader.clientName?.trim() || clientName;
-    const finalTelefone = clientPhone?.trim() || pdfHeader.clientPhone?.trim() || null;
+    const finalCliente =
+      clientName.trim() || pdfHeader.clientName?.trim() || clientName;
+    const finalTelefone =
+      clientPhone?.trim() || pdfHeader.clientPhone?.trim() || null;
 
     await db
-      .update(serviceOrders)
+      .update(measurements)
       .set({
         budgetReference: finalBudgetRef,
+        numeroOrcamento: finalBudgetRef,
+        cliente: finalCliente,
+        telefone: finalTelefone,
         sourcePdfUrl: null,
         updatedAt: new Date(),
       })
-      .where(eq(serviceOrders.id, created.id));
-
-    await createMeasurementShell(db, created.id, measurementType, {
-      cliente: finalCliente,
-      telefone: finalTelefone,
-      numeroOrcamento: finalBudgetRef,
-    });
+      .where(eq(measurements.id, created.id));
 
     void notifyMedidorsOnMeasurementCreated({
       osId: created.id,
@@ -329,13 +341,11 @@ export async function createMeasurementFromPdf(
       message: error instanceof Error ? error.message : "Erro ao criar medição",
     };
   }
-
-  return { success: false, message: "Não foi possível criar a medição." };
 }
 
 /**
- * Exclui medição por completo: arquivos no storage + OS e registros (cascade).
- * Apenas admin/gerente; somente OS em etapa medicao_*.
+ * Exclui medição por completo: arquivos no storage + registro (cascade).
+ * Apenas admin/gerente; somente medições em etapa medicao_*.
  */
 export async function deleteMeasurement(
   osId: string,
@@ -377,27 +387,28 @@ export async function deleteMeasurement(
   try {
     const db = getDb();
 
-    const measRows = await db
+    const [measRow] = await db
       .select({
         photos: measurements.photos,
         items: measurements.items,
       })
       .from(measurements)
-      .where(eq(measurements.osId, osId));
+      .where(eq(measurements.id, osId))
+      .limit(1);
 
     const urls = collectMeasurementFileUrls({
       sourcePdfUrl: order.sourcePdfUrl,
-      photos: measRows.flatMap((r) => r.photos ?? []),
-      items: measRows.flatMap((r) => r.items ?? []),
+      photos: measRow?.photos ?? [],
+      items: measRow?.items ?? [],
     });
 
     await purgeAllOsFiles(osId, urls);
 
-    await db.delete(serviceOrders).where(eq(serviceOrders.id, osId));
+    await db.delete(measurements).where(eq(measurements.id, osId));
 
     revalidatePath("/field");
     revalidatePath(`/field/${osId}`);
-    revalidatePath(`/dashboard/${osId}`);
+    revalidatePath("/dashboard");
 
     return { success: true };
   } catch (error) {
@@ -446,6 +457,7 @@ export async function saveFieldMeasurement(
       : FINAL_MEASUREMENT_TYPE;
   const { osId, notes } = parsed.data;
   const items = itemsParsed.data;
+  const priorityField = parsePriorityField(formData);
   const { photos, error: photoError } = await resolvePhotoUrls(osId, formData);
 
   const { getServiceOrderById } = await import("@/lib/data/orders");
@@ -461,7 +473,7 @@ export async function saveFieldMeasurement(
     };
   }
 
-  const orderContext = { status: order.status };
+  const orderContext = { etapa: order.status };
 
   if (!isMeasurementActionAllowed(orderContext, measurementType)) {
     return {
@@ -496,11 +508,12 @@ export async function saveFieldMeasurement(
       items: itemsToSave,
       notes: notes ?? null,
       photos,
+      priority: priorityField.priority,
     });
     if (!result.success) return result;
     revalidatePath("/field");
     revalidatePath(`/field/${osId}`);
-    revalidatePath(`/dashboard/${osId}`);
+    revalidatePath("/dashboard");
     const warn = photoError ? ` Aviso: ${photoError}` : "";
     return {
       success: true,
@@ -511,59 +524,23 @@ export async function saveFieldMeasurement(
   try {
     const db = getDb();
 
-    const [existing] = await db
-      .select({ id: measurements.id })
-      .from(measurements)
-      .where(
-        and(eq(measurements.osId, osId), eqMeasurementType(measurementType)),
-      )
-      .limit(1);
-
-    const values = {
-      items: itemsToSave,
-      notes: notes ?? null,
-      photos,
-      technicianId: session?.userId ?? null,
-      updatedAt: new Date(),
-    };
-
-    if (existing) {
-      await db
-        .update(measurements)
-        .set(values)
-        .where(eq(measurements.id, existing.id));
-    } else {
-      const [header] = await db
-        .select({
-          cliente: measurements.cliente,
-          telefone: measurements.telefone,
-          numeroOrcamento: measurements.numeroOrcamento,
-        })
-        .from(measurements)
-        .where(eq(measurements.osId, osId))
-        .limit(1);
-
-      await db.insert(measurements).values({
-        osId,
-        type: measurementType,
-        cliente: header?.cliente ?? null,
-        telefone: header?.telefone ?? null,
-        numeroOrcamento: header?.numeroOrcamento ?? null,
-        ...values,
-      });
-    }
-
     await db
-      .update(serviceOrders)
+      .update(measurements)
       .set({
-        status: osStatusFromMeasurementType(measurementType),
+        items: itemsToSave,
+        notes: notes ?? null,
+        photos,
+        status: "medida",
+        etapa: osStatusFromMeasurementType(measurementType),
+        priority: priorityField.priority,
+        technicianId: session?.userId ?? null,
         updatedAt: new Date(),
       })
-      .where(eq(serviceOrders.id, osId));
+      .where(eq(measurements.id, osId));
 
     revalidatePath("/field");
     revalidatePath(`/field/${osId}`);
-    revalidatePath(`/dashboard/${osId}`);
+    revalidatePath("/dashboard");
 
     const warn = photoError ? ` (${photoError})` : "";
     return {
@@ -578,4 +555,3 @@ export async function saveFieldMeasurement(
     };
   }
 }
-

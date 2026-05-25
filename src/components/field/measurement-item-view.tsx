@@ -2,12 +2,15 @@
 
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { MeasurementItemSpecSummary } from "@/components/field/measurement-item-spec-fields";
+import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Button } from "@/components/ui/button";
 
 type MeasurementItemViewProps = {
   item: MeasurementLineItem;
   index: number;
+  lookups?: MeasurementLookups;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
 };
@@ -15,6 +18,7 @@ type MeasurementItemViewProps = {
 export function MeasurementItemView({
   item,
   index,
+  lookups,
   expanded,
   onExpandedChange,
 }: MeasurementItemViewProps) {
@@ -65,6 +69,7 @@ export function MeasurementItemView({
               ? `${item.largura || "—"} × ${item.altura || "—"} mm`
               : null}
           </p>
+          <MeasurementItemSpecSummary item={item} lookups={lookups} />
         </div>
       )}
 
@@ -88,7 +93,7 @@ export function MeasurementItemView({
             </p>
           )}
 
-          <MeasurementDimensionsSummary item={item} />
+          <MeasurementDimensionsSummary item={item} lookups={lookups} />
         </div>
       )}
     </article>
@@ -97,41 +102,46 @@ export function MeasurementItemView({
 
 export function MeasurementDimensionsSummary({
   item,
+  lookups,
   variant = "stacked",
 }: {
   item: MeasurementLineItem;
+  lookups?: MeasurementLookups;
   variant?: "stacked" | "inline";
 }) {
   if (variant === "inline") {
     const ambiente = item.ambiente?.trim();
 
     return (
-      <dl className="grid grid-cols-3 gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,1fr))] sm:items-start sm:gap-x-10">
-        {ambiente ? (
-          <div className="col-span-3 min-w-0 sm:col-span-1">
-            <dt className="text-xs text-muted-foreground">Ambiente</dt>
-            <dd className="mt-0.5 text-sm font-medium">{ambiente}</dd>
+      <>
+        <dl className="grid grid-cols-3 gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,1fr))] sm:items-start sm:gap-x-10">
+          {ambiente ? (
+            <div className="col-span-3 min-w-0 sm:col-span-1">
+              <dt className="text-xs text-muted-foreground">Ambiente</dt>
+              <dd className="mt-0.5 text-sm font-medium">{ambiente}</dd>
+            </div>
+          ) : null}
+          <div className="min-w-0">
+            <dt className="text-xs text-muted-foreground">Quantidade</dt>
+            <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
+              {item.qty > 0 ? item.qty : "—"}
+            </dd>
           </div>
-        ) : null}
-        <div className="min-w-0">
-          <dt className="text-xs text-muted-foreground">Quantidade</dt>
-          <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-            {item.qty > 0 ? item.qty : "—"}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-xs text-muted-foreground">Largura</dt>
-          <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-            {item.largura > 0 ? `${item.largura} mm` : "—"}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-xs text-muted-foreground">Altura</dt>
-          <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-            {item.altura > 0 ? `${item.altura} mm` : "—"}
-          </dd>
-        </div>
-      </dl>
+          <div className="min-w-0">
+            <dt className="text-xs text-muted-foreground">Largura</dt>
+            <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
+              {item.largura > 0 ? `${item.largura} mm` : "—"}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-xs text-muted-foreground">Altura</dt>
+            <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
+              {item.altura > 0 ? `${item.altura} mm` : "—"}
+            </dd>
+          </div>
+        </dl>
+        <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
+      </>
     );
   }
 
@@ -164,6 +174,7 @@ export function MeasurementDimensionsSummary({
           </dd>
         </div>
       </dl>
+      <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
     </div>
   );
 }

@@ -25,7 +25,9 @@ import { DateInput } from "@/components/ui/date-input";
 import { formatBrPhone } from "@/lib/phone-format";
 import { Textarea } from "@/components/ui/textarea";
 import { MeasurementTypeField } from "@/components/field/measurement-type-field";
+import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { MeasurementPriority } from "@/db/schema";
 
 export function CreateMeasurementDialog() {
   const router = useRouter();
@@ -36,6 +38,9 @@ export function CreateMeasurementDialog() {
   const [measurementType, setMeasurementType] = useState<"orcamento" | "final">(
     "orcamento",
   );
+  const [specValues, setSpecValues] = useState({
+    priority: "normal" as MeasurementPriority,
+  });
   const [previewWarning, setPreviewWarning] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
   const pdfInputRef = useRef<HTMLInputElement>(null);
@@ -96,6 +101,9 @@ export function CreateMeasurementDialog() {
       setClientPhone("");
       setBudgetReference("");
       setMeasurementType("orcamento");
+      setSpecValues({
+        priority: "normal",
+      });
       setPreviewWarning(null);
       if (pdfInputRef.current) pdfInputRef.current.value = "";
     }
@@ -215,6 +223,15 @@ export function CreateMeasurementDialog() {
               name="scheduledDate"
               disabled={isPending}
               className="h-11"
+            />
+          </div>
+
+          <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+            <p className="text-sm font-medium">Prioridade</p>
+            <MeasurementSpecFields
+              values={specValues}
+              onChange={setSpecValues}
+              disabled={isPending || parsing}
             />
           </div>
 

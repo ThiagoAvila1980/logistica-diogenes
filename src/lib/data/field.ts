@@ -28,7 +28,7 @@ export async function getFieldMeasurementDraft(
 ): Promise<FieldMeasurementDraft | undefined> {
   const type =
     typeOverride ??
-    getDraftMeasurementType(order);
+    getDraftMeasurementType({ etapa: order.status });
   if (!type) return undefined;
 
   if (useMockData()) {

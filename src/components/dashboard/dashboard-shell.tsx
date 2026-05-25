@@ -9,8 +9,6 @@ import { cn } from "@/lib/utils";
 
 function getMobileTitle(pathname: string): string {
   if (pathname.startsWith("/field")) return "Medições";
-  if (pathname.startsWith("/dashboard/kanban")) return "Kanban";
-  if (pathname.startsWith("/dashboard/")) return "Ordem de serviço";
   if (pathname === "/dashboard") return "Painel";
   if (pathname.startsWith("/production")) return "Corte";
   if (pathname.startsWith("/logistics")) return "Transporte";
@@ -18,6 +16,12 @@ function getMobileTitle(pathname: string): string {
   if (pathname.startsWith("/quote")) return "Orçamentos";
   if (pathname.startsWith("/admin/users")) return "Usuários";
   if (pathname.startsWith("/admin/vehicles")) return "Veículos";
+  if (pathname.startsWith("/admin/cores")) return "Cores";
+  if (pathname.startsWith("/admin/tipo-vidro")) return "Tipo de vidro";
+  if (pathname.startsWith("/admin/tipo-envidracamento")) {
+    return "Tipo de envidraçamento";
+  }
+  if (pathname.startsWith("/admin")) return "Configurações";
   return "Fluxo Diógenes";
 }
 

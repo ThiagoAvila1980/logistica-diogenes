@@ -48,7 +48,7 @@ export function StatusWizardAdvance({ order, userRoles }: Props) {
 
   const [isAdvancing, setIsAdvancing] = useState(false);
   const displayStatus = isAdvancing ? optimisticStatus : order.status;
-  const nextStep = getNextAdvanceStep(displayStatus, order.measurementFlow);
+  const nextStep = getNextAdvanceStep(displayStatus);
   const canAdvance =
     nextStep != null && canAdvanceToStatus(userRoles, nextStep);
   const canRevise = canPerformRevision(userRoles);
@@ -76,7 +76,6 @@ export function StatusWizardAdvance({ order, userRoles }: Props) {
     <div className="space-y-6">
       <StatusWizard
         currentStatus={displayStatus}
-        measurementFlow={order.measurementFlow}
         pending={isAdvancing}
         className={cn(isAdvancing && "opacity-90")}
       />

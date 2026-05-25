@@ -1,11 +1,14 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getSession } from "@/lib/auth/session";
+import { getDb } from "@/lib/db";
+import { installationLogs } from "@/db/schema";
 import {
   parseExistingUrls,
   parsePhotoFiles,
@@ -51,6 +54,37 @@ async function resolveInstallationPhotos(
   };
 }
 
+async function upsertInstallationDraftDb(
+  osId: string,
+  data: {
+    notes: string | null;
+    photos: { before: string[]; after: string[] };
+    installerId?: string;
+  },
+): Promise<void> {
+  const db = getDb();
+  const [existing] = await db
+    .select({ id: installationLogs.id })
+    .from(installationLogs)
+    .where(eq(installationLogs.idMedicao, osId))
+    .limit(1);
+
+  const values = {
+    notes: data.notes,
+    photos: data.photos,
+    installerId: data.installerId ?? null,
+  };
+
+  if (existing) {
+    await db
+      .update(installationLogs)
+      .set(values)
+      .where(eq(installationLogs.id, existing.id));
+  } else {
+    await db.insert(installationLogs).values({ idMedicao: osId, ...values });
+  }
+}
+
 export async function saveInstallationDraft(
   formData: FormData,
 ): Promise<SaveInstallationDraftResult> {
@@ -91,7 +125,7 @@ export async function saveInstallationDraft(
     if (!result.success) return result;
     revalidatePath("/installation");
     revalidatePath(`/installation/${osId}`);
-    revalidatePath(`/dashboard/${osId}`);
+    revalidatePath("/dashboard");
     const warn = photoError ? ` Aviso: ${photoError}` : "";
     return {
       success: true,
@@ -101,9 +135,6 @@ export async function saveInstallationDraft(
 
   try {
     const session = await getSession();
-    const { upsertInstallationDraftDb } = await import(
-      "@/lib/data/installation-db"
-    );
     await upsertInstallationDraftDb(osId, {
       notes: notes ?? null,
       photos: { before, after },
@@ -111,7 +142,7 @@ export async function saveInstallationDraft(
     });
     revalidatePath("/installation");
     revalidatePath(`/installation/${osId}`);
-    revalidatePath(`/dashboard/${osId}`);
+    revalidatePath("/dashboard");
     const warn = photoError ? ` Aviso: ${photoError}` : "";
     return {
       success: true,

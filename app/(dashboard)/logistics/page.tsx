@@ -28,7 +28,7 @@ export default async function LogisticsIndexPage() {
       {logisticsOrders.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Nenhuma OS em transporte no momento.
+            Nenhuma medição em transporte no momento.
           </p>
         </div>
       ) : (

@@ -1,0 +1,266 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { requireRole } from "@/lib/auth/require-role";
+import { authErrorMessage } from "@/lib/auth/auth-error";
+import { useMockData } from "@/lib/data/config";
+import {
+  corMockStore,
+  tipoEnvidracamentoMockStore,
+  tipoVidroMockStore,
+} from "@/lib/data/admin-mock-store";
+import type { LookupAdminRow } from "@/lib/data/lookup-admin-db";
+import type { AdminActionResult } from "@/actions/vehicle-actions";
+
+export type LookupEntity = "cores" | "tipo_vidro" | "tipo_envidracamento";
+
+const lookupSchema = z.object({
+  id: z.string().uuid().optional(),
+  descricao: z.string().min(1, "Descrição obrigatória").max(255),
+});
+
+const ENTITY_CONFIG: Record<
+  LookupEntity,
+  {
+    adminPath: string;
+    listDb: () => Promise<LookupAdminRow[]>;
+    upsertDb: (data: { id?: string; descricao: string }) => Promise<void>;
+    deleteDb: (id: string) => Promise<void>;
+    countDupDb: (descricao: string, excludeId?: string) => Promise<number>;
+    mockStore: {
+      list: () => { id: string; descricao: string }[];
+      create: (descricao: string) => { id: string; descricao: string };
+      update: (id: string, descricao: string) => { id: string; descricao: string };
+      delete: (id: string) => void;
+    };
+  }
+> = {
+  cores: {
+    adminPath: "/admin/cores",
+    listDb: async () => {
+      const { listCoresAdminDb } = await import("@/lib/data/lookup-admin-db");
+      return listCoresAdminDb();
+    },
+    upsertDb: async (data) => {
+      const { upsertCorDb } = await import("@/lib/data/lookup-admin-db");
+      await upsertCorDb(data);
+    },
+    deleteDb: async (id) => {
+      const { deleteCorDb } = await import("@/lib/data/lookup-admin-db");
+      await deleteCorDb(id);
+    },
+    countDupDb: async (descricao, excludeId) => {
+      const { countCorByDescricaoDb } = await import("@/lib/data/lookup-admin-db");
+      return countCorByDescricaoDb(descricao, excludeId);
+    },
+    mockStore: corMockStore,
+  },
+  tipo_vidro: {
+    adminPath: "/admin/tipo-vidro",
+    listDb: async () => {
+      const { listTipoVidroAdminDb } = await import("@/lib/data/lookup-admin-db");
+      return listTipoVidroAdminDb();
+    },
+    upsertDb: async (data) => {
+      const { upsertTipoVidroDb } = await import("@/lib/data/lookup-admin-db");
+      await upsertTipoVidroDb(data);
+    },
+    deleteDb: async (id) => {
+      const { deleteTipoVidroDb } = await import("@/lib/data/lookup-admin-db");
+      await deleteTipoVidroDb(id);
+    },
+    countDupDb: async (descricao, excludeId) => {
+      const { countTipoVidroByDescricaoDb } = await import(
+        "@/lib/data/lookup-admin-db"
+      );
+      return countTipoVidroByDescricaoDb(descricao, excludeId);
+    },
+    mockStore: tipoVidroMockStore,
+  },
+  tipo_envidracamento: {
+    adminPath: "/admin/tipo-envidracamento",
+    listDb: async () => {
+      const { listTipoEnvidracamentoAdminDb } = await import(
+        "@/lib/data/lookup-admin-db"
+      );
+      return listTipoEnvidracamentoAdminDb();
+    },
+    upsertDb: async (data) => {
+      const { upsertTipoEnvidracamentoDb } = await import(
+        "@/lib/data/lookup-admin-db"
+      );
+      await upsertTipoEnvidracamentoDb(data);
+    },
+    deleteDb: async (id) => {
+      const { deleteTipoEnvidracamentoDb } = await import(
+        "@/lib/data/lookup-admin-db"
+      );
+      await deleteTipoEnvidracamentoDb(id);
+    },
+    countDupDb: async (descricao, excludeId) => {
+      const { countTipoEnvidracamentoByDescricaoDb } = await import(
+        "@/lib/data/lookup-admin-db"
+      );
+      return countTipoEnvidracamentoByDescricaoDb(descricao, excludeId);
+    },
+    mockStore: tipoEnvidracamentoMockStore,
+  },
+};
+
+function revalidateLookupPaths(adminPath: string) {
+  revalidatePath(adminPath);
+  revalidatePath("/field");
+  revalidatePath("/dashboard");
+  revalidatePath("/production");
+  revalidatePath("/installation");
+}
+
+function toAdminRows(
+  items: { id: string; descricao: string }[],
+): LookupAdminRow[] {
+  return items.map((item) => ({
+    ...item,
+    usageCount: 0,
+  }));
+}
+
+export async function getLookupItemsForAdmin(
+  entity: LookupEntity,
+): Promise<LookupAdminRow[]> {
+  await requireRole(["admin"]);
+  const config = ENTITY_CONFIG[entity];
+  if (useMockData()) {
+    return toAdminRows(config.mockStore.list());
+  }
+  return config.listDb();
+}
+
+async function saveLookupInternal(
+  entity: LookupEntity,
+  _prev: AdminActionResult | null,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  try {
+    await requireRole(["admin"]);
+  } catch (err) {
+    return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
+  }
+
+  const parsed = lookupSchema.safeParse({
+    id: formData.get("id") || undefined,
+    descricao: formData.get("descricao"),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message:
+        parsed.error.flatten().fieldErrors.descricao?.[0] ?? "Dados inválidos",
+    };
+  }
+
+  const { id, descricao } = parsed.data;
+  const config = ENTITY_CONFIG[entity];
+
+  try {
+    if (useMockData()) {
+      if (id) {
+        config.mockStore.update(id, descricao);
+      } else {
+        config.mockStore.create(descricao);
+      }
+    } else {
+      const dup = await config.countDupDb(descricao, id);
+      if (dup > 0) {
+        return { success: false, message: "Descrição já cadastrada" };
+      }
+      await config.upsertDb({ id, descricao });
+    }
+
+    revalidateLookupPaths(config.adminPath);
+    return {
+      success: true,
+      message: id ? "Registro atualizado" : "Registro cadastrado",
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "Erro ao salvar registro",
+    };
+  }
+}
+
+export async function saveCor(
+  prev: AdminActionResult | null,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  return saveLookupInternal("cores", prev, formData);
+}
+
+export async function saveTipoVidro(
+  prev: AdminActionResult | null,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  return saveLookupInternal("tipo_vidro", prev, formData);
+}
+
+export async function saveTipoEnvidracamento(
+  prev: AdminActionResult | null,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  return saveLookupInternal("tipo_envidracamento", prev, formData);
+}
+
+export async function deleteLookupItem(
+  entity: LookupEntity,
+  id: string,
+): Promise<AdminActionResult> {
+  try {
+    await requireRole(["admin"]);
+  } catch (err) {
+    return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
+  }
+
+  const config = ENTITY_CONFIG[entity];
+
+  try {
+    if (useMockData()) {
+      config.mockStore.delete(id);
+    } else {
+      const rows = await config.listDb();
+      const row = rows.find((item) => item.id === id);
+      if (row && row.usageCount > 0) {
+        return {
+          success: false,
+          message: "Registro em uso em medições — não pode ser removido",
+        };
+      }
+      await config.deleteDb(id);
+    }
+
+    revalidateLookupPaths(config.adminPath);
+    return { success: true, message: "Registro removido" };
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "Erro ao remover registro",
+    };
+  }
+}
+
+export async function deleteCor(id: string): Promise<AdminActionResult> {
+  return deleteLookupItem("cores", id);
+}
+
+export async function deleteTipoVidroItem(
+  id: string,
+): Promise<AdminActionResult> {
+  return deleteLookupItem("tipo_vidro", id);
+}
+
+export async function deleteTipoEnvidracamentoItem(
+  id: string,
+): Promise<AdminActionResult> {
+  return deleteLookupItem("tipo_envidracamento", id);
+}

@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { measurements, cuttingPlans } from "@/db/schema";
 import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
@@ -50,12 +50,7 @@ export async function getCuttingDetailForOs(osId: string): Promise<CuttingDetail
       dimensions: measurements.dimensions,
     })
     .from(measurements)
-    .where(
-      and(
-        eq(measurements.osId, osId),
-        eq(measurements.type, "final"),
-      ),
-    )
+    .where(eq(measurements.id, osId))
     .limit(1);
 
   const [cut] = await db
@@ -65,7 +60,7 @@ export async function getCuttingDetailForOs(osId: string): Promise<CuttingDetail
       acessoriosFeitos: cuttingPlans.acessoriosFeitos,
     })
     .from(cuttingPlans)
-    .where(eq(cuttingPlans.osId, osId))
+    .where(eq(cuttingPlans.idMedicao, osId))
     .limit(1);
 
   const items = (meas?.items as MeasurementLineItem[]) ?? [];

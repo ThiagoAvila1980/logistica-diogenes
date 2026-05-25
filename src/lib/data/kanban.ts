@@ -1,4 +1,8 @@
-import type { OsStatus, MeasurementFlow } from "@/db/schema";
+import type {
+  OsStatus,
+  MeasurementDbStatus,
+  MeasurementDbType,
+} from "@/db/schema";
 import { useMockData } from "./config";
 import { mockRepository } from "./mock-repository";
 
@@ -13,15 +17,16 @@ export type KanbanOrderItem = {
   number: string;
   budgetReference: string | null;
   status: OsStatus;
-  measurementFlow: MeasurementFlow;
+  type: MeasurementDbType;
+  measurementStatus: MeasurementDbStatus;
   clientName: string;
-  priority: "baixa" | "normal" | "alta" | "urgente";
+  priority: "normal" | "alta" | "urgente";
   scheduledDate: Date | null;
-  /** Momento em que a OS entrou no status atual (proxy para tempo na coluna) */
+  /** Momento em que a medição entrou na etapa atual (proxy para tempo na coluna) */
   updatedAt: Date;
   /** true quando o medidor já registrou itens de medição (items não vazio). */
   hasMeasurement: boolean;
-  /** Presente quando a OS está no plano de corte */
+  /** Presente quando a medição está no plano de corte */
   cuttingSteps: CuttingSteps | null;
 };
 

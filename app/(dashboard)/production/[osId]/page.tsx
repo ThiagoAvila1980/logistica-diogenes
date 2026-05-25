@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
+import { listMeasurementLookups } from "@/lib/data/lookups";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CuttingChecklist } from "@/components/production/cutting-checklist";
@@ -13,9 +15,10 @@ type Props = { params: Promise<{ osId: string }> };
 
 export default async function ProductionOsPage({ params }: Props) {
   const { osId } = await params;
-  const [order, detail] = await Promise.all([
+  const [order, detail, lookups] = await Promise.all([
     getServiceOrderById(osId),
     getCuttingDetailForOs(osId),
+    listMeasurementLookups(),
   ]);
   if (!order) notFound();
 
@@ -26,7 +29,7 @@ export default async function ProductionOsPage({ params }: Props) {
       <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2">
         <Link href="/production">
           <ArrowLeft className="h-4 w-4" />
-          Voltar às OS
+          Voltar ao plano de corte
         </Link>
       </Button>
 
@@ -42,6 +45,12 @@ export default async function ProductionOsPage({ params }: Props) {
             {order.description}
           </p>
         )}
+        <div className="mt-3">
+          <MeasurementSpecFields
+            values={{ priority: order.priority }}
+            readOnly
+          />
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -52,11 +61,12 @@ export default async function ProductionOsPage({ params }: Props) {
             items={measurement.items}
             photos={measurement.photos}
             notes={measurement.notes}
+            lookups={lookups}
           />
         ) : (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              Nenhuma medição final registrada para esta OS.
+              Nenhuma medição registrada para este item.
             </CardContent>
           </Card>
         )}

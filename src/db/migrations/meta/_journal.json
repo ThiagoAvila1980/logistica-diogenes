@@ -85,6 +85,20 @@
       "when": 1748100000000,
       "tag": "0015_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1748200000000,
+      "tag": "0016_remove_service_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1748300000000,
+      "tag": "0017_item_spec_fields",
+      "breakpoints": true
     }
   ]
 }

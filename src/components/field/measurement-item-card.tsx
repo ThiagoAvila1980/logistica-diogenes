@@ -5,6 +5,8 @@ import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { resolveUploadDisplayUrlAction } from "@/actions/upload-actions";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { DrawingBoard } from "@/components/field/drawing-board";
+import { MeasurementItemSpecFields } from "@/components/field/measurement-item-spec-fields";
+import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +14,7 @@ import { Label } from "@/components/ui/label";
 type MeasurementItemCardProps = {
   item: MeasurementLineItem;
   index: number;
+  lookups: MeasurementLookups;
   expanded: boolean;
   canRemove: boolean;
   disabled?: boolean;
@@ -27,6 +30,7 @@ type MeasurementItemCardProps = {
 export function MeasurementItemCard({
   item,
   index,
+  lookups,
   expanded,
   canRemove,
   disabled,
@@ -232,6 +236,22 @@ export function MeasurementItemCard({
                 />
               </div>
             </div>
+            <MeasurementItemSpecFields
+              lookups={lookups}
+              itemId={item.id}
+              values={{
+                idCor: item.idCor ?? null,
+                idTipoVidro: item.idTipoVidro ?? null,
+                idTipoEnvidracamento: item.idTipoEnvidracamento ?? null,
+              }}
+              disabled={disabled}
+              onChange={(specValues) =>
+                onChange({
+                  ...item,
+                  ...specValues,
+                })
+              }
+            />
           </div>
         </div>
       )}
@@ -246,6 +266,9 @@ export function createEmptyMeasurementItem(id: string): MeasurementLineItem {
     qty: 0,
     largura: 0,
     altura: 0,
+    idCor: null,
+    idTipoVidro: null,
+    idTipoEnvidracamento: null,
     drawingUrl: null,
   };
 }

@@ -34,7 +34,7 @@ export default async function ProductionIndexPage() {
       <ul className="mt-6 space-y-2">
         {orders.length === 0 ? (
           <li className="text-sm text-muted-foreground">
-            Nenhuma OS nesta etapa.
+            Nenhuma medição nesta etapa.
           </li>
         ) : (
           orders.map((o) => {

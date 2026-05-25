@@ -4,14 +4,12 @@ import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
-import { cuttingPlans, serviceOrders, users } from "@/db/schema";
-import { getSession } from "@/lib/auth/session";
+import { cuttingPlans } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { getServiceOrderById } from "@/lib/data/orders";
-import { createCuttingProblemNotifications } from "@/lib/data/notifications-db";
-import { getOrderDisplayNumber } from "@/lib/order-display";
+import { sendStageProblemAlertAction } from "@/actions/stage-alert-actions";
 
 const updateStepSchema = z.object({
   osId: z.string().uuid(),
@@ -52,7 +50,11 @@ export async function updateCuttingStepAction(
   try {
     const order = await getServiceOrderById(osId);
     if (!order) return { success: false, message: "OS não encontrada" };
-    if (!CUTTING_STATUSES.includes(order.status as (typeof CUTTING_STATUSES)[number])) {
+    if (
+      !CUTTING_STATUSES.includes(
+        order.status as (typeof CUTTING_STATUSES)[number],
+      )
+    ) {
       return { success: false, message: "OS não está em etapa de corte" };
     }
 
@@ -60,7 +62,7 @@ export async function updateCuttingStepAction(
     const [existing] = await db
       .select({ id: cuttingPlans.id })
       .from(cuttingPlans)
-      .where(eq(cuttingPlans.osId, osId))
+      .where(eq(cuttingPlans.idMedicao, osId))
       .limit(1);
 
     const fieldMap = {
@@ -76,8 +78,7 @@ export async function updateCuttingStepAction(
         .where(eq(cuttingPlans.id, existing.id));
     } else {
       await db.insert(cuttingPlans).values({
-        osId,
-        status: "em_andamento",
+        idMedicao: osId,
         ...fieldMap[step],
       });
     }
@@ -107,35 +108,9 @@ export async function sendCuttingAlertAction(
   const parsed = alertSchema.safeParse(raw);
   if (!parsed.success) return { success: false, message: "Mensagem inválida" };
 
-  try {
-    await requireRole(["admin", "gerente", "cortador"]);
-  } catch {
-    return { success: false, message: "Sem permissão para esta ação" };
-  }
-
-  const { osId, message } = parsed.data;
-
-  const session = await getSession();
-  const order = await getServiceOrderById(osId);
-  if (!order) return { success: false, message: "OS não encontrada" };
-
-  try {
-    const sent = await createCuttingProblemNotifications({
-      osId,
-      osNumber: getOrderDisplayNumber(order),
-      clientName: order.clientName,
-      senderName: session?.name ?? "Cortador",
-      message,
-    });
-    if (sent === 0) {
-      return {
-        success: false,
-        message: "Nenhum gestor ativo encontrado para notificar",
-      };
-    }
-    return { success: true };
-  } catch (err) {
-    console.error("[sendCuttingAlert]", err);
-    return { success: false, message: "Erro ao enviar notificação" };
-  }
+  return sendStageProblemAlertAction({
+    osId: parsed.data.osId,
+    stage: "cutting",
+    message: parsed.data.message,
+  });
 }
