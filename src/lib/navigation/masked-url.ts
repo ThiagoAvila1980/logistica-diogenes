@@ -34,6 +34,8 @@ export function isValidInternalPath(path: string): boolean {
   );
 }
 
+const PUBLIC_UNMASKED_PATHS = new Set(["/login", "/unauthorized"]);
+
 export function isMaskablePath(pathname: string): boolean {
   if (
     !pathname ||
@@ -43,7 +45,7 @@ export function isMaskablePath(pathname: string): boolean {
     return false;
   }
 
-  if (pathname === "/") return false;
+  if (pathname === "/" || PUBLIC_UNMASKED_PATHS.has(pathname)) return false;
 
   return isValidInternalPath(pathname);
 }
@@ -95,10 +97,14 @@ export function maskBrowserUrl(pathname: string, mode: "replace" | "push"): void
 
   const state = { internalPath: pathname };
 
-  if (mode === "push") {
-    window.history.pushState(state, "", "/");
-    return;
-  }
+  try {
+    if (mode === "push") {
+      window.history.pushState(state, "", "/");
+      return;
+    }
 
-  window.history.replaceState(state, "", "/");
+    window.history.replaceState(state, "", "/");
+  } catch {
+    /* WebViews (WhatsApp/Instagram) podem bloquear History API */
+  }
 }

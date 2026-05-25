@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Fluxo Diógenes",
   description: "Gestão de vidraçaria — medição ao pós-venda",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export const viewport = {

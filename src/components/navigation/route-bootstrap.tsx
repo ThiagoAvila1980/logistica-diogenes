@@ -25,7 +25,11 @@ export function RouteBootstrap({ session }: RouteBootstrapProps) {
     const goto = parseGotoParam(window.location.search);
 
     if (goto) {
-      window.history.replaceState(null, "", "/");
+      try {
+        window.history.replaceState(null, "", "/");
+      } catch {
+        /* History API indisponível em alguns WebViews */
+      }
 
       if (!session) {
         router.replace(`/login?next=${encodeURIComponent(goto)}`);
