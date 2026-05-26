@@ -2,7 +2,7 @@ import "dotenv/config";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
 import postgres from "postgres";
-import { getDirectDatabaseUrl } from "./env";
+import { getDirectDatabaseUrl, isRemoteSupabaseUrl } from "./env";
 import * as schema from "./schema";
 import { hashPassword } from "@/lib/auth/password";
 import { DEMO_DEFAULT_PASSWORD } from "@/lib/auth/demo-password";
@@ -10,7 +10,7 @@ import { DEMO_DEFAULT_PASSWORD } from "@/lib/auth/demo-password";
 const connectionString = getDirectDatabaseUrl();
 const client = postgres(connectionString, {
   prepare: false,
-  ssl: connectionString.includes("supabase") ? "require" : undefined,
+  ssl: isRemoteSupabaseUrl(connectionString) ? "require" : undefined,
   max: 1,
 });
 const db = drizzle(client, { schema });

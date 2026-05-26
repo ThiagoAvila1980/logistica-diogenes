@@ -1,27 +1,64 @@
+/** Parâmetros de Prisma/Drizzle que o driver postgres.js repassa como GUC inválido. */
+const STRIP_SEARCH_PARAMS = new Set([
+  "schema",
+  "pgbouncer",
+  "connection_limit",
+]);
+
 /**
- * URLs de conexão Supabase.
- *
- * - DATABASE_URL: pooler (porta 6543) — uso em runtime (Server Actions, API)
- * - DIRECT_URL: conexão direta (porta 5432) — migrations e seed
+ * Remove query params incompatíveis com postgres.js (ex.: ?schema=public).
  */
-export function getDatabaseUrl(): string {
+export function normalizePostgresConnectionUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  try {
+    const parsed = new URL(trimmed);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (STRIP_SEARCH_PARAMS.has(key)) {
+        parsed.searchParams.delete(key);
+      }
+    }
+    const search = parsed.searchParams.toString();
+    const auth =
+      parsed.username.length > 0
+        ? `${parsed.username}${parsed.password ? `:${parsed.password}` : ""}@`
+        : "";
+    const base = `${parsed.protocol}//${auth}${parsed.host}${parsed.pathname}`;
+    return search ? `${base}?${search}` : base;
+  } catch {
+    return trimmed
+      .replace(/([?&])schema=[^&]*&?/g, "$1")
+      .replace(/[?&]$/, "");
+  }
+}
+
+function requireDatabaseUrl(): string {
   const url = process.env.DATABASE_URL?.trim();
   if (!url) {
     throw new Error(
-      "DATABASE_URL não configurada. Copie a connection string do Supabase (Session pooler) para .env.local",
+      "DATABASE_URL não configurada. Defina a connection string em .env.local (Supabase ou PostgreSQL local).",
     );
   }
-  return url;
+  return normalizePostgresConnectionUrl(url);
+}
+
+/**
+ * URLs de conexão PostgreSQL.
+ *
+ * - DATABASE_URL: runtime (Server Actions, API)
+ * - DIRECT_URL: migrations e seed (opcional; cai em DATABASE_URL)
+ */
+export function getDatabaseUrl(): string {
+  return requireDatabaseUrl();
 }
 
 export function getDirectDatabaseUrl(): string {
   const direct = process.env.DIRECT_URL?.trim();
-  if (direct) return direct;
-  const url = process.env.DATABASE_URL?.trim();
-  if (url) return url;
-  throw new Error(
-    "DIRECT_URL ou DATABASE_URL não configurada. Copie .env.example para .env.local e preencha a connection string do Supabase.",
-  );
+  if (direct) return normalizePostgresConnectionUrl(direct);
+  return requireDatabaseUrl();
+}
+
+export function isRemoteSupabaseUrl(url: string): boolean {
+  return url.includes("supabase.com") || url.includes("supabase.co");
 }
 
 export function isSupabaseConfigured(): boolean {

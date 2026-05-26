@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { getDatabaseUrl } from "./env";
+import { getDatabaseUrl, isRemoteSupabaseUrl } from "./env";
 import * as schema from "./schema";
 
 type FluxoDb = ReturnType<typeof drizzle<typeof schema>>;
@@ -13,7 +13,7 @@ export function getDb(): FluxoDb {
   const connectionString = getDatabaseUrl();
   const client = postgres(connectionString, {
     prepare: false,
-    ssl: connectionString.includes("supabase") ? "require" : undefined,
+    ssl: isRemoteSupabaseUrl(connectionString) ? "require" : undefined,
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,

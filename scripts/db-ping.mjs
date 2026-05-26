@@ -1,13 +1,16 @@
 import postgres from "postgres";
+import {
+  getDatabaseUrlFromEnv,
+  getDirectDatabaseUrlFromEnv,
+  postgresSslOption,
+} from "./db-url.mjs";
 
 function getDatabaseUrl() {
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) throw new Error("DATABASE_URL não configurada");
-  return url;
+  return getDatabaseUrlFromEnv();
 }
 
 function getDirectDatabaseUrl() {
-  return process.env.DIRECT_URL?.trim() || getDatabaseUrl();
+  return getDirectDatabaseUrlFromEnv();
 }
 
 function describeUrl(label, url) {
@@ -24,7 +27,7 @@ function describeUrl(label, url) {
 async function pingOnce(label, url) {
   const sql = postgres(url, {
     prepare: false,
-    ssl: url.includes("supabase") ? "require" : undefined,
+    ssl: postgresSslOption(url),
     max: 1,
     connect_timeout: 10,
   });
@@ -64,15 +67,15 @@ const directOk = await pingWithRetry("DIRECT_URL", getDirectDatabaseUrl());
 
 if (!runtimeOk || !directOk) {
   console.error(
-    "\nO formato da URL parece correto, mas o pooler rejeitou a senha.\n" +
-      "Isso é um bug conhecido do Supabase após reset de senha (região aws-1-us-west-2).\n\n" +
-      "Tente nesta ordem:\n" +
+    "\nFalha ao conectar ao PostgreSQL.\n\n" +
+      "PostgreSQL local:\n" +
+      "1. Confirme que o serviço está rodando (porta 5432)\n" +
+      "2. DATABASE_URL e DIRECT_URL apontando para o mesmo host local\n" +
+      "3. Remova ?schema=public da URL (só funciona no Prisma, não no postgres.js)\n\n" +
+      "Supabase remoto:\n" +
       "1. Dashboard > Project Settings > General > Restart project\n" +
-      "2. Dashboard > Database > Reset database password\n" +
-      "3. Copie a connection string COMPLETA (não só a senha) para .env.local\n" +
-      "4. Use senha só com letras e números (sem @, #, &, etc.)\n" +
-      "5. Aguarde 2-5 minutos e rode npm run db:ping novamente\n\n" +
-      "Enquanto isso, o banco continua acessível via MCP no Cursor.",
+      "2. Copie a connection string completa para .env.local\n" +
+      "3. Aguarde 2-5 minutos e rode npm run db:ping novamente",
   );
   process.exit(1);
 }
