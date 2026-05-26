@@ -10,29 +10,22 @@ import { cn } from "@/lib/utils";
 import type { KanbanOrderItem } from "@/lib/data/kanban";
 import { KanbanStatusBadge } from "./kanban-status-badge";
 
-const MEASUREMENT_STATUSES = new Set(["medicao_orcamento", "medicao_final"]);
-const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
-const TRANSPORT_STATUSES = new Set([
-  "transporte_perfil",
-  "transporte_estrutural",
-  "transporte_perfis_total",
-  "transporte_acessorios",
-  "transporte_levar_vidro",
-]);
-const INSTALLATION_STATUSES = new Set([
-  "instalacao_estrutural",
-  "instalacao_vidros",
-  "concluido",
-]);
-
 const PRIORITY_BORDER: Record<string, string> = {
   normal: "border-l-border",
   alta: "border-l-orange-500",
   urgente: "border-l-red-500",
 };
 
+const MEASUREMENT_PHASE = "medicao";
+const CUTTING_PHASE = "plano_corte";
+const TRANSPORT_PHASE = "transporte";
+const INSTALLATION_PHASE = "instalacao";
+
 type KanbanCardProps = {
   os: KanbanOrderItem;
+  phaseId: string;
+  placementKey: string;
+  isParallelPlacement?: boolean;
   index: number;
   canAdvance?: boolean;
   onKeyboardAdvance?: (osId: string) => void;
@@ -40,6 +33,9 @@ type KanbanCardProps = {
 
 export function KanbanCard({
   os,
+  phaseId,
+  placementKey,
+  isParallelPlacement = false,
   index,
   canAdvance,
   onKeyboardAdvance,
@@ -60,14 +56,18 @@ export function KanbanCard({
     PRIORITY_BORDER[os.priority] ?? PRIORITY_BORDER.normal;
   const displayNumber = getOrderDisplayNumber(os);
   const detailHref = getOsModuleHref(os.id, os.status);
-  const isMeasurementColumn = MEASUREMENT_STATUSES.has(os.status);
+  const isMeasurementColumn = phaseId === MEASUREMENT_PHASE;
   const isFinal = os.type === "final";
-  const isCuttingColumn = CUTTING_STATUSES.has(os.status);
-  const isTransportColumn = TRANSPORT_STATUSES.has(os.status);
-  const isInstallationColumn = INSTALLATION_STATUSES.has(os.status);
+  const isCuttingColumn = phaseId === CUTTING_PHASE;
+  const isTransportColumn = phaseId === TRANSPORT_PHASE;
+  const isInstallationColumn = phaseId === INSTALLATION_PHASE;
 
   return (
-    <Draggable draggableId={os.id} index={index}>
+    <Draggable
+      draggableId={placementKey}
+      index={index}
+      isDragDisabled={isParallelPlacement}
+    >
       {(provided, snapshot) => (
         <article
           ref={provided.innerRef}
@@ -80,17 +80,23 @@ export function KanbanCard({
               ? "z-10 scale-[1.02] shadow-lg ring-1 ring-primary/40"
               : "shadow-sm hover:shadow-md",
           )}
-          data-testid={`kanban-card-${os.id}`}
+          data-testid={`kanban-card-${os.id}-${phaseId}`}
           title={`${displayNumber} · ${os.clientName}${os.scheduledDate ? ` · ${formatBrDate(os.scheduledDate)}` : ""}`}
         >
           <div className="flex items-start gap-1 p-1.5 sm:gap-1.5 sm:p-2">
             <button
               type="button"
-              className="mt-0.5 shrink-0 cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted active:cursor-grabbing max-sm:-ml-0.5"
-              {...provided.dragHandleProps}
+              className={cn(
+                "mt-0.5 shrink-0 rounded p-0.5 text-muted-foreground max-sm:-ml-0.5",
+                isParallelPlacement
+                  ? "cursor-default opacity-40"
+                  : "cursor-grab hover:bg-muted active:cursor-grabbing",
+              )}
+              {...(isParallelPlacement ? {} : provided.dragHandleProps)}
               tabIndex={0}
               aria-label={`Arrastar orçamento ${displayNumber}`}
               onClick={(e) => e.preventDefault()}
+              disabled={isParallelPlacement}
             >
               <GripVertical className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
             </button>

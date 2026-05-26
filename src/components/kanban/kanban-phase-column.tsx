@@ -8,9 +8,11 @@ import { getAllowedTransitions } from "@/lib/workflow/status-machine";
 import type { KanbanOrderItem } from "@/lib/data/kanban";
 import type { KanbanPhase } from "@/lib/kanban/column-groups";
 
+import type { KanbanPlacedOrder } from "@/lib/kanban/phase-placement";
+
 type KanbanPhaseColumnProps = {
   phase: KanbanPhase;
-  items: KanbanOrderItem[];
+  items: KanbanPlacedOrder[];
   isDropDisabled?: boolean;
   onKeyboardAdvance?: (osId: string) => void;
 };
@@ -51,13 +53,18 @@ export function KanbanPhaseColumn({
                   : "bg-transparent",
               )}
             >
-              {items.map((os, idx) => {
-                const canAdvance = getAllowedTransitions(os.status).length > 0;
+              {items.map((item, idx) => {
+                const canAdvance =
+                  !item.isParallelPlacement &&
+                  getAllowedTransitions(item.os.status).length > 0;
 
                 return (
                   <KanbanCard
-                    key={os.id}
-                    os={os}
+                    key={item.placementKey}
+                    os={item.os}
+                    phaseId={item.phaseId}
+                    placementKey={item.placementKey}
+                    isParallelPlacement={item.isParallelPlacement}
                     index={idx}
                     canAdvance={canAdvance}
                     onKeyboardAdvance={onKeyboardAdvance}

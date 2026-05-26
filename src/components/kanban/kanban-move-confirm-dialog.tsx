@@ -19,6 +19,7 @@ export type KanbanPendingMove = {
   clientName: string;
   sourceStatus: OsStatus;
   destStatus: OsStatus;
+  sourcePhaseId: string;
   destPhaseId: string;
   destIndex?: number;
 };

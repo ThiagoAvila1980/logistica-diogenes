@@ -6,6 +6,7 @@ import {
   measurementClientName,
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
+import { hasPendingCuttingSteps } from "@/lib/transport-gates";
 import type { KanbanOrderItem } from "./kanban";
 
 const TRANSPORT_STATUSES = new Set([
@@ -65,6 +66,20 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
     const isTransportPhase = TRANSPORT_STATUSES.has(r.status);
     const isInstallationPhase = INSTALLATION_STATUSES.has(r.status);
 
+    const cuttingStepsData = {
+      corte: r.corteFeito ?? false,
+      embalagem: r.embalagemFeita ?? false,
+      acessorios: r.acessoriosFeitos ?? false,
+    };
+
+    const hasPendingCutting =
+      isTransportPhase &&
+      hasPendingCuttingSteps({
+        corteFeito: cuttingStepsData.corte,
+        embalagemFeita: cuttingStepsData.embalagem,
+        acessoriosFeitos: cuttingStepsData.acessorios,
+      });
+
     return {
       id: r.id,
       number: r.number,
@@ -77,13 +92,8 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       scheduledDate: r.scheduledDate,
       updatedAt: r.updatedAt,
       hasMeasurement: Boolean(r.hasMeasurement),
-      cuttingSteps: isCortePhase
-        ? {
-            corte: r.corteFeito ?? false,
-            embalagem: r.embalagemFeita ?? false,
-            acessorios: r.acessoriosFeitos ?? false,
-          }
-        : null,
+      cuttingSteps:
+        isCortePhase || hasPendingCutting ? cuttingStepsData : null,
       transportSteps: isTransportPhase
         ? {
             levarPerfilEstrutural: r.levarPerfilEstrutural ?? false,

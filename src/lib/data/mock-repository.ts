@@ -301,6 +301,21 @@ export const mockRepository = {
         m.etapa === "instalacao_vidros" ||
         m.etapa === "concluido";
 
+      const cuttingStepsData = cut
+        ? {
+            corte: cut.corteFeito,
+            embalagem: cut.embalagemFeita,
+            acessorios: cut.acessoriosFeitos,
+          }
+        : null;
+
+      const hasPendingCutting =
+        isTransportPhase &&
+        cuttingStepsData &&
+        (!cuttingStepsData.corte ||
+          !cuttingStepsData.embalagem ||
+          !cuttingStepsData.acessorios);
+
       return {
         id: m.id,
         number: m.number,
@@ -313,13 +328,10 @@ export const mockRepository = {
         scheduledDate: m.scheduledDate,
         updatedAt: m.updatedAt,
         hasMeasurement: isMeasured(m),
-        cuttingSteps: isCortePhase && cut
-          ? {
-              corte: cut.corteFeito,
-              embalagem: cut.embalagemFeita,
-              acessorios: cut.acessoriosFeitos,
-            }
-          : null,
+        cuttingSteps:
+          (isCortePhase || hasPendingCutting) && cuttingStepsData
+            ? cuttingStepsData
+            : null,
         transportSteps: isTransportPhase
           ? {
               levarPerfilEstrutural: false,

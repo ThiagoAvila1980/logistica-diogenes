@@ -101,6 +101,7 @@ export function SendToCuttingButton({
                 clientName,
                 sourceStatus: SOURCE_STATUS,
                 destStatus: DEST_STATUS,
+                sourcePhaseId: "medicao",
                 destPhaseId: "plano_corte",
               }
             : null

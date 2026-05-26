@@ -1,5 +1,6 @@
 import type { KanbanOrderItem } from "@/lib/data/kanban";
-import { KANBAN_PHASES, getPhaseIdForStatus } from "@/lib/kanban/column-groups";
+import { KANBAN_PHASES } from "@/lib/kanban/column-groups";
+import { orderAppearsInKanbanPhase } from "@/lib/kanban/phase-placement";
 
 export type ColumnMetric = {
   phaseId: string;
@@ -17,8 +18,8 @@ export function computePhaseMetrics(
 
   return phaseIds.map((phaseId) => {
     const phase = phaseById.get(phaseId);
-    const inPhase = orders.filter(
-      (o) => getPhaseIdForStatus(o.status) === phaseId,
+    const inPhase = orders.filter((o) =>
+      orderAppearsInKanbanPhase(o, phaseId),
     );
 
     if (inPhase.length === 0) {

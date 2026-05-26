@@ -13,6 +13,11 @@ import {
   getPhaseIdForStatus,
   resolvePhaseDropTarget,
 } from "@/lib/kanban/column-groups";
+import {
+  parseKanbanDraggableId,
+  placeKanbanOrders,
+  type KanbanPlacedOrder,
+} from "@/lib/kanban/phase-placement";
 import type { OsStatus } from "@/db/schema";
 import {
   reviveKanbanOrders,
@@ -34,22 +39,10 @@ import { getOrderDisplayNumber } from "@/lib/order-display";
 import { STATUS_LABELS } from "@/lib/workflow/status-machine";
 import { cn } from "@/lib/utils";
 
-type PhaseColumnsState = Record<string, KanbanOrderItem[]>;
+type PhaseColumnsState = Record<string, KanbanPlacedOrder[]>;
 
 function groupByPhase(data: KanbanOrderItem[]): PhaseColumnsState {
-  const grouped: PhaseColumnsState = {};
-  for (const phase of KANBAN_PHASES) {
-    grouped[phase.id] = [];
-  }
-
-  for (const os of data) {
-    const phaseId = getPhaseIdForStatus(os.status);
-    if (phaseId && grouped[phaseId]) {
-      grouped[phaseId].push(os);
-    }
-  }
-
-  return grouped;
+  return placeKanbanOrders(data);
 }
 
 type KanbanBoardProps = {
@@ -86,8 +79,8 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
   const findOrder = useCallback(
     (osId: string): KanbanOrderItem | undefined => {
       for (const list of Object.values(columns)) {
-        const found = list.find((o) => o.id === osId);
-        if (found) return found;
+        const found = list.find((item) => item.os.id === osId);
+        if (found) return found.os;
       }
       return orders.find((o) => o.id === osId);
     },
@@ -116,6 +109,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
       osId: string,
       sourceStatus: OsStatus,
       destStatus: OsStatus,
+      sourcePhaseId: string,
       destPhaseId: string,
       destIndex?: number,
     ) => {
@@ -141,6 +135,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         clientName: order.clientName,
         sourceStatus,
         destStatus,
+        sourcePhaseId,
         destPhaseId,
         destIndex,
       });
@@ -179,14 +174,14 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         prevColumns = structuredClone(prev);
         const next = structuredClone(prev);
         const srcList = next[sourcePhaseId] ?? [];
-        const srcIdx = srcList.findIndex((o) => o.id === osId);
+        const srcIdx = srcList.findIndex((item) => item.os.id === osId);
         if (srcIdx < 0) return prev;
 
         const [moved] = srcList.splice(srcIdx, 1);
         if (!moved) return prev;
 
-        moved.status = destStatus;
-        moved.updatedAt = new Date();
+        moved.os.status = destStatus;
+        moved.os.updatedAt = new Date();
         next[destPhaseId] = next[destPhaseId] ?? [];
         const insertAt = destIndex ?? next[destPhaseId].length;
         next[destPhaseId].splice(insertAt, 0, moved);
@@ -203,6 +198,15 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         if (res.success && res.notificationSummary) {
           setDragSuccess(res.notificationSummary);
         }
+        if (res.success) {
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === osId
+                ? { ...o, status: destStatus, updatedAt: new Date() }
+                : o,
+            ),
+          );
+        }
       });
     },
     [findOrder],
@@ -214,10 +218,10 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
       osId,
       sourceStatus,
       destStatus,
+      sourcePhaseId,
       destPhaseId,
       destIndex,
     } = pendingMove;
-    const sourcePhaseId = getPhaseIdForStatus(sourceStatus);
     if (!sourcePhaseId || !destPhaseId) return;
     setPendingMove(null);
     applyMove(
@@ -248,7 +252,8 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
 
     const sourcePhaseId = source.droppableId;
     const destPhaseId = destination.droppableId;
-    const order = findOrder(draggableId);
+    const { osId } = parseKanbanDraggableId(draggableId);
+    const order = findOrder(osId);
     if (!order) return;
 
     const sourceStatus = order.status;
@@ -274,9 +279,10 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
     }
 
     requestMove(
-      draggableId,
+      osId,
       sourceStatus,
       destStatus,
+      sourcePhaseId,
       destPhaseId,
       destination.index,
     );
@@ -299,7 +305,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
       const destPhaseId = getPhaseIdForStatus(next);
       if (!sourcePhaseId || !destPhaseId) return;
 
-      requestMove(osId, sourceStatus, next, destPhaseId);
+      requestMove(osId, sourceStatus, next, sourcePhaseId, destPhaseId);
     },
     [findOrder, requestMove],
   );
