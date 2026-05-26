@@ -92,7 +92,7 @@ export function DashboardShell({
             "flex-1 overflow-x-hidden overflow-y-auto",
             "pt-14 md:pt-0",
             "pb-[calc(3.25rem+env(safe-area-inset-bottom,0px))] md:pb-0",
-            isField && "bg-muted/20",
+            isField && "bg-muted",
           )}
         >
           {children}

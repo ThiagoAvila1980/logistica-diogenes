@@ -40,12 +40,14 @@ export default async function ProductionIndexPage() {
 
   return (
     <div className="p-6 lg:p-8">
-      <h1 className="text-2xl font-bold">Plano de corte</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Perfis, vidros, acessórios e embalagem.
-      </p>
+      <header className="mb-6">
+        <h1 className="text-xl font-bold sm:text-2xl">Plano de corte</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Perfis, vidros, acessórios e embalagem.
+        </p>
+      </header>
 
-      <ul className="mt-6 space-y-2">
+      <ul className="space-y-3">
         {orders.length === 0 ? (
           <li className="text-sm text-muted-foreground">
             Nenhuma medição nesta etapa.

@@ -20,10 +20,12 @@ export default async function LogisticsOsPage({ params }: Props) {
 
   if (!canOperateTransportModule(order.status, detail.cuttingSteps)) {
     return (
-      <div className="rounded-xl border bg-card p-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Aguardando conclusão do corte para liberar o transporte desta OS.
-        </p>
+      <div className="p-6 lg:p-8">
+        <div className="rounded-xl border bg-card p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Aguardando conclusão do corte para liberar o transporte desta OS.
+          </p>
+        </div>
       </div>
     );
   }

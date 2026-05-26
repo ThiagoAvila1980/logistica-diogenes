@@ -17,13 +17,13 @@ export default async function LogisticsIndexPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <header>
+    <div className="p-6 lg:p-8">
+      <header className="mb-6">
         <div className="flex items-center gap-2">
           <Truck className="h-6 w-6 text-primary" aria-hidden />
           <h1 className="text-xl font-bold sm:text-2xl">Transporte</h1>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Checklist de carga, veículo em uso e comprovante de entrega.
         </p>
       </header>

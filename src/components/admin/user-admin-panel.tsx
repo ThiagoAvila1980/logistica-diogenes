@@ -7,6 +7,7 @@ import {
   createUser,
   updateUser,
 } from "@/actions/user-admin-actions";
+import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
 import type { AdminUserRow } from "@/lib/data/users-admin";
 import {
@@ -137,18 +138,26 @@ export function UserAdminPanel({
                   )}
                 </div>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEditing(user);
-                  setEditOpen(true);
-                }}
-              >
-                <Pencil className="h-4 w-4" />
-                Editar
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditing(user);
+                    setEditOpen(true);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Editar
+                </Button>
+                <DeleteUserDialog
+                  userId={user.id}
+                  userName={user.name}
+                  userEmail={user.email}
+                  disabled={user.id === currentUserId}
+                />
+              </div>
             </div>
           ))}
         </CardContent>

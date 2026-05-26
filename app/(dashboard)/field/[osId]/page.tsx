@@ -30,7 +30,7 @@ export default async function FieldOsPage({ params }: Props) {
   ]);
 
   const session = await getSession();
-  const canDelete = hasAnyRole(session?.roles ?? [], ["admin", "gerente"]);
+  const canManage = hasAnyRole(session?.roles ?? [], ["admin", "gerente"]);
 
   return (
     <FieldMeasurementForm
@@ -40,7 +40,8 @@ export default async function FieldOsPage({ params }: Props) {
         orcamento: draftOrcamento,
         final: draftFinal,
       }}
-      canDelete={canDelete}
+      canDelete={canManage}
+      canSendToCutting={canManage}
     />
   );
 }

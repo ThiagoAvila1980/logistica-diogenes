@@ -75,3 +75,15 @@ export async function countUsersByEmailDb(
     .where(eq(users.email, normalized));
   return rows.filter((r) => r.id !== excludeId).length;
 }
+
+export async function deleteUserDb(id: string): Promise<void> {
+  const db = getDb();
+  await db.delete(users).where(eq(users.id, id));
+}
+
+export async function countAdminUsersDb(excludeId?: string): Promise<number> {
+  const rows = await listAdminUsersDb();
+  return rows.filter(
+    (u) => u.id !== excludeId && u.roles.includes("admin"),
+  ).length;
+}

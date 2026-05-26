@@ -193,3 +193,67 @@ export async function updateUser(
     };
   }
 }
+
+export async function deleteUser(userId: string): Promise<AdminActionResult> {
+  let session;
+  try {
+    session = await requireRole(["admin"]);
+  } catch (err) {
+    return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
+  }
+
+  const id = z.string().uuid().safeParse(userId);
+  if (!id.success) {
+    return { success: false, message: "Usuário inválido" };
+  }
+
+  if (id.data === session.userId) {
+    return { success: false, message: "Você não pode excluir sua própria conta" };
+  }
+
+  try {
+    if (useMockData()) {
+      const target = userMockStore.list().find((u) => u.id === id.data);
+      if (!target) {
+        return { success: false, message: "Usuário não encontrado" };
+      }
+      if (
+        target.roles.includes("admin") &&
+        userMockStore.countAdmins(id.data) === 0
+      ) {
+        return {
+          success: false,
+          message: "Não é possível remover o último administrador do sistema",
+        };
+      }
+      userMockStore.delete(id.data);
+    } else {
+      const { deleteUserDb, countAdminUsersDb, listAdminUsersDb } = await import(
+        "@/lib/data/users-admin-db"
+      );
+      const all = await listAdminUsersDb();
+      const target = all.find((u) => u.id === id.data);
+      if (!target) {
+        return { success: false, message: "Usuário não encontrado" };
+      }
+      if (
+        target.roles.includes("admin") &&
+        (await countAdminUsersDb(id.data)) === 0
+      ) {
+        return {
+          success: false,
+          message: "Não é possível remover o último administrador do sistema",
+        };
+      }
+      await deleteUserDb(id.data);
+    }
+
+    revalidatePath("/admin/users");
+    return { success: true, message: "Usuário excluído permanentemente" };
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "Erro ao excluir usuário",
+    };
+  }
+}

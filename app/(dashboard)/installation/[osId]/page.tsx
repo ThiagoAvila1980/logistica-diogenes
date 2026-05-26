@@ -21,10 +21,12 @@ export default async function InstallationOsPage({ params }: Props) {
 
   if (!canOperateInstallationModule(order.status, detail.cuttingSteps)) {
     return (
-      <div className="rounded-xl border bg-card p-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Aguardando conclusão do corte para liberar a instalação desta OS.
-        </p>
+      <div className="p-6 lg:p-8">
+        <div className="rounded-xl border bg-card p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Aguardando conclusão do corte para liberar a instalação desta OS.
+          </p>
+        </div>
       </div>
     );
   }
@@ -61,7 +63,7 @@ export default async function InstallationOsPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <InstallationChecklist
           osId={osId}
           initialInstallationSteps={detail.installationSteps}

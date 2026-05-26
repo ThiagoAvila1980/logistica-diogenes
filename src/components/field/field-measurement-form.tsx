@@ -58,6 +58,7 @@ import {
   type MeasurementDbType,
 } from "@/lib/workflow/measurement-actions";
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
+import { SendToCuttingButton } from "@/components/field/send-to-cutting-button";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
@@ -74,6 +75,7 @@ type FieldMeasurementFormProps = {
   };
   lookups: MeasurementLookups;
   canDelete?: boolean;
+  canSendToCutting?: boolean;
 };
 
 function resolveInitialItems(
@@ -122,6 +124,7 @@ export function FieldMeasurementForm({
   draftsByType,
   lookups,
   canDelete = false,
+  canSendToCutting = false,
 }: FieldMeasurementFormProps) {
   const router = useRouter();
   const initialType =
@@ -586,6 +589,21 @@ export function FieldMeasurementForm({
             />
           )}
         </section>
+
+        {canSendToCutting && order.status === "medicao_final" ? (
+          <section className="rounded-xl border bg-card p-4 shadow-sm">
+            <p className="mb-3 text-sm text-muted-foreground">
+              Medição final registrada. Envie para o plano de corte quando estiver
+              pronta — mesma regra do arraste no kanban (Final → Cortes).
+            </p>
+            <SendToCuttingButton
+              osId={order.id}
+              osNumber={displayNumeroOrcamento}
+              clientName={displayCliente}
+              orderStatus={order.status}
+            />
+          </section>
+        ) : null}
 
         {allowedActions.length > 0 && !viewMode ? (
           <div className="fixed inset-x-0 bottom-[calc(3.25rem+env(safe-area-inset-bottom,0px))] z-30 border-t bg-card/95 p-3 backdrop-blur md:static md:mt-2 md:rounded-xl md:border md:p-4 md:shadow-sm">

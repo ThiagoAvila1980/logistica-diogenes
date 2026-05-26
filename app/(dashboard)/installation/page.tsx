@@ -12,13 +12,13 @@ export default async function InstallationIndexPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <header>
+    <div className="p-6 lg:p-8">
+      <header className="mb-6">
         <div className="flex items-center gap-2">
           <Wrench className="h-6 w-6 text-primary" aria-hidden />
           <h1 className="text-xl font-bold sm:text-2xl">Instalação</h1>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Checklist de etapas e registro fotográfico do serviço na obra.
         </p>
       </header>

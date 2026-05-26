@@ -118,9 +118,10 @@ export async function moveOSCard(
       });
     });
 
-    revalidatePath("/dashboard/kanban");
     revalidatePath("/dashboard");
-    revalidatePath("/dashboard");
+    revalidatePath("/field");
+    revalidatePath(`/field/${osId}`);
+    revalidatePath("/production");
 
     return finishKanbanMove(osId, target);
   } catch (error) {

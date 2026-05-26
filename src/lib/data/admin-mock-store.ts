@@ -284,4 +284,16 @@ export const userMockStore = {
     if (data.active != null) mockAdminUsers[idx].active = data.active;
     return { ...mockAdminUsers[idx] };
   },
+
+  delete(id: string): void {
+    const idx = mockAdminUsers.findIndex((u) => u.id === id);
+    if (idx < 0) throw new Error("Usuário não encontrado");
+    mockAdminUsers.splice(idx, 1);
+  },
+
+  countAdmins(excludeId?: string): number {
+    return mockAdminUsers.filter(
+      (u) => u.id !== excludeId && u.roles.includes("admin"),
+    ).length;
+  },
 };
