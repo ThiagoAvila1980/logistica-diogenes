@@ -48,7 +48,7 @@ export default async function UnauthorizedPage({ searchParams }: Props) {
             <Link href={homeHref}>Ir para minha área</Link>
           </Button>
           <Button asChild variant="ghost" className="w-full">
-            <Link href="/login">Trocar usuário</Link>
+            <Link href="/api/auth/logout">Trocar usuário</Link>
           </Button>
         </CardContent>
       </Card>

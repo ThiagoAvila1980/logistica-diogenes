@@ -1,6 +1,6 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { cores, measurements, tipoEnvidracamento, tipoVidro } from "@/db/schema";
+import { cores, measurements, tipoEnvidracamento, tipoVidro, ambientes } from "@/db/schema";
 
 export type LookupAdminRow = {
   id: string;
@@ -183,6 +183,64 @@ export async function countTipoEnvidracamentoByDescricaoDb(
       descricao: tipoEnvidracamento.descricao,
     })
     .from(tipoEnvidracamento);
+  const normalized = normalizeDescricao(descricao);
+  return rows.filter(
+    (r) => r.id !== excludeId && normalizeDescricao(r.descricao) === normalized,
+  ).length;
+}
+
+export async function listAmbientesAdminDb(): Promise<LookupAdminRow[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: ambientes.idAmbiente,
+      descricao: ambientes.descricao,
+      usageCount: sql<number>`(
+        select count(*)::int
+        from ${measurements} m
+        cross join lateral jsonb_array_elements(coalesce(m.items, '[]'::jsonb)) as item
+        where item->>'idAmbiente' = ${ambientes.idAmbiente}::text
+      )`,
+    })
+    .from(ambientes)
+    .orderBy(asc(ambientes.descricao));
+
+  return rows.map((r) => ({
+    id: r.id,
+    descricao: r.descricao,
+    usageCount: r.usageCount,
+  }));
+}
+
+export async function upsertAmbienteDb(data: {
+  id?: string;
+  descricao: string;
+}): Promise<void> {
+  const db = getDb();
+  const descricao = data.descricao.trim();
+  if (data.id) {
+    await db
+      .update(ambientes)
+      .set({ descricao })
+      .where(eq(ambientes.idAmbiente, data.id));
+    return;
+  }
+  await db.insert(ambientes).values({ descricao });
+}
+
+export async function deleteAmbienteDb(id: string): Promise<void> {
+  const db = getDb();
+  await db.delete(ambientes).where(eq(ambientes.idAmbiente, id));
+}
+
+export async function countAmbienteByDescricaoDb(
+  descricao: string,
+  excludeId?: string,
+): Promise<number> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: ambientes.idAmbiente, descricao: ambientes.descricao })
+    .from(ambientes);
   const normalized = normalizeDescricao(descricao);
   return rows.filter(
     (r) => r.id !== excludeId && normalizeDescricao(r.descricao) === normalized,

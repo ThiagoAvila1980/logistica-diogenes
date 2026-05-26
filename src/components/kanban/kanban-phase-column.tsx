@@ -52,9 +52,7 @@ export function KanbanPhaseColumn({
               )}
             >
               {items.map((os, idx) => {
-                const canAdvance = getAllowedTransitions(os.status).some(
-                  (s) => s !== "revisao",
-                );
+                const canAdvance = getAllowedTransitions(os.status).length > 0;
 
                 return (
                   <KanbanCard

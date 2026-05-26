@@ -99,6 +99,27 @@
       "when": 1748300000000,
       "tag": "0017_item_spec_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1748400000000,
+      "tag": "0018_transport_install_steps",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1748500000000,
+      "tag": "0019_remove_revision",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1748600000000,
+      "tag": "0020_ambientes",
+      "breakpoints": true
     }
   ]
 }

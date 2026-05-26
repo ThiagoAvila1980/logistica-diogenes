@@ -74,7 +74,7 @@ export function DashboardShell({
         mockMode={mockMode}
         session={session}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 transition-transform duration-200 md:relative md:z-auto md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 h-[100dvh] max-h-[100dvh] transition-transform duration-200 md:sticky md:top-0 md:z-auto md:translate-x-0",
           menuOpen ? "translate-x-0" : "-translate-x-full",
         )}
         onNavigate={() => setMenuOpen(false)}

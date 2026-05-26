@@ -23,8 +23,6 @@ export type OrderListItem = {
 
 export type OrderDetail = OrderListItem & {
   description: string | null;
-  revisionReason: string | null;
-  revisionFromStatus: OsStatus | null;
   clientPhone: string | null;
   sourcePdfUrl: string | null;
 };

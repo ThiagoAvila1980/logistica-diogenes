@@ -9,29 +9,28 @@ import {
 
 /** @deprecated Use getAllowedTransitions(from) — mantido para compatibilidade */
 export const STATUS_FLOW: Record<OsStatus, OsStatus[]> = {
-  medicao_orcamento: ["medicao_final", "revisao"],
-  medicao_final: ["cortes", "revisao"],
-  cortes: ["embalagem", "revisao"],
-  embalagem: ["acessorios_plano", "revisao"],
-  acessorios_plano: ["transporte_perfil", "revisao"],
-  transporte_perfil: ["transporte_estrutural", "revisao"],
-  transporte_estrutural: ["transporte_perfis_total", "revisao"],
-  transporte_perfis_total: ["transporte_acessorios", "revisao"],
-  transporte_acessorios: ["transporte_levar_vidro", "revisao"],
-  transporte_levar_vidro: ["instalacao_estrutural", "revisao"],
-  instalacao_estrutural: ["instalacao_vidros", "revisao"],
-  instalacao_vidros: ["concluido", "revisao"],
+  medicao_orcamento: ["medicao_final"],
+  medicao_final: ["cortes"],
+  cortes: ["embalagem"],
+  embalagem: ["acessorios_plano"],
+  acessorios_plano: ["transporte_perfil"],
+  transporte_perfil: ["transporte_estrutural"],
+  transporte_estrutural: ["transporte_perfis_total"],
+  transporte_perfis_total: ["transporte_acessorios"],
+  transporte_acessorios: ["transporte_levar_vidro"],
+  transporte_levar_vidro: ["instalacao_estrutural"],
+  instalacao_estrutural: ["instalacao_vidros"],
+  instalacao_vidros: ["concluido"],
   concluido: [],
-  revisao: [],
   // Legado
-  orcamento_enviado: ["revisao"],
-  aprovado_cliente: ["revisao"],
-  os_gerada: ["revisao"],
-  em_corte: ["revisao"],
-  corte_concluido: ["revisao"],
-  em_transporte: ["revisao"],
-  transporte_entregue: ["revisao"],
-  instalacao_final: ["revisao"],
+  orcamento_enviado: [],
+  aprovado_cliente: [],
+  os_gerada: [],
+  em_corte: [],
+  corte_concluido: [],
+  em_transporte: [],
+  transporte_entregue: [],
+  instalacao_final: [],
 };
 
 /** Labels para UI (StatusWizard) */
@@ -49,7 +48,6 @@ export const STATUS_LABELS: Record<OsStatus, string> = {
   instalacao_estrutural: "Instalação estrutural",
   instalacao_vidros: "Instalação dos vidros",
   concluido: "Concluído",
-  revisao: "Em revisão",
   // Legado
   orcamento_enviado: "Orçamento enviado (legado)",
   aprovado_cliente: "Aprovado pelo cliente (legado)",
@@ -72,16 +70,16 @@ export function getStepIndex(status: OsStatus): number {
   return getStepIndexForFlow(status);
 }
 
-/** Próximo status no fluxo linear (exclui revisão) */
+/** Próximo status no fluxo linear */
 export function getNextLinearStatus(current: OsStatus): OsStatus | null {
-  if (current === "revisao" || current === "concluido") return null;
+  if (current === "concluido") return null;
   const steps = getWizardStepsForFlow();
   const idx = steps.indexOf(current);
   if (idx < 0 || idx >= steps.length - 1) return null;
   return steps[idx + 1] ?? null;
 }
 
-/** Transições de avanço (primeira do fluxo, sem revisão) */
+/** Transições de avanço (primeira do fluxo) */
 export function getPrimaryNextStatus(current: OsStatus): OsStatus | null {
   return getPrimaryNextStatusForFlow(current);
 }
@@ -100,7 +98,6 @@ export type TransitionContext = {
   cuttingSteps: CuttingSteps;
   transportItemsChecked: Record<string, boolean> | null;
   installationHasPhotos: boolean;
-  revisionFromStatus: OsStatus | null;
 };
 
 export type TransitionErrorCode =
@@ -112,9 +109,7 @@ export type TransitionErrorCode =
   | "ACCESSORIES_INCOMPLETE"
   | "TRANSPORT_INCOMPLETE"
   | "INSTALLATION_PHOTOS_REQUIRED"
-  | "BIOMETRIC_CONFIRMATION_REQUIRED"
-  | "REVISION_TARGET_INVALID"
-  | "REVISION_REASON_REQUIRED";
+  | "BIOMETRIC_CONFIRMATION_REQUIRED";
 
 export class TransitionValidationError extends Error {
   constructor(
@@ -134,28 +129,11 @@ export function assertTransitionGuards(
   to: OsStatus,
   ctx: TransitionContext,
 ): void {
-  if (
-    !canTransition(from, to) &&
-    !(from === "revisao" && to !== "revisao")
-  ) {
+  if (!canTransition(from, to)) {
     throw new TransitionValidationError(
       "INVALID_TRANSITION",
       `Transição não permitida: ${from} → ${to}`,
     );
-  }
-
-  if (to === "revisao") {
-    return;
-  }
-
-  if (from === "revisao") {
-    if (!ctx.revisionFromStatus || to !== ctx.revisionFromStatus) {
-      throw new TransitionValidationError(
-        "REVISION_TARGET_INVALID",
-        "Ao sair de revisão, o destino deve ser o status anterior registrado.",
-      );
-    }
-    return;
   }
 
   if (to === "medicao_final" && !ctx.hasFinalMeasurement) {

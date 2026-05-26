@@ -527,6 +527,7 @@ export async function saveFieldMeasurement(
     await db
       .update(measurements)
       .set({
+        type: measurementType,
         items: itemsToSave,
         notes: notes ?? null,
         photos,

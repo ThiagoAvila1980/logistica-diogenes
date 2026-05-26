@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { MeasurementItemSpecSummary } from "@/components/field/measurement-item-spec-fields";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
+import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Button } from "@/components/ui/button";
 
@@ -23,8 +24,12 @@ export function MeasurementItemView({
   onExpandedChange,
 }: MeasurementItemViewProps) {
   const hasDrawing = Boolean(item.drawingUrl);
+  const ambienteLabel = resolveLookupLabel(
+    lookups?.ambientes ?? [],
+    item.idAmbiente ?? null,
+  );
   const hasDimensions =
-    Boolean(item.ambiente?.trim()) ||
+    Boolean(item.idAmbiente) ||
     item.qty > 0 ||
     item.largura > 0 ||
     item.altura > 0;
@@ -60,8 +65,8 @@ export function MeasurementItemView({
 
       {!expanded && hasDimensions && (
         <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-          {item.ambiente?.trim() ? (
-            <p className="font-medium text-foreground">{item.ambiente.trim()}</p>
+          {ambienteLabel ? (
+            <p className="font-medium text-foreground">{ambienteLabel}</p>
           ) : null}
           <p className="tabular-nums">
             {item.qty > 0 ? `${item.qty} × ` : ""}
@@ -109,16 +114,19 @@ export function MeasurementDimensionsSummary({
   lookups?: MeasurementLookups;
   variant?: "stacked" | "inline";
 }) {
-  if (variant === "inline") {
-    const ambiente = item.ambiente?.trim();
+  const ambienteLabel = resolveLookupLabel(
+    lookups?.ambientes ?? [],
+    item.idAmbiente ?? null,
+  );
 
+  if (variant === "inline") {
     return (
       <>
         <dl className="grid grid-cols-3 gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,1fr))] sm:items-start sm:gap-x-10">
-          {ambiente ? (
+          {ambienteLabel ? (
             <div className="col-span-3 min-w-0 sm:col-span-1">
               <dt className="text-xs text-muted-foreground">Ambiente</dt>
-              <dd className="mt-0.5 text-sm font-medium">{ambiente}</dd>
+              <dd className="mt-0.5 text-sm font-medium">{ambienteLabel}</dd>
             </div>
           ) : null}
           <div className="min-w-0">
@@ -147,10 +155,10 @@ export function MeasurementDimensionsSummary({
 
   return (
     <div className="rounded-lg border bg-muted/20 p-4">
-      {item.ambiente?.trim() ? (
+      {ambienteLabel ? (
         <div className="mb-3">
           <dt className="text-xs text-muted-foreground">Ambiente</dt>
-          <dd className="mt-0.5 text-sm font-medium">{item.ambiente.trim()}</dd>
+          <dd className="mt-0.5 text-sm font-medium">{ambienteLabel}</dd>
         </div>
       ) : null}
       <h4 className="text-sm font-medium">Dimensões (mm)</h4>
@@ -194,7 +202,7 @@ export function hasSavedMeasurementForView(
   return draft.items.some(
     (item) =>
       Boolean(item.drawingUrl) ||
-      Boolean(item.ambiente?.trim()) ||
+      Boolean(item.idAmbiente) ||
       (item.qty > 0 && item.largura > 0 && item.altura > 0),
   );
 }

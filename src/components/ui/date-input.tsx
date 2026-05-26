@@ -78,7 +78,8 @@ export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
       if (!nativeInput) return;
 
       const isoValue = brDateToIso(display);
-      nativeInput.value = isoValue || new Date().toISOString().slice(0, 10);
+      // Não pré-selecionar hoje quando vazio — senão o picker não dispara onChange ao clicar no dia atual.
+      nativeInput.value = isoValue;
 
       if (typeof nativeInput.showPicker === "function") {
         nativeInput.showPicker();

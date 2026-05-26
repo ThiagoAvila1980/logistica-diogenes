@@ -7,6 +7,7 @@ export type MeasurementLookups = {
   cores: LookupOption[];
   tipoVidro: LookupOption[];
   tipoEnvidracamento: LookupOption[];
+  ambientes: LookupOption[];
 };
 
 export function resolveLookupLabel(

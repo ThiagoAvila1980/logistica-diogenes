@@ -106,8 +106,6 @@ export async function getServiceOrderByIdDb(
       scheduledDate: measurements.scheduledDate,
       updatedAt: measurements.updatedAt,
       description: measurements.description,
-      revisionReason: measurements.revisionReason,
-      revisionFromStatus: measurements.revisionFromEtapa,
       assignedUserId: measurements.assignedUserId,
       clientName: measurementClientName,
       clientPhone: measurementClientPhone,
@@ -124,8 +122,6 @@ export async function getServiceOrderByIdDb(
   return {
     ...mapMeasurementRow(row),
     description: row.description,
-    revisionReason: row.revisionReason,
-    revisionFromStatus: row.revisionFromStatus,
     clientPhone: row.clientPhone,
     sourcePdfUrl: row.sourcePdfUrl,
   };

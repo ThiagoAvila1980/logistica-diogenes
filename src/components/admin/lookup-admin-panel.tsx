@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
 import type { LookupAdminRow } from "@/lib/data/lookup-admin-db";
@@ -45,6 +46,7 @@ export function LookupAdminPanel({
   saveAction,
   deleteAction,
 }: LookupAdminPanelProps) {
+  const router = useRouter();
   const [createState, createAction, createPending] = useActionState<
     AdminActionResult | null,
     FormData
@@ -57,6 +59,21 @@ export function LookupAdminPanel({
   >(saveAction, null);
   const [deletePending, startDelete] = useTransition();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const [createFormKey, setCreateFormKey] = useState(0);
+
+  useEffect(() => {
+    if (createState?.success) {
+      setCreateFormKey((key) => key + 1);
+      router.refresh();
+    }
+  }, [createState, router]);
+
+  useEffect(() => {
+    if (editState?.success) {
+      setEditOpen(false);
+      router.refresh();
+    }
+  }, [editState, router]);
 
   function openEdit(item: LookupAdminRow) {
     setEditing(item);
@@ -85,7 +102,11 @@ export function LookupAdminPanel({
               <AlertDescription>{createState.message}</AlertDescription>
             </Alert>
           )}
-          <form action={createAction} className="grid gap-4 sm:grid-cols-[1fr_auto]">
+          <form
+            key={createFormKey}
+            action={createAction}
+            className="grid gap-4 sm:grid-cols-[1fr_auto]"
+          >
             <div className="space-y-2">
               <Label htmlFor="new-descricao">{fieldLabel}</Label>
               <Input
@@ -158,7 +179,11 @@ export function LookupAdminPanel({
                       setDeleteMessage(null);
                       startDelete(async () => {
                         const result = await deleteAction(item.id);
-                        if (!result.success) setDeleteMessage(result.message);
+                        if (!result.success) {
+                          setDeleteMessage(result.message);
+                          return;
+                        }
+                        router.refresh();
                       });
                     }}
                   >

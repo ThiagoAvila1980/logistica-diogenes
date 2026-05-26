@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getDefaultRouteForRoles } from "@/lib/auth/permissions";
 
+export const dynamic = "force-dynamic";
+
 export default async function AuthLayout({
   children,
 }: {

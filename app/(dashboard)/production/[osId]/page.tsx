@@ -54,7 +54,7 @@ export default async function ProductionOsPage({ params }: Props) {
       </div>
 
       <div className="space-y-6">
-        <CuttingChecklist osId={osId} initialSteps={cuttingSteps} />
+        <CuttingChecklist osId={osId} osStatus={order.status} initialSteps={cuttingSteps} />
 
         {measurement ? (
           <ProductionMeasurementMedia

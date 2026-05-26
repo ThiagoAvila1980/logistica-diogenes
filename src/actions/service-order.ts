@@ -18,9 +18,8 @@ import {
   canTransition,
   TransitionValidationError,
 } from "@/lib/workflow/status-machine";
+import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
 import { getSession } from "@/lib/auth/session";
-import { authErrorMessage, AuthError } from "@/lib/auth/auth-error";
-import { requireRole } from "@/lib/auth/require-role";
 
 const transitionInputSchema = z.object({
   osId: z.string().uuid(),
@@ -38,7 +37,6 @@ const transitionInputSchema = z.object({
     "instalacao_estrutural",
     "instalacao_vidros",
     "concluido",
-    "revisao",
     // Legado
     "orcamento_enviado",
     "aprovado_cliente",
@@ -139,22 +137,6 @@ export async function transitionServiceOrderStatus(
 
   const { osId, toStatus, reason, changedById } = parsed.data;
 
-  if (toStatus === "revisao") {
-    try {
-      await requireRole(["gerente", "admin"]);
-    } catch (err) {
-      const message = authErrorMessage(err);
-      if (message) {
-        return {
-          success: false,
-          code: err instanceof AuthError ? err.code : "FORBIDDEN",
-          message,
-        };
-      }
-      throw err;
-    }
-  }
-
   if (useMockData()) {
     const result = mockRepository.transition(osId, toStatus, reason);
     if (result.success) {
@@ -178,51 +160,15 @@ export async function transitionServiceOrderStatus(
 
     const fromStatus = order.etapa as OsStatus;
 
-    if (fromStatus === "revisao") {
-      try {
-        await requireRole(["gerente", "admin"]);
-      } catch (err) {
-        const message = authErrorMessage(err);
-        if (message) {
-          return {
-            success: false,
-            code: err instanceof AuthError ? err.code : "FORBIDDEN",
-            message,
-          };
-        }
-        throw err;
-      }
-    }
-
-    if (!canTransition(fromStatus, toStatus) && toStatus !== "revisao") {
-      if (fromStatus !== "revisao") {
-        return {
-          success: false,
-          code: "INVALID_TRANSITION",
-          message: `Transição não permitida: ${fromStatus} → ${toStatus}`,
-        };
-      }
-    }
-
-    const ctxBase = await loadTransitionContext(osId, db);
-
-    const ctx = {
-      ...ctxBase,
-      revisionFromStatus:
-        toStatus === "revisao"
-          ? fromStatus
-          : fromStatus === "revisao"
-            ? (order.revisionFromEtapa as OsStatus | null)
-            : null,
-    };
-
-    if (toStatus === "revisao" && !reason) {
+    if (!canTransition(fromStatus, toStatus)) {
       return {
         success: false,
-        code: "REVISION_REASON_REQUIRED",
-        message: "Informe o motivo da revisão.",
+        code: "INVALID_TRANSITION",
+        message: `Transição não permitida: ${fromStatus} → ${toStatus}`,
       };
     }
+
+    const ctx = await loadTransitionContext(osId, db);
 
     assertTransitionGuards(fromStatus, toStatus, ctx);
 
@@ -230,15 +176,8 @@ export async function transitionServiceOrderStatus(
     const updatePayload: Partial<typeof measurements.$inferInsert> = {
       etapa: toStatus,
       updatedAt: now,
+      ...measurementTypePatchForEtapa(toStatus),
     };
-
-    if (toStatus === "revisao") {
-      updatePayload.revisionReason = reason;
-      updatePayload.revisionFromEtapa = fromStatus;
-    } else if (fromStatus === "revisao") {
-      updatePayload.revisionReason = null;
-      updatePayload.revisionFromEtapa = null;
-    }
 
     const session = await getSession();
 
@@ -254,10 +193,6 @@ export async function transitionServiceOrderStatus(
         toStatus,
         reason: reason ?? null,
         changedById: changedById ?? session?.userId ?? null,
-        metadata:
-          toStatus === "revisao"
-            ? { revisionFrom: fromStatus }
-            : undefined,
       });
     });
 

@@ -63,6 +63,7 @@ import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
 import { useScreenOrientationLock } from "@/hooks/use-screen-orientation-lock";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
+import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import type { MeasurementPriority } from "@/db/schema";
 
 type FieldMeasurementFormProps = {
@@ -84,7 +85,7 @@ function resolveInitialItems(
     return [
       {
         id: `${osId}-item-0`,
-        ambiente: "",
+        idAmbiente: null,
         qty: 0,
         largura: draft.largura ?? 0,
         altura: draft.altura ?? 0,
@@ -686,9 +687,8 @@ export function FieldMeasurementForm({
                     className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 border-b border-dashed pb-2 last:border-0 last:pb-0"
                   >
                     <span className="text-muted-foreground">
-                      {item.ambiente?.trim()
-                        ? item.ambiente.trim()
-                        : `Medição ${index + 1}`}
+                      {resolveLookupLabel(lookups.ambientes, item.idAmbiente ?? null) ||
+                        `Medição ${index + 1}`}
                     </span>
                     <span className="font-mono tabular-nums">
                       {item.qty} × {item.largura} × {item.altura} mm

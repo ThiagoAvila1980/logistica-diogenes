@@ -1,6 +1,6 @@
 import { asc } from "drizzle-orm";
 import { getDb } from "@/db";
-import { cores, tipoEnvidracamento, tipoVidro } from "@/db/schema";
+import { cores, tipoEnvidracamento, tipoVidro, ambientes } from "@/db/schema";
 import { useMockData } from "./config";
 import type { LookupOption, MeasurementLookups } from "./lookup-types";
 
@@ -13,16 +13,18 @@ export async function listMeasurementLookups(): Promise<MeasurementLookups> {
       corMockStore,
       tipoVidroMockStore,
       tipoEnvidracamentoMockStore,
+      ambienteMockStore,
     } = await import("./admin-mock-store");
     return {
       cores: corMockStore.list(),
       tipoVidro: tipoVidroMockStore.list(),
       tipoEnvidracamento: tipoEnvidracamentoMockStore.list(),
+      ambientes: ambienteMockStore.list(),
     };
   }
 
   const db = getDb();
-  const [coresRows, vidroRows, envRows] = await Promise.all([
+  const [coresRows, vidroRows, envRows, ambienteRows] = await Promise.all([
     db
       .select({ id: cores.idCor, descricao: cores.descricao })
       .from(cores)
@@ -38,6 +40,10 @@ export async function listMeasurementLookups(): Promise<MeasurementLookups> {
       })
       .from(tipoEnvidracamento)
       .orderBy(asc(tipoEnvidracamento.descricao)),
+    db
+      .select({ id: ambientes.idAmbiente, descricao: ambientes.descricao })
+      .from(ambientes)
+      .orderBy(asc(ambientes.descricao)),
   ]);
 
   return {
@@ -47,5 +53,6 @@ export async function listMeasurementLookups(): Promise<MeasurementLookups> {
       id: r.id,
       descricao: r.descricao,
     })),
+    ambientes: ambienteRows.map((r) => ({ id: r.id, descricao: r.descricao })),
   };
 }

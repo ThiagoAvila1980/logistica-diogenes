@@ -9,11 +9,12 @@ import {
   corMockStore,
   tipoEnvidracamentoMockStore,
   tipoVidroMockStore,
+  ambienteMockStore,
 } from "@/lib/data/admin-mock-store";
 import type { LookupAdminRow } from "@/lib/data/lookup-admin-db";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
 
-export type LookupEntity = "cores" | "tipo_vidro" | "tipo_envidracamento";
+export type LookupEntity = "cores" | "tipo_vidro" | "tipo_envidracamento" | "ambientes";
 
 const lookupSchema = z.object({
   id: z.string().uuid().optional(),
@@ -105,6 +106,28 @@ const ENTITY_CONFIG: Record<
       return countTipoEnvidracamentoByDescricaoDb(descricao, excludeId);
     },
     mockStore: tipoEnvidracamentoMockStore,
+  },
+  ambientes: {
+    adminPath: "/admin/ambientes",
+    listDb: async () => {
+      const { listAmbientesAdminDb } = await import("@/lib/data/lookup-admin-db");
+      return listAmbientesAdminDb();
+    },
+    upsertDb: async (data) => {
+      const { upsertAmbienteDb } = await import("@/lib/data/lookup-admin-db");
+      await upsertAmbienteDb(data);
+    },
+    deleteDb: async (id) => {
+      const { deleteAmbienteDb } = await import("@/lib/data/lookup-admin-db");
+      await deleteAmbienteDb(id);
+    },
+    countDupDb: async (descricao, excludeId) => {
+      const { countAmbienteByDescricaoDb } = await import(
+        "@/lib/data/lookup-admin-db"
+      );
+      return countAmbienteByDescricaoDb(descricao, excludeId);
+    },
+    mockStore: ambienteMockStore,
   },
 };
 
@@ -263,4 +286,17 @@ export async function deleteTipoEnvidracamentoItem(
   id: string,
 ): Promise<AdminActionResult> {
   return deleteLookupItem("tipo_envidracamento", id);
+}
+
+export async function saveAmbiente(
+  prev: AdminActionResult | null,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  return saveLookupInternal("ambientes", prev, formData);
+}
+
+export async function deleteAmbienteItem(
+  id: string,
+): Promise<AdminActionResult> {
+  return deleteLookupItem("ambientes", id);
 }

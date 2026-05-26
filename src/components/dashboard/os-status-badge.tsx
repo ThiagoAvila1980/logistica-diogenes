@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 const STATUS_VARIANT: Partial<
   Record<OsStatus, "default" | "secondary" | "destructive" | "outline">
 > = {
-  revisao: "destructive",
   concluido: "secondary",
 };
 

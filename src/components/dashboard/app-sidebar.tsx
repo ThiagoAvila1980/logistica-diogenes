@@ -59,9 +59,14 @@ export function AppSidebar({
   const showSettings = session ? hasRole(session.roles, "admin") : false;
 
   return (
-    <aside className={cn("flex w-56 flex-col overflow-visible border-r bg-card", className)}>
-      <div className="border-b px-4 py-5">
-        <div className="flex items-start justify-between gap-2 overflow-visible">
+    <aside
+      className={cn(
+        "flex h-full w-56 flex-col overflow-hidden border-r bg-card",
+        className,
+      )}
+    >
+      <div className="shrink-0 border-b px-4 py-5">
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link
               href={session ? navHomeHref(session.roles) : "/dashboard"}
@@ -81,7 +86,7 @@ export function AppSidebar({
           />
         </div>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 p-3">
+      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
         {navItems.map(({ href, label, match }) => {
           const Icon = NAV_ICONS[match] ?? LayoutDashboard;
           const active =
@@ -110,7 +115,7 @@ export function AppSidebar({
         )}
       </nav>
       {session && (
-        <div className="border-t p-3 space-y-2">
+        <div className="shrink-0 border-t p-3 space-y-2">
           <div className="text-xs">
             <p className="font-medium truncate">{session.name}</p>
             <p className="text-muted-foreground">
@@ -121,7 +126,7 @@ export function AppSidebar({
         </div>
       )}
       {mockMode && (
-        <div className="border-t p-3 text-xs text-muted-foreground">
+        <div className="shrink-0 border-t p-3 text-xs text-muted-foreground">
           Modo demo (dados mock)
         </div>
       )}

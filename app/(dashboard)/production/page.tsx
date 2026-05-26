@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listServiceOrders } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { hasPendingCuttingSteps } from "@/lib/transport-gates";
 import { cn } from "@/lib/utils";
 
 const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
@@ -14,15 +15,28 @@ const STEP_LABELS = [
 
 export default async function ProductionIndexPage() {
   const allOrders = await listServiceOrders();
-  const orders = allOrders.filter((o) => CUTTING_STATUSES.has(o.status));
+  const candidateOrders = allOrders.filter(
+    (o) =>
+      CUTTING_STATUSES.has(o.status) || o.status.startsWith("transporte_"),
+  );
 
   const detailsEntries = await Promise.all(
-    orders.map(async (o) => {
+    candidateOrders.map(async (o) => {
       const detail = await getCuttingDetailForOs(o.id);
       return [o.id, detail.cuttingSteps] as const;
     }),
   );
   const stepsMap = Object.fromEntries(detailsEntries);
+
+  const orders = candidateOrders.filter((o) => {
+    const steps = stepsMap[o.id];
+    if (!steps) return CUTTING_STATUSES.has(o.status);
+    return hasPendingCuttingSteps({
+      corteFeito: steps.corte,
+      embalagemFeita: steps.embalagem,
+      acessoriosFeitos: steps.acessorios,
+    });
+  });
 
   return (
     <div className="p-6 lg:p-8">

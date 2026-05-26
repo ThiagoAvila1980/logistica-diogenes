@@ -24,6 +24,14 @@ export function measurementTypeFromOsStatus(
   return null;
 }
 
+/** Mantém `measurements.type` alinhado quando `etapa` muda na fase de medição. */
+export function measurementTypePatchForEtapa(
+  etapa: OsStatus,
+): Partial<{ type: MeasurementDbType }> {
+  const type = measurementTypeFromOsStatus(etapa);
+  return type ? { type } : {};
+}
+
 export function isMedicaoPhaseStatus(status: OsStatus): boolean {
   return status === "medicao_orcamento" || status === "medicao_final";
 }

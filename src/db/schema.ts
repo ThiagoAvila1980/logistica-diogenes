@@ -51,7 +51,6 @@ export const osStatus = pgEnum("os_status", [
   "instalacao_estrutural",
   "instalacao_vidros",
   "concluido",
-  "revisao",
   // Legado (registros antigos / histórico)
   "orcamento_enviado",
   "aprovado_cliente",
@@ -83,7 +82,6 @@ export const cuttingStatus = pgEnum("cutting_status", [
   "pendente",
   "em_andamento",
   "concluido",
-  "revisao",
 ]);
 
 export const transportStatus = pgEnum("transport_status", [
@@ -91,7 +89,6 @@ export const transportStatus = pgEnum("transport_status", [
   "carregado",
   "em_transito",
   "entregue",
-  "revisao",
 ]);
 
 export const installationStatus = pgEnum("installation_status", [
@@ -100,7 +97,6 @@ export const installationStatus = pgEnum("installation_status", [
   "vidros",
   "final",
   "concluido",
-  "revisao",
 ]);
 
 // ─── Lookup tables ─────────────────────────────────────────────────────────────
@@ -119,6 +115,11 @@ export const tipoEnvidracamento = pgTable("tipo_envidracamento", {
   idTipoEnvidracamento: uuid("id_tipo_envidracamento")
     .defaultRandom()
     .primaryKey(),
+  descricao: varchar("descricao", { length: 255 }).notNull(),
+});
+
+export const ambientes = pgTable("ambientes", {
+  idAmbiente: uuid("id_ambiente").defaultRandom().primaryKey(),
   descricao: varchar("descricao", { length: 255 }).notNull(),
 });
 
@@ -167,8 +168,6 @@ export const measurements = pgTable(
     description: text("description"),
     scheduledDate: timestamp("scheduled_date", { withTimezone: true }),
     dueDate: timestamp("due_date", { withTimezone: true }),
-    revisionReason: text("revision_reason"),
-    revisionFromEtapa: osStatus("revision_from_etapa"),
     dimensions: jsonb("dimensions").$type<Dimensions>(),
     items: jsonb("items").$type<MeasurementLineItem[]>(),
     photos: jsonb("photos").$type<string[]>(),
@@ -299,6 +298,12 @@ export const transportLogs = pgTable(
     vehiclePlate: varchar("vehicle_plate", { length: 20 }),
     routeNotes: text("route_notes"),
     status: transportStatus("status").default("pendente").notNull(),
+    // Sub-etapas independentes — desbloqueadas pelos cutting steps correspondentes
+    levarPerfilEstrutural: boolean("levar_perfil_estrutural").default(false).notNull(),
+    levarPerfilTotal: boolean("levar_perfis_total").default(false).notNull(),
+    levarAcessorios: boolean("levar_acessorios").default(false).notNull(),
+    levarVidro: boolean("levar_vidro").default(false).notNull(),
+    transporteConcluido: boolean("transporte_concluido").default(false).notNull(),
     departureAt: timestamp("departure_at", { withTimezone: true }),
     arrivalAt: timestamp("arrival_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -329,6 +334,9 @@ export const installationLogs = pgTable(
     structuralInstalled: boolean("structural_installed").default(false).notNull(),
     glassInstalled: boolean("glass_installed").default(false).notNull(),
     finalCompleted: boolean("final_completed").default(false).notNull(),
+    // Sub-etapas independentes — desbloqueadas pelos transport steps correspondentes
+    instalacaoEstruturalFeita: boolean("instalacao_estrutural_feita").default(false).notNull(),
+    instalacaoVidrosFeita: boolean("instalacao_vidros_feita").default(false).notNull(),
     photos: jsonb("photos").$type<InstallationPhotos>(),
     signatureUrl: text("signature_url"),
     signedAt: timestamp("signed_at", { withTimezone: true }),
@@ -431,6 +439,8 @@ export const tipoEnvidracamentoRelations = relations(
   tipoEnvidracamento,
   () => ({}),
 );
+
+export const ambientesRelations = relations(ambientes, () => ({}));
 
 export const measurementsRelations = relations(measurements, ({ one, many }) => ({
   assignedUser: one(users, {

@@ -7,9 +7,11 @@ import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { DrawingBoard } from "@/components/field/drawing-board";
 import { MeasurementItemSpecFields } from "@/components/field/measurement-item-spec-fields";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
+import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 
 type MeasurementItemCardProps = {
   item: MeasurementLineItem;
@@ -77,8 +79,13 @@ export function MeasurementItemCard({
     onChange({ ...item, [field]: value });
   }
 
+  const ambienteLabel = resolveLookupLabel(
+    lookups.ambientes,
+    item.idAmbiente ?? null,
+  );
+
   const hasDimensions =
-    Boolean(item.ambiente?.trim()) ||
+    Boolean(item.idAmbiente) ||
     item.qty > 0 ||
     item.largura > 0 ||
     item.altura > 0;
@@ -130,8 +137,8 @@ export function MeasurementItemCard({
 
       {!expanded && hasDimensions && (
         <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-          {item.ambiente?.trim() ? (
-            <p className="font-medium text-foreground">{item.ambiente.trim()}</p>
+          {ambienteLabel ? (
+            <p className="font-medium text-foreground">{ambienteLabel}</p>
           ) : null}
           <p className="tabular-nums">
             {item.qty > 0 ? `${item.qty} × ` : ""}
@@ -166,15 +173,22 @@ export function MeasurementItemCard({
           <div className="rounded-lg border bg-muted/20 p-4">
             <div className="space-y-2">
               <Label htmlFor={`ambiente-${item.id}`}>Ambiente</Label>
-              <Input
+              <Select
                 id={`ambiente-${item.id}`}
-                type="text"
-                placeholder="ex: Sala, Quarto, Varanda"
-                value={item.ambiente ?? ""}
-                onChange={(e) => updateField("ambiente", e.target.value)}
+                value={item.idAmbiente ?? ""}
                 disabled={disabled}
                 className="h-12 text-base"
-              />
+                onChange={(e) =>
+                  updateField("idAmbiente", e.target.value || null)
+                }
+              >
+                <option value="">Selecione...</option>
+                {lookups.ambientes.map((ambiente) => (
+                  <option key={ambiente.id} value={ambiente.id}>
+                    {ambiente.descricao}
+                  </option>
+                ))}
+              </Select>
             </div>
             <h4 className="mt-4 text-sm font-medium">Dimensões (mm)</h4>
             <div className="mt-3 grid grid-cols-1 gap-4 min-[400px]:grid-cols-3">
@@ -262,7 +276,7 @@ export function MeasurementItemCard({
 export function createEmptyMeasurementItem(id: string): MeasurementLineItem {
   return {
     id,
-    ambiente: "",
+    idAmbiente: null,
     qty: 0,
     largura: 0,
     altura: 0,

@@ -91,6 +91,16 @@ export function writeStoredRoute(pathname: string): void {
   }
 }
 
+export function clearStoredRoute(): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    sessionStorage.removeItem(APP_ROUTE_STORAGE_KEY);
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export function maskBrowserUrl(pathname: string, mode: "replace" | "push"): void {
   if (typeof window === "undefined") return;
   if (!isMaskablePath(pathname)) return;

@@ -65,16 +65,31 @@ if (!result.success) {
 }
 ```
 
-Revisão (voltar etapa com motivo) continua em `transitionServiceOrderStatus` (`@/actions/service-order`).
-
 ### Scripts de banco
 
 ```bash
-npm run db:generate   # gera migration a partir do schema
-npm run db:migrate    # aplica migrations no Supabase (via DIRECT_URL)
-npm run db:seed       # popula dados iniciais
-npm run db:studio     # Drizzle Studio
+npm run db:generate            # gera migration a partir do schema
+npm run db:migrate             # aplica migrations pendentes (via DIRECT_URL)
+npm run db:migration-status    # diagnóstico: o que o Drizzle vai aplicar ou ignorar
+npm run db:sync-drizzle-journal # registra hashes após apply manual (db-apply-*)
+npm run db:seed                # popula dados iniciais
+npm run db:studio              # Drizzle Studio
 ```
+
+#### Migrations manuais
+
+Algumas migrations (índices, refactors grandes) usam scripts `scripts/db-apply-*.mjs` em vez do `db:migrate`.
+
+O `drizzle-kit migrate` **não usa hash** para decidir o que aplicar — compara o campo `when` do `_journal.json` com o **maior** `created_at` em `drizzle.__drizzle_migrations`. Se `when` for menor que esse máximo, a migration é ignorada silenciosamente.
+
+Fluxo recomendado após apply manual:
+
+```bash
+npm run db:sync-drizzle-journal   # registra hashes faltantes
+npm run db:migration-status       # confirma que não há pendências ignoradas
+```
+
+Para migrations novas geradas pelo Drizzle (`db:generate`), o `when` já vem correto e `db:migrate` funciona normalmente.
 
 ## Exemplo de UI
 

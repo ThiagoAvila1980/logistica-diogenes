@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { CheckCircle2, Loader2, Truck } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,13 +13,14 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { updateCuttingStepAction } from "@/actions/cutting-actions";
+import { updateCuttingStepAction, advanceCuttingToTransportAction } from "@/actions/cutting-actions";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 
 type Step = "corte" | "embalagem" | "acessorios";
 
 type Props = {
   osId: string;
+  osStatus: string;
   initialSteps: { corte: boolean; embalagem: boolean; acessorios: boolean };
 };
 
@@ -40,12 +42,30 @@ const STEPS: { key: Step; label: string; description: string }[] = [
   },
 ];
 
-export function CuttingChecklist({ osId, initialSteps }: Props) {
+export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
+  const router = useRouter();
   const [steps, setSteps] = useState(initialSteps);
   const [loadingStep, setLoadingStep] = useState<Step | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [isAdvancing, startAdvancing] = useTransition();
 
   const allDone = steps.corte && steps.embalagem && steps.acessorios;
+
+  async function handleAdvanceToTransport() {
+    startAdvancing(async () => {
+      if (osStatus.startsWith("transporte_") || osStatus.startsWith("instalacao")) {
+        router.push(`/logistics/${osId}`);
+        return;
+      }
+
+      const result = await advanceCuttingToTransportAction({ osId });
+      if (result.success) {
+        router.push(`/logistics/${osId}`);
+      } else {
+        setStepError(result.message ?? "Erro ao avançar para transporte");
+      }
+    });
+  }
 
   async function handleStepToggle(step: Step, done: boolean) {
     setLoadingStep(step);
@@ -130,9 +150,21 @@ export function CuttingChecklist({ osId, initialSteps }: Props) {
         {allDone && (
           <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <AlertDescription className="text-emerald-700 dark:text-emerald-400">
-              Todas as etapas concluídas! Esta medição está pronta para
-              transporte.
+            <AlertDescription className="flex items-center justify-between gap-3 text-emerald-700 dark:text-emerald-400">
+              <span>Todas as etapas de corte concluídas.</span>
+              <Button
+                size="sm"
+                onClick={handleAdvanceToTransport}
+                disabled={isAdvancing}
+                className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isAdvancing ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Truck className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                Ver transporte
+              </Button>
             </AlertDescription>
           </Alert>
         )}

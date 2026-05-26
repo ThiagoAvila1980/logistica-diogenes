@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  AlertTriangle,
   Boxes,
   CheckCircle2,
   CircleDot,
@@ -96,11 +95,6 @@ const STATUS_VISUAL: Partial<Record<OsStatus, Omit<StatusVisual, "label">>> = {
     icon: CheckCircle2,
     dotClass: "bg-emerald-600",
     badgeClass: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-400",
-  },
-  revisao: {
-    icon: AlertTriangle,
-    dotClass: "bg-red-500",
-    badgeClass: "bg-red-500/15 text-red-700 dark:text-red-400",
   },
 };
 

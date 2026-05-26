@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   Car,
   ChevronDown,
+  DoorOpen,
   Layers,
   Palette,
   PanelTop,
@@ -21,6 +22,7 @@ import {
 const SETTINGS_ICONS: Record<string, LucideIcon> = {
   "/admin/vehicles": Car,
   "/admin/cores": Palette,
+  "/admin/ambientes": DoorOpen,
   "/admin/tipo-vidro": Layers,
   "/admin/tipo-envidracamento": PanelTop,
 };

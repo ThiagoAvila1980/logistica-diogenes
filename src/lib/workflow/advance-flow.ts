@@ -1,7 +1,7 @@
 import type { OsStatus } from "@/db/schema";
 import { getAdvanceFlow } from "./measurement-flow";
 
-/** Fluxo linear de avanço (sem revisão) */
+/** Fluxo linear de avanço */
 export function getAdvanceStatusFlow(): Partial<Record<OsStatus, OsStatus[]>> {
   return getAdvanceFlow();
 }

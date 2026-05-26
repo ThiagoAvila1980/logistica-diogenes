@@ -9,12 +9,10 @@ import {
   Package,
   Truck,
   Wrench,
-  AlertTriangle,
   ClipboardList,
   Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import type { OsStatus } from "@/db/schema";
 import {
   getStepIndex,
@@ -39,7 +37,6 @@ const STEP_ICONS: Record<OsStatus, LucideIcon> = {
   instalacao_estrutural: Wrench,
   instalacao_vidros: Wrench,
   concluido: CheckCircle,
-  revisao: AlertTriangle,
   // Legado
   orcamento_enviado: FileText,
   aprovado_cliente: CheckCircle,
@@ -66,21 +63,10 @@ export function StatusWizard({
   pending = false,
 }: StatusWizardProps) {
   const steps = WIZARD_STEPS;
-  const currentIndex =
-    currentStatus === "revisao" ? -1 : getStepIndex(currentStatus);
+  const currentIndex = getStepIndex(currentStatus);
 
   return (
     <div className={cn("w-full", className)}>
-      {currentStatus === "revisao" && (
-        <Badge
-          variant="destructive"
-          className="mb-4 flex w-fit items-center gap-1.5"
-        >
-          <AlertTriangle className="h-3.5 w-3.5" />
-          {kanbanColumnTitle("revisao")}
-        </Badge>
-      )}
-
       <div
         className={cn(
           "flex items-start gap-0 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
@@ -155,4 +141,3 @@ export function StatusWizard({
     </div>
   );
 }
-

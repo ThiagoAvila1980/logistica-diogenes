@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Pencil, Plus } from "lucide-react";
 import {
   createUser,
@@ -76,6 +77,7 @@ export function UserAdminPanel({
   users: AdminUserRow[];
   currentUserId: string;
 }) {
+  const router = useRouter();
   const [createState, createAction, createPending] = useActionState<
     AdminActionResult | null,
     FormData
@@ -87,6 +89,20 @@ export function UserAdminPanel({
     AdminActionResult | null,
     FormData
   >(updateUser, null);
+
+  useEffect(() => {
+    if (createState?.success) {
+      setCreateOpen(false);
+      router.refresh();
+    }
+  }, [createState, router]);
+
+  useEffect(() => {
+    if (editState?.success) {
+      setEditOpen(false);
+      router.refresh();
+    }
+  }, [editState, router]);
 
   return (
     <div className="space-y-6">

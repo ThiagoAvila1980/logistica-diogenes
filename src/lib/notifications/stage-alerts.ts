@@ -21,12 +21,7 @@ export function getStageAlertTypeFromEtapa(
     return "cutting";
   }
   if (etapa.startsWith("transporte_")) return "transport";
-  if (
-    etapa.startsWith("instalacao") ||
-    etapa === "revisao"
-  ) {
-    return "installation";
-  }
+  if (etapa.startsWith("instalacao")) return "installation";
   return null;
 }
 

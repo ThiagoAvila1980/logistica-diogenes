@@ -5,8 +5,11 @@ import { Truck } from "lucide-react";
 
 export default async function LogisticsIndexPage() {
   const orders = await listServiceOrders();
-  const logisticsOrders = orders.filter((o) =>
-    o.status.startsWith("transporte_"),
+  const logisticsOrders = orders.filter(
+    (o) =>
+      o.status.startsWith("transporte_") ||
+      o.status.startsWith("instalacao") ||
+      o.status === "concluido",
   );
 
   const summaries = await getLogisticsSummaries(

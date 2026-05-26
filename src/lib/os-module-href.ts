@@ -1,37 +1,31 @@
 /**
  * Base path do módulo operacional para uma OS, conforme etapa atual.
  */
-export function getOsModuleBasePath(
-  status: string,
-  revisionFromStatus?: string | null,
-): string {
-  const effectiveStatus =
-    status === "revisao" && revisionFromStatus ? revisionFromStatus : status;
-
-  if (effectiveStatus.startsWith("medicao")) return "/field";
+export function getOsModuleBasePath(status: string): string {
+  if (status.startsWith("medicao")) return "/field";
   if (
-    effectiveStatus.includes("orcamento") ||
-    effectiveStatus === "aprovado_cliente"
+    status.includes("orcamento") ||
+    status === "aprovado_cliente"
   ) {
     return "/quote";
   }
   if (
-    effectiveStatus === "cortes" ||
-    effectiveStatus === "embalagem" ||
-    effectiveStatus === "acessorios_plano" ||
-    effectiveStatus.includes("corte")
+    status === "cortes" ||
+    status === "embalagem" ||
+    status === "acessorios_plano" ||
+    status.includes("corte")
   ) {
     return "/production";
   }
   if (
-    effectiveStatus.startsWith("transporte_") ||
-    effectiveStatus.includes("transporte")
+    status.startsWith("transporte_") ||
+    status.includes("transporte")
   ) {
     return "/logistics";
   }
   if (
-    effectiveStatus.startsWith("instalacao") ||
-    effectiveStatus === "concluido"
+    status.startsWith("instalacao") ||
+    status === "concluido"
   ) {
     return "/installation";
   }
@@ -39,10 +33,6 @@ export function getOsModuleBasePath(
   return "/field";
 }
 
-export function getOsModuleHref(
-  osId: string,
-  status: string,
-  revisionFromStatus?: string | null,
-): string {
-  return `${getOsModuleBasePath(status, revisionFromStatus)}/${osId}`;
+export function getOsModuleHref(osId: string, status: string): string {
+  return `${getOsModuleBasePath(status)}/${osId}`;
 }

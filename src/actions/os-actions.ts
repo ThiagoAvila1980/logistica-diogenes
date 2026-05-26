@@ -40,6 +40,7 @@ import { authErrorMessage, AuthError } from "@/lib/auth/auth-error";
 import { requireRole } from "@/lib/auth/require-role";
 import { getAdvanceAllowedRoles } from "@/lib/auth/permissions";
 import { getServiceOrderById } from "@/lib/data/orders";
+import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
 
 const advanceSchema = z.object({
   osId: z.string().uuid(),
@@ -374,7 +375,11 @@ export async function advanceOSStatus(
 
       await tx
         .update(measurements)
-        .set({ etapa: nextStatus, updatedAt: sql`NOW()` })
+        .set({
+          etapa: nextStatus,
+          updatedAt: sql`NOW()`,
+          ...measurementTypePatchForEtapa(nextStatus),
+        })
         .where(eq(measurements.id, osId));
 
       await tx.insert(statusHistory).values({

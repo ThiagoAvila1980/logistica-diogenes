@@ -24,6 +24,7 @@ import {
 import {
   getMeasurementActionErrorMessage,
   isMeasurementActionAllowed,
+  measurementTypeFromOsStatus,
   osStatusFromMeasurementType,
 } from "@/lib/workflow/measurement-actions";
 import { vehicleMockStore } from "@/lib/data/admin-mock-store";
@@ -44,8 +45,6 @@ type MockMeasurement = {
   sourcePdfUrl: string | null;
   description: string | null;
   scheduledDate: Date | null;
-  revisionReason: string | null;
-  revisionFromEtapa: OsStatus | null;
   dimensions?: Record<string, number>;
   items?: MeasurementLineItem[];
   notes?: string | null;
@@ -111,8 +110,6 @@ function toOrderDetail(m: MockMeasurement): OrderDetail {
   return {
     ...toListItem(m),
     description: m.description,
-    revisionReason: m.revisionReason,
-    revisionFromStatus: m.revisionFromEtapa,
     clientPhone: m.telefone,
     sourcePdfUrl: m.sourcePdfUrl,
   };
@@ -134,8 +131,6 @@ let measurements: MockMeasurement[] = [
     sourcePdfUrl: null,
     description: "Sacada envidraçada — 4 folhas",
     scheduledDate: new Date("2026-05-20"),
-    revisionReason: null,
-    revisionFromEtapa: null,
     photos: [],
     updatedAt: new Date(),
   },
@@ -154,8 +149,6 @@ let measurements: MockMeasurement[] = [
     sourcePdfUrl: null,
     description: "Fachada comercial — perfil structurado",
     scheduledDate: new Date("2026-05-22"),
-    revisionReason: null,
-    revisionFromEtapa: null,
     updatedAt: new Date(),
   },
   {
@@ -173,8 +166,6 @@ let measurements: MockMeasurement[] = [
     sourcePdfUrl: null,
     description: "Box blindex banheiro social",
     scheduledDate: new Date("2026-05-18"),
-    revisionReason: null,
-    revisionFromEtapa: null,
     dimensions: { largura: 900, altura: 2100 },
     updatedAt: new Date(),
   },
@@ -193,8 +184,6 @@ let measurements: MockMeasurement[] = [
     sourcePdfUrl: null,
     description: "Janelas quartos — 6 unidades",
     scheduledDate: new Date("2026-05-25"),
-    revisionReason: null,
-    revisionFromEtapa: null,
     updatedAt: new Date(),
   },
   {
@@ -212,8 +201,6 @@ let measurements: MockMeasurement[] = [
     sourcePdfUrl: null,
     description: "Guarda-corpo varanda — medição final pós-aprovação",
     scheduledDate: new Date("2026-05-21"),
-    revisionReason: null,
-    revisionFromEtapa: null,
     updatedAt: new Date(),
   },
   {
@@ -231,8 +218,6 @@ let measurements: MockMeasurement[] = [
     sourcePdfUrl: null,
     description: "Entrega esquadrias — bloco B",
     scheduledDate: new Date("2026-05-23"),
-    revisionReason: null,
-    revisionFromEtapa: null,
     updatedAt: new Date(),
   },
   {
@@ -250,8 +235,6 @@ let measurements: MockMeasurement[] = [
     sourcePdfUrl: null,
     description: "Instalação estrutural sacada",
     scheduledDate: new Date("2026-05-24"),
-    revisionReason: null,
-    revisionFromEtapa: null,
     updatedAt: new Date(),
   },
   {
@@ -269,8 +252,6 @@ let measurements: MockMeasurement[] = [
     sourcePdfUrl: null,
     description: "Nova medição — cliente solicitou visita técnica",
     scheduledDate: new Date("2026-05-20"),
-    revisionReason: null,
-    revisionFromEtapa: null,
     updatedAt: new Date(),
   },
 ];
@@ -354,8 +335,6 @@ function loadContext(idMedicao: string, m: MockMeasurement) {
     },
     transportItemsChecked: trans?.itemsChecked ?? null,
     installationHasPhotos: hasBeforeAfter,
-    revisionFromStatus:
-      m.etapa === "revisao" ? m.revisionFromEtapa : null,
   };
 }
 
@@ -373,6 +352,16 @@ export const mockRepository = {
         m.etapa === "cortes" ||
         m.etapa === "embalagem" ||
         m.etapa === "acessorios_plano";
+      const isTransportPhase =
+        m.etapa === "transporte_perfil" ||
+        m.etapa === "transporte_estrutural" ||
+        m.etapa === "transporte_perfis_total" ||
+        m.etapa === "transporte_acessorios" ||
+        m.etapa === "transporte_levar_vidro";
+      const isInstallationPhase =
+        m.etapa === "instalacao_estrutural" ||
+        m.etapa === "instalacao_vidros" ||
+        m.etapa === "concluido";
 
       return {
         id: m.id,
@@ -391,6 +380,20 @@ export const mockRepository = {
               corte: cut.corteFeito,
               embalagem: cut.embalagemFeita,
               acessorios: cut.acessoriosFeitos,
+            }
+          : null,
+        transportSteps: isTransportPhase
+          ? {
+              levarPerfilEstrutural: false,
+              levarPerfilTotal: false,
+              levarAcessorios: false,
+              levarVidro: false,
+            }
+          : null,
+        installationSteps: isInstallationPhase
+          ? {
+              instalacaoEstruturalFeita: false,
+              instalacaoVidrosFeita: false,
             }
           : null,
       };
@@ -427,11 +430,24 @@ export const mockRepository = {
     if (!m) return { success: false, message: "OS não encontrada" };
 
     const CUTTING_STATUSES = ["cortes", "embalagem", "acessorios_plano"];
-    if (!CUTTING_STATUSES.includes(m.etapa)) {
+
+    let cut = cuttingPlans.find((c) => c.idMedicao === osId);
+    const cuttingSteps = {
+      corteFeito: cut?.corteFeito ?? false,
+      embalagemFeita: cut?.embalagemFeita ?? false,
+      acessoriosFeitos: cut?.acessoriosFeitos ?? false,
+    };
+    const canEditCutting =
+      CUTTING_STATUSES.includes(m.etapa) ||
+      (m.etapa.startsWith("transporte_") &&
+        (!cuttingSteps.corteFeito ||
+          !cuttingSteps.embalagemFeita ||
+          !cuttingSteps.acessoriosFeitos));
+
+    if (!canEditCutting) {
       return { success: false, message: "OS não está em etapa de corte" };
     }
 
-    let cut = cuttingPlans.find((c) => c.idMedicao === osId);
     if (!cut) {
       cut = {
         idMedicao: osId,
@@ -445,6 +461,10 @@ export const mockRepository = {
     if (step === "corte") cut.corteFeito = done;
     else if (step === "embalagem") cut.embalagemFeita = done;
     else cut.acessoriosFeitos = done;
+
+    if (step === "corte" && done && cut.corteFeito && ["cortes", "embalagem", "acessorios_plano"].includes(m.etapa)) {
+      m.etapa = "transporte_perfil";
+    }
 
     m.updatedAt = new Date();
     return { success: true };
@@ -496,6 +516,7 @@ export const mockRepository = {
     m.items = data.items;
     m.notes = data.notes;
     m.photos = data.photos;
+    m.type = type;
     m.status = "medida";
     m.etapa = osStatusFromMeasurementType(type);
     if (data.priority) m.priority = data.priority;
@@ -534,14 +555,9 @@ export const mockRepository = {
       };
     }
 
-    if (targetStatus === "revisao") {
-      return {
-        success: false,
-        message: "Use o painel da OS para enviar à revisão com motivo.",
-      };
-    }
-
     m.etapa = targetStatus;
+    const syncedType = measurementTypeFromOsStatus(targetStatus);
+    if (syncedType) m.type = syncedType;
     m.updatedAt = new Date();
     return { success: true };
   },
@@ -580,8 +596,6 @@ export const mockRepository = {
       sourcePdfUrl: null,
       description: input.description ?? "Medição",
       scheduledDate: input.scheduledDate ?? null,
-      revisionReason: null,
-      revisionFromEtapa: null,
       photos: [],
       updatedAt: new Date(),
     });
@@ -663,7 +677,7 @@ export const mockRepository = {
   transition(
     osId: string,
     toStatus: OsStatus,
-    reason?: string,
+    _reason?: string,
   ): TransitionResult {
     const m = findMeasurement(osId);
     if (!m) {
@@ -672,33 +686,15 @@ export const mockRepository = {
 
     const fromStatus = m.etapa;
 
-    if (!canTransition(fromStatus, toStatus) && toStatus !== "revisao") {
-      if (fromStatus !== "revisao") {
-        return {
-          success: false,
-          code: "INVALID_TRANSITION",
-          message: `Transição não permitida: ${fromStatus} → ${toStatus}`,
-        };
-      }
-    }
-
-    if (toStatus === "revisao" && !reason) {
+    if (!canTransition(fromStatus, toStatus)) {
       return {
         success: false,
-        code: "REVISION_REASON_REQUIRED",
-        message: "Informe o motivo da revisão.",
+        code: "INVALID_TRANSITION",
+        message: `Transição não permitida: ${fromStatus} → ${toStatus}`,
       };
     }
 
-    const ctx = {
-      ...loadContext(osId, m),
-      revisionFromStatus:
-        toStatus === "revisao"
-          ? fromStatus
-          : fromStatus === "revisao"
-            ? m.revisionFromEtapa
-            : null,
-    };
+    const ctx = loadContext(osId, m);
 
     try {
       assertTransitionGuards(fromStatus, toStatus, ctx);
@@ -709,15 +705,9 @@ export const mockRepository = {
       throw err;
     }
 
-    if (toStatus === "revisao") {
-      m.revisionReason = reason ?? null;
-      m.revisionFromEtapa = fromStatus;
-    } else if (fromStatus === "revisao") {
-      m.revisionReason = null;
-      m.revisionFromEtapa = null;
-    }
-
     m.etapa = toStatus;
+    const syncedType = measurementTypeFromOsStatus(toStatus);
+    if (syncedType) m.type = syncedType;
     m.updatedAt = new Date();
 
     return { success: true, status: toStatus };

@@ -5,7 +5,10 @@ import { Wrench } from "lucide-react";
 export default async function InstallationIndexPage() {
   const orders = await listServiceOrders();
   const installationOrders = orders.filter(
-    (o) => o.status.startsWith("instalacao") || o.status === "concluido",
+    (o) =>
+      o.status.startsWith("transporte_") ||
+      o.status.startsWith("instalacao") ||
+      o.status === "concluido",
   );
 
   return (

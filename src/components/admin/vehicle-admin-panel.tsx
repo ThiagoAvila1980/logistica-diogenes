@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   deleteVehicle,
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 
 export function VehicleAdminPanel({ vehicles }: { vehicles: VehicleRow[] }) {
+  const router = useRouter();
   const [createState, createAction, createPending] = useActionState<
     AdminActionResult | null,
     FormData
@@ -40,6 +42,21 @@ export function VehicleAdminPanel({ vehicles }: { vehicles: VehicleRow[] }) {
   >(saveVehicle, null);
   const [deletePending, startDelete] = useTransition();
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const [createFormKey, setCreateFormKey] = useState(0);
+
+  useEffect(() => {
+    if (createState?.success) {
+      setCreateFormKey((key) => key + 1);
+      router.refresh();
+    }
+  }, [createState, router]);
+
+  useEffect(() => {
+    if (editState?.success) {
+      setEditOpen(false);
+      router.refresh();
+    }
+  }, [editState, router]);
 
   function openEdit(vehicle: VehicleRow) {
     setEditing(vehicle);
@@ -68,7 +85,11 @@ export function VehicleAdminPanel({ vehicles }: { vehicles: VehicleRow[] }) {
               <AlertDescription>{createState.message}</AlertDescription>
             </Alert>
           )}
-          <form action={createAction} className="grid gap-4 sm:grid-cols-2">
+          <form
+            key={createFormKey}
+            action={createAction}
+            className="grid gap-4 sm:grid-cols-2"
+          >
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="new-description">Descrição</Label>
               <Input
@@ -156,7 +177,11 @@ export function VehicleAdminPanel({ vehicles }: { vehicles: VehicleRow[] }) {
                       setDeleteMessage(null);
                       startDelete(async () => {
                         const result = await deleteVehicle(vehicle.id);
-                        if (!result.success) setDeleteMessage(result.message);
+                        if (!result.success) {
+                          setDeleteMessage(result.message);
+                          return;
+                        }
+                        router.refresh();
                       });
                     }}
                   >

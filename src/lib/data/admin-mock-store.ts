@@ -215,6 +215,15 @@ export const tipoEnvidracamentoMockStore = createLookupMockStore([
   { id: "mock-env-fixo", descricao: "Fixo" },
 ]);
 
+export const ambienteMockStore = createLookupMockStore([
+  { id: "mock-amb-sala", descricao: "Sala" },
+  { id: "mock-amb-quarto", descricao: "Quarto" },
+  { id: "mock-amb-varanda", descricao: "Varanda" },
+  { id: "mock-amb-cozinha", descricao: "Cozinha" },
+  { id: "mock-amb-banheiro", descricao: "Banheiro" },
+  { id: "mock-amb-externa", descricao: "Área externa" },
+]);
+
 let mockAdminUsers: AdminUserRow[] = [];
 
 export function initMockAdminUsers(seed: AdminUserRow[]) {

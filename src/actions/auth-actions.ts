@@ -139,7 +139,6 @@ export async function loginWithCredentials(
 
 export async function logout(): Promise<void> {
   await clearSession();
-  redirect("/login");
 }
 
 export async function getCurrentSession(): Promise<SessionUser | null> {

@@ -3,6 +3,7 @@
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
+import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
 import { getDb } from "@/lib/db";
 import { measurements, statusHistory, type OsStatus } from "@/db/schema";
 import { useMockData } from "@/lib/data/config";
@@ -16,10 +17,35 @@ import { isKanbanNotifyStatus } from "@/lib/notifications/types";
 
 import { authErrorMessage, AuthError } from "@/lib/auth/auth-error";
 import { requireRole } from "@/lib/auth/require-role";
+import { getSession } from "@/lib/auth/session";
+import { listKanbanOrders, type KanbanOrderItem } from "@/lib/data/kanban";
 
 export type MoveOSCardResult =
   | { success: true; notificationSummary?: string }
   | { success: false; message: string };
+
+export type RefreshKanbanOrdersResult =
+  | { success: true; orders: KanbanOrderItem[] }
+  | { success: false; message: string };
+
+export async function refreshKanbanOrders(): Promise<RefreshKanbanOrdersResult> {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return { success: false, message: "Sessão expirada. Faça login novamente." };
+    }
+
+    const orders = await listKanbanOrders();
+    return { success: true, orders };
+  } catch (error) {
+    console.error("[refreshKanbanOrders]", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Erro ao atualizar o kanban",
+    };
+  }
+}
 
 export async function moveOSCard(
   osId: string,
@@ -77,7 +103,11 @@ export async function moveOSCard(
     await db.transaction(async (tx) => {
       await tx
         .update(measurements)
-        .set({ etapa: target, updatedAt: sql`NOW()` })
+        .set({
+          etapa: target,
+          updatedAt: sql`NOW()`,
+          ...measurementTypePatchForEtapa(target),
+        })
         .where(eq(measurements.id, osId));
 
       await tx.insert(statusHistory).values({

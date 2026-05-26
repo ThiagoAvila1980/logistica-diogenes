@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
+import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { KanbanPhaseColumn } from "./kanban-phase-column";
-import { KanbanColumn } from "./kanban-column";
 import { KanbanFiltersBar } from "./kanban-filters";
 import { KanbanColumnStats } from "./kanban-column-stats";
-import { moveOSCard } from "@/actions/kanban-actions";
+import { moveOSCard, refreshKanbanOrders } from "@/actions/kanban-actions";
 import { getAllowedTransitions } from "@/lib/workflow/status-machine";
 import {
   KANBAN_PHASES,
@@ -14,7 +14,10 @@ import {
   resolvePhaseDropTarget,
 } from "@/lib/kanban/column-groups";
 import type { OsStatus } from "@/db/schema";
-import type { KanbanOrderItem } from "@/lib/data/kanban";
+import {
+  reviveKanbanOrders,
+  type KanbanOrderItem,
+} from "@/lib/data/kanban-types";
 import {
   DEFAULT_KANBAN_FILTERS,
   filterKanbanOrders,
@@ -26,18 +29,15 @@ import {
 } from "./kanban-move-confirm-dialog";
 import { KANBAN_VISIBLE_COLUMNS } from "@/lib/kanban/constants";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { STATUS_LABELS } from "@/lib/workflow/status-machine";
-
-const REVISAO_PHASE_ID = "revisao";
+import { cn } from "@/lib/utils";
 
 type PhaseColumnsState = Record<string, KanbanOrderItem[]>;
 
 function groupByPhase(data: KanbanOrderItem[]): PhaseColumnsState {
-  const grouped: PhaseColumnsState = {
-    [REVISAO_PHASE_ID]: [],
-  };
+  const grouped: PhaseColumnsState = {};
   for (const phase of KANBAN_PHASES) {
     grouped[phase.id] = [];
   }
@@ -57,20 +57,26 @@ type KanbanBoardProps = {
 };
 
 export function KanbanBoard({ initialData }: KanbanBoardProps) {
+  const [orders, setOrders] = useState(initialData);
   const [filters, setFilters] = useState<KanbanFilters>(DEFAULT_KANBAN_FILTERS);
   const [columns, setColumns] = useState<PhaseColumnsState>(() =>
     groupByPhase(initialData),
   );
   const [isPending, startTransition] = useTransition();
+  const [isRefreshing, startRefresh] = useTransition();
   const [dragError, setDragError] = useState<string | null>(null);
   const [dragSuccess, setDragSuccess] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<KanbanPendingMove | null>(
     null,
   );
 
+  useEffect(() => {
+    setOrders(initialData);
+  }, [initialData]);
+
   const filteredData = useMemo(
-    () => filterKanbanOrders(initialData, filters),
-    [initialData, filters],
+    () => filterKanbanOrders(orders, filters),
+    [orders, filters],
   );
 
   useEffect(() => {
@@ -83,10 +89,27 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         const found = list.find((o) => o.id === osId);
         if (found) return found;
       }
-      return initialData.find((o) => o.id === osId);
+      return orders.find((o) => o.id === osId);
     },
-    [columns, initialData],
+    [columns, orders],
   );
+
+  const handleRefresh = useCallback(() => {
+    setDragError(null);
+    setDragSuccess(null);
+
+    startRefresh(async () => {
+      const result = await refreshKanbanOrders();
+      if (!result.success) {
+        setDragError(result.message);
+        return;
+      }
+
+      const nextOrders = reviveKanbanOrders(result.orders);
+      setOrders(nextOrders);
+      setDragSuccess("Kanban atualizado.");
+    });
+  }, []);
 
   const requestMove = useCallback(
     (
@@ -265,9 +288,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
       if (!order) return;
 
       const sourceStatus = order.status;
-      const next = getAllowedTransitions(sourceStatus).find(
-        (s) => s !== "revisao",
-      );
+      const next = getAllowedTransitions(sourceStatus)[0];
 
       if (!next) {
         setDragError("Não há próxima etapa permitida para esta OS.");
@@ -283,14 +304,37 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
     [findOrder, requestMove],
   );
 
-  const revisaoItems = columns[REVISAO_PHASE_ID] ?? [];
-
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold tracking-tight lg:text-xl">
+            Kanban — Ordens de Serviço
+          </h1>
+          <p className="text-[11px] tabular-nums text-muted-foreground">
+            {orders.length} OS
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 shrink-0 gap-1.5 text-xs"
+          onClick={handleRefresh}
+          disabled={isRefreshing || isPending}
+        >
+          <RefreshCw
+            className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
+            aria-hidden
+          />
+          Atualizar
+        </Button>
+      </div>
+
       <KanbanFiltersBar
         filters={filters}
         onChange={setFilters}
-        totalCount={initialData.length}
+        totalCount={orders.length}
         filteredCount={filteredData.length}
       />
 
@@ -358,22 +402,6 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
             />
           ))}
         </div>
-
-        {revisaoItems.length > 0 && (
-          <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-2">
-            <KanbanColumn
-              status="revisao"
-              title="Revisão"
-              titleTooltip={STATUS_LABELS.revisao}
-              items={revisaoItems}
-              isDropDisabled={isPending}
-              canAdvanceCards={revisaoItems.some((item) =>
-                getAllowedTransitions(item.status).some((s) => s !== "revisao"),
-              )}
-              onKeyboardAdvance={handleKeyboardAdvance}
-            />
-          </div>
-        )}
       </DragDropContext>
     </div>
   );

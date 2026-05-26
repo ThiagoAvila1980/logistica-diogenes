@@ -17,6 +17,15 @@ export function getSessionCookieOptions() {
   };
 }
 
+/** Expira imediatamente o cookie de sessão (logout). */
+export function getClearSessionCookieOptions() {
+  return {
+    ...getSessionCookieOptions(),
+    maxAge: 0,
+    expires: new Date(0),
+  };
+}
+
 /** Prefetch do App Router pode rodar sem cookies; redirecionar quebra a navegação. */
 export function isAuthPrefetchRequest(request: Request): boolean {
   return (

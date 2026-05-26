@@ -72,14 +72,10 @@ export function getKanbanPhaseForStatus(status: OsStatus): KanbanPhase | null {
 }
 
 export function isKanbanPipelineStatus(status: OsStatus): boolean {
-  return (
-    KANBAN_PIPELINE_STATUSES.includes(normalizeKanbanStatus(status)) ||
-    status === "revisao"
-  );
+  return KANBAN_PIPELINE_STATUSES.includes(normalizeKanbanStatus(status));
 }
 
 export function getPhaseIdForStatus(status: OsStatus): string | null {
-  if (status === "revisao") return "revisao";
   return getKanbanPhaseForStatus(status)?.id ?? null;
 }
 
@@ -91,8 +87,7 @@ export function resolvePhaseDropTarget(
   fromStatus: OsStatus,
   toPhaseId: string,
 ): OsStatus | null {
-  const normalized =
-    fromStatus === "revisao" ? fromStatus : normalizeKanbanStatus(fromStatus);
+  const normalized = normalizeKanbanStatus(fromStatus);
   const fromPhase = getKanbanPhaseForStatus(normalized);
   const toPhase = KANBAN_PHASES.find((p) => p.id === toPhaseId);
 

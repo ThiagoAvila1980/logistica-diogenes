@@ -12,6 +12,18 @@ import { KanbanStatusBadge } from "./kanban-status-badge";
 
 const MEASUREMENT_STATUSES = new Set(["medicao_orcamento", "medicao_final"]);
 const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
+const TRANSPORT_STATUSES = new Set([
+  "transporte_perfil",
+  "transporte_estrutural",
+  "transporte_perfis_total",
+  "transporte_acessorios",
+  "transporte_levar_vidro",
+]);
+const INSTALLATION_STATUSES = new Set([
+  "instalacao_estrutural",
+  "instalacao_vidros",
+  "concluido",
+]);
 
 const PRIORITY_BORDER: Record<string, string> = {
   normal: "border-l-border",
@@ -51,6 +63,8 @@ export function KanbanCard({
   const isMeasurementColumn = MEASUREMENT_STATUSES.has(os.status);
   const isFinal = os.type === "final";
   const isCuttingColumn = CUTTING_STATUSES.has(os.status);
+  const isTransportColumn = TRANSPORT_STATUSES.has(os.status);
+  const isInstallationColumn = INSTALLATION_STATUSES.has(os.status);
 
   return (
     <Draggable draggableId={os.id} index={index}>
@@ -130,6 +144,55 @@ export function KanbanCard({
                     ] as const
                   ).map(({ key, label }) => {
                     const done = os.cuttingSteps?.[key] ?? false;
+                    return (
+                      <span
+                        key={key}
+                        className={cn(
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          done
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {label}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : isTransportColumn ? (
+                <div className="flex gap-1">
+                  {(
+                    [
+                      { key: "levarPerfilEstrutural", label: "Perf." },
+                      { key: "levarPerfilTotal", label: "Total" },
+                      { key: "levarAcessorios", label: "Ac." },
+                    ] as const
+                  ).map(({ key, label }) => {
+                    const done = os.transportSteps?.[key] ?? false;
+                    return (
+                      <span
+                        key={key}
+                        className={cn(
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          done
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {label}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : isInstallationColumn ? (
+                <div className="flex gap-1">
+                  {(
+                    [
+                      { key: "instalacaoEstruturalFeita", label: "Estru." },
+                      { key: "instalacaoVidrosFeita", label: "Vidros" },
+                    ] as const
+                  ).map(({ key, label }) => {
+                    const done = os.installationSteps?.[key] ?? false;
                     return (
                       <span
                         key={key}
