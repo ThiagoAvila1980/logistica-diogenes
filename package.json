@@ -12,7 +12,7 @@
     "lint": "next lint",
     "db:generate": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs migrate",
-    "db:migrate:prod": "node ./node_modules/drizzle-kit/bin.cjs migrate",
+    "db:migrate:prod": "node scripts/db-migrate-prod.mjs",
     "db:migrate-roles": "node --env-file=.env.local scripts/db-apply-user-roles.mjs",
     "db:migrate-drop-clients": "node --env-file=.env.local scripts/db-apply-drop-clients.mjs",
     "db:migrate-remove-revision": "node --env-file=.env.local scripts/db-apply-remove-revision.mjs",

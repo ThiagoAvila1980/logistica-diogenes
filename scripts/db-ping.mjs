@@ -68,14 +68,15 @@ const directOk = await pingWithRetry("DIRECT_URL", getDirectDatabaseUrl());
 if (!runtimeOk || !directOk) {
   console.error(
     "\nFalha ao conectar ao PostgreSQL.\n\n" +
-      "PostgreSQL local:\n" +
+      "Docker / Coolify:\n" +
+      "1. localhost dentro do container não alcança Postgres em outro container ou no host\n" +
+      "2. Use o hostname interno do Postgres (nome do serviço no Coolify)\n" +
+      "3. Variáveis DATABASE_URL / DIRECT_URL no Runtime do app, não só no build\n" +
+      "4. Rode migrate no start/pós-deploy: npm run db:migrate:prod && npm run start\n\n" +
+      "PostgreSQL no mesmo host (sem Docker):\n" +
       "1. Confirme que o serviço está rodando (porta 5432)\n" +
-      "2. DATABASE_URL e DIRECT_URL apontando para o mesmo host local\n" +
-      "3. Remova ?schema=public da URL (só funciona no Prisma, não no postgres.js)\n\n" +
-      "Supabase remoto:\n" +
-      "1. Dashboard > Project Settings > General > Restart project\n" +
-      "2. Copie a connection string completa para .env.local\n" +
-      "3. Aguarde 2-5 minutos e rode npm run db:ping novamente",
+      "2. DATABASE_URL e DIRECT_URL apontando para o host correto\n" +
+      "3. Remova ?schema=public da URL (só funciona no Prisma)\n",
   );
   process.exit(1);
 }
