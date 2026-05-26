@@ -122,8 +122,3 @@ export async function deleteVehicle(vehicleId: string): Promise<AdminActionResul
     };
   }
 }
-
-export async function listActiveVehiclesForTransportAction() {
-  const { listActiveVehiclesForTransport } = await import("@/lib/data/vehicles");
-  return listActiveVehiclesForTransport();
-}

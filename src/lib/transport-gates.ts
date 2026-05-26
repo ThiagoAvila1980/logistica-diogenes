@@ -102,7 +102,6 @@ export type TransportSteps = {
   levarPerfilEstrutural: boolean;
   levarPerfilTotal: boolean;
   levarAcessorios: boolean;
-  levarVidro: boolean;
   transporteConcluido: boolean;
 };
 
@@ -125,10 +124,7 @@ export type TransportGates = {
 };
 
 /** Sub-etapas exibidas no checklist operacional de transporte */
-export type TransportChecklistStep = Exclude<
-  keyof TransportSteps,
-  "levarVidro"
->;
+export type TransportChecklistStep = keyof TransportSteps;
 
 export type InstallationGate = {
   unlocked: boolean;

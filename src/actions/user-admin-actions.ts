@@ -193,8 +193,3 @@ export async function updateUser(
     };
   }
 }
-
-export async function assertAdminSession() {
-  await requireRole(["admin"]);
-  return getSession();
-}

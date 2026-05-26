@@ -26,7 +26,6 @@ async function main() {
       transport_logs,
       installation_logs,
       measurements,
-      user_passkeys,
       vehicles,
       users
     RESTART IDENTITY CASCADE;
@@ -89,7 +88,6 @@ async function main() {
           budgetReference: "ORC-2026-SEED01",
           description: "Porta de vidro temperado 10mm + esquadria alumínio",
           dimensions: { largura: 900, altura: 2100, espessura: 10 },
-          technicianId: medidor.id,
           notes: "Local plano, sem obstáculos aparentes",
         },
         {
@@ -153,7 +151,6 @@ async function main() {
       corteFeito: true,
       embalagemFeita: false,
       acessoriosFeitos: false,
-      operatorId: cortador.id,
     },
   ]);
 
@@ -177,7 +174,6 @@ async function main() {
       driverId: motorista.id,
       vehicleId: vehicles[0].id,
       vehiclePlate: vehicles[0].plate,
-      status: "em_transito",
     },
   ]);
 
@@ -185,7 +181,6 @@ async function main() {
     {
       idMedicao: medInstalacao.id,
       installerId: instalador.id,
-      status: "estrutural",
     },
   ]);
 

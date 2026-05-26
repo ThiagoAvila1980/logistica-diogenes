@@ -14,7 +14,7 @@ export type TransportKanbanSteps = {
   levarPerfilEstrutural: boolean;
   levarPerfilTotal: boolean;
   levarAcessorios: boolean;
-  levarVidro: boolean;
+  transporteConcluido: boolean;
 };
 
 export type InstallationKanbanSteps = {

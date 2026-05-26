@@ -120,6 +120,13 @@
       "when": 1748600000000,
       "tag": "0020_ambientes",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1748700000000,
+      "tag": "0021_cleanup_unused_columns",
+      "breakpoints": true
     }
   ]
 }

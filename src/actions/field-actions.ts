@@ -52,16 +52,6 @@ export type DeleteMeasurementResult =
   | { success: true }
   | { success: false; message: string };
 
-export type ParsePdfPreviewResult =
-  | {
-      success: true;
-      clientName: string | null;
-      clientPhone: string | null;
-      budgetReference: string | null;
-      warning?: string;
-    }
-  | { success: false; message: string };
-
 const createMeasurementSchema = z.object({
   clientName: z.string().min(2, "Nome do cliente obrigatório"),
   clientPhone: z.string().max(20).optional(),
@@ -113,43 +103,6 @@ async function resolvePhotoUrls(
     photos: [...existing, ...urls],
     error: errors.length > 0 ? errors.join("; ") : undefined,
   };
-}
-
-/** Pré-visualiza dados extraídos do cabeçalho do PDF (sem criar OS). */
-export async function parseMeasurementPdfPreview(
-  formData: FormData,
-): Promise<ParsePdfPreviewResult> {
-  try {
-    await requireRole(["admin", "gerente"]);
-  } catch (err) {
-    return {
-      success: false,
-      message: authErrorMessage(err) ?? "Sem permissão.",
-    };
-  }
-
-  const pdfFile = parsePdfFileField(formData);
-  if (!pdfFile) {
-    return { success: false, message: "Selecione um arquivo PDF." };
-  }
-
-  try {
-    const buffer = Buffer.from(await pdfFile.arrayBuffer());
-    const { parsePdfBuffer } = await import("@/lib/upload/save-pdf");
-    const { header, error } = await parsePdfBuffer(buffer);
-    return {
-      success: true,
-      clientName: header.clientName,
-      clientPhone: header.clientPhone,
-      budgetReference: header.budgetReference,
-      warning: error,
-    };
-  } catch (err) {
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : "Erro ao ler PDF",
-    };
-  }
 }
 
 /**
@@ -534,7 +487,6 @@ export async function saveFieldMeasurement(
         status: "medida",
         etapa: osStatusFromMeasurementType(measurementType),
         priority: priorityField.priority,
-        technicianId: session?.userId ?? null,
         updatedAt: new Date(),
       })
       .where(eq(measurements.id, osId));

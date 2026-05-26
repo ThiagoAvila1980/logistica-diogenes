@@ -45,7 +45,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
       levarPerfilTotal: transportLogs.levarPerfilTotal,
       levarAcessorios: transportLogs.levarAcessorios,
-      levarVidro: transportLogs.levarVidro,
+      transporteConcluido: transportLogs.transporteConcluido,
       // Installation steps
       instalacaoEstruturalFeita: installationLogs.instalacaoEstruturalFeita,
       instalacaoVidrosFeita: installationLogs.instalacaoVidrosFeita,
@@ -89,7 +89,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
             levarPerfilEstrutural: r.levarPerfilEstrutural ?? false,
             levarPerfilTotal: r.levarPerfilTotal ?? false,
             levarAcessorios: r.levarAcessorios ?? false,
-            levarVidro: r.levarVidro ?? false,
+            transporteConcluido: r.transporteConcluido ?? false,
           }
         : null,
       installationSteps: isInstallationPhase

@@ -225,25 +225,3 @@ export async function advanceCuttingToTransportAction(
     return { success: false, message: "Erro ao avançar para transporte" };
   }
 }
-
-const alertSchema = z.object({
-  osId: z.string().uuid(),
-  message: z.string().min(5).max(1000),
-});
-
-export type SendCuttingAlertResult =
-  | { success: true }
-  | { success: false; message: string };
-
-export async function sendCuttingAlertAction(
-  raw: z.infer<typeof alertSchema>,
-): Promise<SendCuttingAlertResult> {
-  const parsed = alertSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: "Mensagem inválida" };
-
-  return sendStageProblemAlertAction({
-    osId: parsed.data.osId,
-    stage: "cutting",
-    message: parsed.data.message,
-  });
-}

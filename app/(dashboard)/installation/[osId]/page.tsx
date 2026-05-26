@@ -8,6 +8,7 @@ import { getOrderDisplayNumber } from "@/lib/order-display";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { Button } from "@/components/ui/button";
 import { InstallationChecklist } from "@/components/installation/installation-checklist";
+import { InstallationServicePhotos } from "@/components/installation/installation-service-photos";
 
 type Props = { params: Promise<{ osId: string }> };
 
@@ -60,12 +61,19 @@ export default async function InstallationOsPage({ params }: Props) {
         </div>
       </div>
 
-      <InstallationChecklist
-        osId={osId}
-        initialInstallationSteps={detail.installationSteps}
-        initialTransportSteps={detail.transportSteps}
-        initialCuttingSteps={detail.cuttingSteps}
-      />
+      <div className="space-y-4">
+        <InstallationChecklist
+          osId={osId}
+          initialInstallationSteps={detail.installationSteps}
+          initialTransportSteps={detail.transportSteps}
+          initialCuttingSteps={detail.cuttingSteps}
+        />
+
+        <InstallationServicePhotos
+          osId={osId}
+          initialPhotos={detail.servicePhotos}
+        />
+      </div>
     </div>
   );
 }

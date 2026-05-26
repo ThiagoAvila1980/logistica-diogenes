@@ -52,7 +52,6 @@ export async function getTransportDetailForOs(
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
         levarPerfilTotal: transportLogs.levarPerfilTotal,
         levarAcessorios: transportLogs.levarAcessorios,
-        levarVidro: transportLogs.levarVidro,
         transporteConcluido: transportLogs.transporteConcluido,
       })
       .from(transportLogs)
@@ -89,7 +88,6 @@ export async function getTransportDetailForOs(
       levarPerfilEstrutural: trans?.levarPerfilEstrutural ?? false,
       levarPerfilTotal: trans?.levarPerfilTotal ?? false,
       levarAcessorios: trans?.levarAcessorios ?? false,
-      levarVidro: trans?.levarVidro ?? false,
       transporteConcluido: trans?.transporteConcluido ?? false,
     },
     vehicleId: trans?.vehicleId ?? null,

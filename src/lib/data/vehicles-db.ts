@@ -140,8 +140,6 @@ export async function assignVehicleToTransportDb(
     vehicleId,
     vehiclePlate: plate,
     driverId: driverId ?? null,
-    status: "em_transito" as const,
-    departureAt: new Date(),
     updatedAt: new Date(),
   };
 

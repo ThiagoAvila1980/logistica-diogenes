@@ -5,22 +5,7 @@ import type {
   OsStatus,
 } from "@/db/schema";
 import type { OrderDetail, OrderListItem } from "./types";
-import {
-  assertTransitionGuards,
-  canTransition,
-  TransitionValidationError,
-} from "@/lib/workflow/status-machine";
-import type { TransitionResult } from "@/actions/service-order";
-import type { AdvanceOSResult } from "@/actions/os-actions";
-import {
-  isAllowedAdvance,
-  type AdvanceTargetStatus,
-} from "@/lib/workflow/advance-flow";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
-import {
-  validateAdvancePayload,
-  type AdvanceStepContext,
-} from "@/lib/workflow/validate-advance-payload";
 import {
   getMeasurementActionErrorMessage,
   isMeasurementActionAllowed,
@@ -57,23 +42,19 @@ type MockCutting = {
   corteFeito: boolean;
   embalagemFeita: boolean;
   acessoriosFeitos: boolean;
-  operatorId?: string | null;
-  notes?: string | null;
 };
 
 type MockTransport = {
   idMedicao: string;
-  itemsChecked?: Record<string, boolean> | null;
   vehicleId?: string | null;
 };
 
 type MockInstallation = {
   idMedicao: string;
-  photos: { before?: string[]; after?: string[] } | null;
+  photos: { service?: string[] } | null;
   notes?: string | null;
-  structuralInstalled?: boolean;
-  glassInstalled?: boolean;
-  finalCompleted?: boolean;
+  instalacaoEstruturalFeita?: boolean;
+  instalacaoVidrosFeita?: boolean;
 };
 
 const DEMO_MEDIDOR = "a1000000-0000-4000-8000-000000000002";
@@ -295,49 +276,6 @@ function findMeasurement(id: string): MockMeasurement | undefined {
   return measurements.find((m) => m.id === id);
 }
 
-function buildAdvanceContext(idMedicao: string): AdvanceStepContext {
-  const m = findMeasurement(idMedicao);
-  const cut = cuttingPlans.find((c) => c.idMedicao === idMedicao);
-  const trans = transportStore.find((t) => t.idMedicao === idMedicao);
-  const inst = installationLogs.find((i) => i.idMedicao === idMedicao);
-
-  return {
-    hasFinalMeasurement: !!m && m.type === "final" && isMeasured(m),
-    cuttingPlan: cut
-      ? {
-          corteFeito: cut.corteFeito,
-          embalagemFeita: cut.embalagemFeita,
-          acessoriosFeitos: cut.acessoriosFeitos,
-        }
-      : null,
-    transportItemsChecked: trans?.itemsChecked ?? null,
-    installation: inst ? { photos: inst.photos } : null,
-  };
-}
-
-function loadContext(idMedicao: string, m: MockMeasurement) {
-  const cut = cuttingPlans.find((c) => c.idMedicao === idMedicao);
-  const trans = transportStore.find((t) => t.idMedicao === idMedicao);
-  const inst = installationLogs.find((i) => i.idMedicao === idMedicao);
-  const photos = inst?.photos;
-  const hasBeforeAfter =
-    !!photos &&
-    (photos.before?.length ?? 0) > 0 &&
-    (photos.after?.length ?? 0) > 0;
-
-  return {
-    hasFinalMeasurement: m.type === "final" && isMeasured(m),
-    hasBudgetMeasurement: m.type === "orcamento" && isMeasured(m),
-    cuttingSteps: {
-      corteFeito: cut?.corteFeito ?? false,
-      embalagemFeita: cut?.embalagemFeita ?? false,
-      acessoriosFeitos: cut?.acessoriosFeitos ?? false,
-    },
-    transportItemsChecked: trans?.itemsChecked ?? null,
-    installationHasPhotos: hasBeforeAfter,
-  };
-}
-
 export const mockRepository = {
   list(): OrderListItem[] {
     return measurements
@@ -387,7 +325,7 @@ export const mockRepository = {
               levarPerfilEstrutural: false,
               levarPerfilTotal: false,
               levarAcessorios: false,
-              levarVidro: false,
+              transporteConcluido: false,
             }
           : null,
         installationSteps: isInstallationPhase
@@ -621,25 +559,9 @@ export const mockRepository = {
     );
   },
 
-  getInstallationDraft(osId: string) {
-    const inst = installationLogs.find((i) => i.idMedicao === osId);
-    if (!inst) return undefined;
-    return {
-      notes: inst.notes ?? undefined,
-      photosBefore: inst.photos?.before ?? [],
-      photosAfter: inst.photos?.after ?? [],
-      structuralInstalled: inst.structuralInstalled,
-      glassInstalled: inst.glassInstalled,
-      finalCompleted: inst.finalCompleted,
-    };
-  },
-
-  saveInstallationDraft(
+  saveInstallationServicePhotos(
     osId: string,
-    data: {
-      notes: string | null;
-      photos: { before: string[]; after: string[] };
-    },
+    servicePhotos: string[],
   ): { success: true } | { success: false; message: string } {
     const m = findMeasurement(osId);
     if (!m) {
@@ -657,13 +579,14 @@ export const mockRepository = {
 
     const existing = installationLogs.find((i) => i.idMedicao === osId);
     if (existing) {
-      existing.notes = data.notes;
-      existing.photos = data.photos;
+      existing.photos = {
+        ...existing.photos,
+        service: servicePhotos,
+      };
     } else {
       installationLogs.push({
         idMedicao: osId,
-        notes: data.notes,
-        photos: data.photos,
+        photos: { service: servicePhotos },
       });
     }
     m.updatedAt = new Date();
@@ -672,182 +595,6 @@ export const mockRepository = {
 
   listByStatus(status: OsStatus): OrderListItem[] {
     return this.list().filter((o) => o.status === status);
-  },
-
-  transition(
-    osId: string,
-    toStatus: OsStatus,
-    _reason?: string,
-  ): TransitionResult {
-    const m = findMeasurement(osId);
-    if (!m) {
-      return { success: false, code: "NOT_FOUND", message: "OS não encontrada." };
-    }
-
-    const fromStatus = m.etapa;
-
-    if (!canTransition(fromStatus, toStatus)) {
-      return {
-        success: false,
-        code: "INVALID_TRANSITION",
-        message: `Transição não permitida: ${fromStatus} → ${toStatus}`,
-      };
-    }
-
-    const ctx = loadContext(osId, m);
-
-    try {
-      assertTransitionGuards(fromStatus, toStatus, ctx);
-    } catch (err) {
-      if (err instanceof TransitionValidationError) {
-        return { success: false, code: err.code, message: err.message };
-      }
-      throw err;
-    }
-
-    m.etapa = toStatus;
-    const syncedType = measurementTypeFromOsStatus(toStatus);
-    if (syncedType) m.type = syncedType;
-    m.updatedAt = new Date();
-
-    return { success: true, status: toStatus };
-  },
-
-  /** Helpers de demo para liberar guards */
-  addFinalMeasurement(osId: string) {
-    const m = findMeasurement(osId);
-    if (!m) return;
-    m.type = "final";
-    m.status = "medida";
-    if (!m.dimensions) {
-      m.dimensions = { largura: 900, altura: 2100 };
-    }
-    m.updatedAt = new Date();
-  },
-
-  ensureCuttingComplete(osId: string) {
-    const existing = cuttingPlans.find((c) => c.idMedicao === osId);
-    const data: MockCutting = {
-      idMedicao: osId,
-      corteFeito: true,
-      embalagemFeita: true,
-      acessoriosFeitos: true,
-    };
-    if (existing) Object.assign(existing, data);
-    else cuttingPlans.push(data);
-  },
-
-  async advance(
-    osId: string,
-    nextStatus: AdvanceTargetStatus,
-    payload?: Record<string, unknown>,
-  ): Promise<AdvanceOSResult> {
-    const m = findMeasurement(osId);
-    if (!m) {
-      return { success: false, message: "OS não encontrada" };
-    }
-
-    if (!isAllowedAdvance(m.etapa, nextStatus)) {
-      return {
-        success: false,
-        message: `Transição inválida: ${m.etapa} → ${nextStatus}`,
-      };
-    }
-
-    const err = await validateAdvancePayload(
-      nextStatus,
-      payload,
-      buildAdvanceContext(osId),
-      osId,
-    );
-    if (err) {
-      return { success: false, message: err };
-    }
-
-    const p = payload ?? {};
-
-    if (nextStatus === "medicao_final") {
-      m.dimensions = (p.dimensions as Record<string, number>) ?? m.dimensions ?? {};
-      m.photos = (p.photos as string[]) ?? m.photos ?? [];
-      m.notes = (p.notes as string) ?? m.notes ?? null;
-      m.status = "medida";
-      m.type = "final";
-    }
-    if (
-      nextStatus === "cortes" ||
-      nextStatus === "embalagem" ||
-      nextStatus === "acessorios_plano"
-    ) {
-      const existing = cuttingPlans.find((c) => c.idMedicao === osId);
-      const data: MockCutting = {
-        idMedicao: osId,
-        corteFeito: existing?.corteFeito ?? false,
-        embalagemFeita: existing?.embalagemFeita ?? false,
-        acessoriosFeitos: existing?.acessoriosFeitos ?? false,
-        operatorId: (p.operatorId as string) ?? existing?.operatorId ?? null,
-        notes: (p.notes as string) ?? existing?.notes ?? null,
-      };
-      if (existing) Object.assign(existing, data);
-      else cuttingPlans.push(data);
-    }
-    if (nextStatus === "transporte_perfil") {
-      const vehicleId = p.vehicleId as string;
-      vehicleMockStore.assignToTransport(osId, vehicleId);
-      const t = transportStore.find((x) => x.idMedicao === osId);
-      if (t) t.vehicleId = vehicleId;
-      else transportStore.push({ idMedicao: osId, vehicleId });
-    }
-    if (
-      nextStatus === "transporte_estrutural" ||
-      nextStatus === "transporte_perfis_total" ||
-      nextStatus === "transporte_acessorios" ||
-      nextStatus === "transporte_levar_vidro"
-    ) {
-      const t = transportStore.find((x) => x.idMedicao === osId);
-      const itemsChecked = p.itemsChecked as Record<string, boolean>;
-      const vehicleId = (p.vehicleId as string | undefined) ?? t?.vehicleId;
-      if (t) {
-        t.itemsChecked = itemsChecked;
-        if (vehicleId) t.vehicleId = vehicleId;
-      } else {
-        transportStore.push({
-          idMedicao: osId,
-          itemsChecked,
-          vehicleId: vehicleId ?? null,
-        });
-      }
-      if (nextStatus === "transporte_levar_vidro") {
-        vehicleMockStore.releaseFromTransport(osId);
-      }
-    }
-    if (
-      nextStatus.startsWith("instalacao") ||
-      nextStatus === "concluido"
-    ) {
-      this.ensureInstallationComplete(osId);
-    }
-
-    m.etapa = nextStatus;
-    m.updatedAt = new Date();
-
-    return {
-      success: true,
-      message: `OS avançada para ${nextStatus.replace(/_/g, " ")}`,
-      newStatus: nextStatus,
-    };
-  },
-
-  ensureInstallationComplete(osId: string) {
-    const existing = installationLogs.find((i) => i.idMedicao === osId);
-    const data = {
-      idMedicao: osId,
-      photos: {
-        before: ["https://example.com/before.jpg"],
-        after: ["https://example.com/after.jpg"],
-      },
-    };
-    if (existing) Object.assign(existing, data);
-    else installationLogs.push(data);
   },
 
   deleteMeasurementOs(

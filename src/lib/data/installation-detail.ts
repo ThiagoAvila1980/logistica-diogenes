@@ -12,6 +12,7 @@ export type InstallationDetail = {
   transportSteps: TransportSteps;
   installationSteps: InstallationSteps;
   notes: string | null;
+  servicePhotos: string[];
 };
 
 export async function getInstallationDetailForOs(
@@ -40,7 +41,6 @@ export async function getInstallationDetailForOs(
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
         levarPerfilTotal: transportLogs.levarPerfilTotal,
         levarAcessorios: transportLogs.levarAcessorios,
-        levarVidro: transportLogs.levarVidro,
         transporteConcluido: transportLogs.transporteConcluido,
       })
       .from(transportLogs)
@@ -51,6 +51,7 @@ export async function getInstallationDetailForOs(
         instalacaoEstruturalFeita: installationLogs.instalacaoEstruturalFeita,
         instalacaoVidrosFeita: installationLogs.instalacaoVidrosFeita,
         notes: installationLogs.notes,
+        photos: installationLogs.photos,
       })
       .from(installationLogs)
       .where(eq(installationLogs.idMedicao, osId))
@@ -74,7 +75,6 @@ export async function getInstallationDetailForOs(
       levarPerfilEstrutural: trans?.levarPerfilEstrutural ?? false,
       levarPerfilTotal: trans?.levarPerfilTotal ?? false,
       levarAcessorios: trans?.levarAcessorios ?? false,
-      levarVidro: trans?.levarVidro ?? false,
       transporteConcluido: trans?.transporteConcluido ?? false,
     },
     installationSteps: {
@@ -82,5 +82,6 @@ export async function getInstallationDetailForOs(
       instalacaoVidrosFeita: inst?.instalacaoVidrosFeita ?? false,
     },
     notes: inst?.notes ?? null,
+    servicePhotos: inst?.photos?.service ?? [],
   };
 }

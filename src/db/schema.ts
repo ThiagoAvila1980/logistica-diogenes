@@ -7,7 +7,6 @@ import {
   pgEnum,
   varchar,
   boolean,
-  integer,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -16,7 +15,6 @@ import type {
   Dimensions,
   MeasurementLineItem,
   InstallationPhotos,
-  TransportItemsChecked,
 } from "@/lib/workflow/schemas";
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -76,27 +74,6 @@ export const measurementPriority = pgEnum("measurement_priority", [
   "normal",
   "alta",
   "urgente",
-]);
-
-export const cuttingStatus = pgEnum("cutting_status", [
-  "pendente",
-  "em_andamento",
-  "concluido",
-]);
-
-export const transportStatus = pgEnum("transport_status", [
-  "pendente",
-  "carregado",
-  "em_transito",
-  "entregue",
-]);
-
-export const installationStatus = pgEnum("installation_status", [
-  "pendente",
-  "estrutural",
-  "vidros",
-  "final",
-  "concluido",
 ]);
 
 // ─── Lookup tables ─────────────────────────────────────────────────────────────
@@ -167,16 +144,10 @@ export const measurements = pgTable(
     sourcePdfUrl: text("source_pdf_url"),
     description: text("description"),
     scheduledDate: timestamp("scheduled_date", { withTimezone: true }),
-    dueDate: timestamp("due_date", { withTimezone: true }),
     dimensions: jsonb("dimensions").$type<Dimensions>(),
     items: jsonb("items").$type<MeasurementLineItem[]>(),
     photos: jsonb("photos").$type<string[]>(),
     notes: text("notes"),
-    clientDeviceId: varchar("client_device_id", { length: 64 }),
-    syncedAt: timestamp("synced_at", { withTimezone: true }),
-    technicianId: uuid("technician_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -190,7 +161,6 @@ export const measurements = pgTable(
     index("idx_meas_etapa").on(t.etapa),
     index("idx_meas_priority").on(t.priority),
     index("idx_meas_assigned").on(t.assignedUserId),
-    index("idx_meas_technician").on(t.technicianId),
     index("idx_meas_etapa_updated").on(t.etapa, t.updatedAt),
   ],
 );
@@ -237,18 +207,12 @@ export const cuttingPlans = pgTable(
     corteFeito: boolean("corte_feito").default(false).notNull(),
     embalagemFeita: boolean("embalagem_feita").default(false).notNull(),
     acessoriosFeitos: boolean("acessorios_feitos").default(false).notNull(),
-    operatorId: uuid("operator_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
-    completedAt: timestamp("completed_at", { withTimezone: true }),
   },
   (t) => [
     index("idx_cut_medicao").on(t.idMedicao),
-    index("idx_cut_operator").on(t.operatorId),
     uniqueIndex("idx_cut_medicao_unique").on(t.idMedicao),
   ],
 );
@@ -284,11 +248,6 @@ export const transportLogs = pgTable(
     idMedicao: uuid("id_medicao")
       .references(() => measurements.id, { onDelete: "cascade" })
       .notNull(),
-    itemsChecked: jsonb("items_checked").$type<TransportItemsChecked>(),
-    loadPhotos: jsonb("load_photos").$type<string[]>(),
-    deliveryPhotos: jsonb("delivery_photos").$type<string[]>(),
-    deliveryProofUrl: text("delivery_proof_url"),
-    notes: text("notes"),
     driverId: uuid("driver_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -297,15 +256,11 @@ export const transportLogs = pgTable(
     }),
     vehiclePlate: varchar("vehicle_plate", { length: 20 }),
     routeNotes: text("route_notes"),
-    status: transportStatus("status").default("pendente").notNull(),
     // Sub-etapas independentes — desbloqueadas pelos cutting steps correspondentes
     levarPerfilEstrutural: boolean("levar_perfil_estrutural").default(false).notNull(),
     levarPerfilTotal: boolean("levar_perfis_total").default(false).notNull(),
     levarAcessorios: boolean("levar_acessorios").default(false).notNull(),
-    levarVidro: boolean("levar_vidro").default(false).notNull(),
     transporteConcluido: boolean("transporte_concluido").default(false).notNull(),
-    departureAt: timestamp("departure_at", { withTimezone: true }),
-    arrivalAt: timestamp("arrival_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -315,7 +270,6 @@ export const transportLogs = pgTable(
   },
   (t) => [
     index("idx_trans_medicao").on(t.idMedicao),
-    index("idx_trans_status").on(t.status),
     index("idx_trans_driver").on(t.driverId),
     index("idx_trans_vehicle").on(t.vehicleId),
     uniqueIndex("idx_trans_medicao_unique").on(t.idMedicao),
@@ -331,29 +285,20 @@ export const installationLogs = pgTable(
     idMedicao: uuid("id_medicao")
       .references(() => measurements.id, { onDelete: "cascade" })
       .notNull(),
-    structuralInstalled: boolean("structural_installed").default(false).notNull(),
-    glassInstalled: boolean("glass_installed").default(false).notNull(),
-    finalCompleted: boolean("final_completed").default(false).notNull(),
     // Sub-etapas independentes — desbloqueadas pelos transport steps correspondentes
     instalacaoEstruturalFeita: boolean("instalacao_estrutural_feita").default(false).notNull(),
     instalacaoVidrosFeita: boolean("instalacao_vidros_feita").default(false).notNull(),
     photos: jsonb("photos").$type<InstallationPhotos>(),
-    signatureUrl: text("signature_url"),
-    signedAt: timestamp("signed_at", { withTimezone: true }),
-    signedByName: varchar("signed_by_name", { length: 255 }),
     notes: text("notes"),
     installerId: uuid("installer_id").references(() => users.id, {
       onDelete: "set null",
     }),
-    status: installationStatus("status").default("pendente").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
-    completedAt: timestamp("completed_at", { withTimezone: true }),
   },
   (t) => [
     index("idx_inst_medicao").on(t.idMedicao),
-    index("idx_inst_status").on(t.status),
     index("idx_inst_installer").on(t.installerId),
     uniqueIndex("idx_inst_medicao_unique").on(t.idMedicao),
   ],
@@ -394,40 +339,14 @@ export const notifications = pgTable(
   ],
 );
 
-// ─── KPIs / alertas de prazo (Fase 3) — removido stage_sla_config ─────────────
-
-export const userPasskeys = pgTable(
-  "user_passkeys",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id")
-      .references(() => users.id, { onDelete: "cascade" })
-      .notNull(),
-    credentialId: text("credential_id").notNull().unique(),
-    publicKey: text("public_key").notNull(),
-    counter: integer("counter").default(0).notNull(),
-    transports: jsonb("transports").$type<string[]>(),
-    deviceName: varchar("device_name", { length: 128 }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-  },
-  (t) => [
-    index("idx_passkeys_user").on(t.userId),
-  ],
-);
-
 // ─── Relations ─────────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many }) => ({
   assignedMeasurements: many(measurements, { relationName: "assignedMeasurements" }),
-  technicianMeasurements: many(measurements, { relationName: "technicianMeasurements" }),
   cuttingPlans: many(cuttingPlans),
   transportLogs: many(transportLogs),
   installationLogs: many(installationLogs),
   statusChanges: many(statusHistory),
-  passkeys: many(userPasskeys),
   notifications: many(notifications),
 }));
 
@@ -447,11 +366,6 @@ export const measurementsRelations = relations(measurements, ({ one, many }) => 
     fields: [measurements.assignedUserId],
     references: [users.id],
     relationName: "assignedMeasurements",
-  }),
-  technician: one(users, {
-    fields: [measurements.technicianId],
-    references: [users.id],
-    relationName: "technicianMeasurements",
   }),
   cuttingPlan: one(cuttingPlans),
   transportLog: one(transportLogs),
@@ -474,10 +388,6 @@ export const cuttingPlansRelations = relations(cuttingPlans, ({ one }) => ({
   measurement: one(measurements, {
     fields: [cuttingPlans.idMedicao],
     references: [measurements.id],
-  }),
-  operator: one(users, {
-    fields: [cuttingPlans.operatorId],
-    references: [users.id],
   }),
 }));
 
@@ -507,13 +417,6 @@ export const installationLogsRelations = relations(installationLogs, ({ one }) =
   }),
   installer: one(users, {
     fields: [installationLogs.installerId],
-    references: [users.id],
-  }),
-}));
-
-export const userPasskeysRelations = relations(userPasskeys, ({ one }) => ({
-  user: one(users, {
-    fields: [userPasskeys.userId],
     references: [users.id],
   }),
 }));

@@ -19,8 +19,7 @@ export default async function InstallationIndexPage() {
           <h1 className="text-xl font-bold sm:text-2xl">Instalação</h1>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Estrutural, vidros e final — com fotos antes/depois e confirmação
-          biométrica nas etapas críticas.
+          Checklist de etapas e registro fotográfico do serviço na obra.
         </p>
       </header>
 

@@ -76,13 +76,11 @@ export async function updateTransportStepAction(
       };
     }
 
-    // Busca transport steps atuais
     const [transport] = await db
       .select({
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
         levarPerfilTotal: transportLogs.levarPerfilTotal,
         levarAcessorios: transportLogs.levarAcessorios,
-        levarVidro: transportLogs.levarVidro,
         transporteConcluido: transportLogs.transporteConcluido,
       })
       .from(transportLogs)
@@ -93,11 +91,9 @@ export async function updateTransportStepAction(
       levarPerfilEstrutural: false,
       levarPerfilTotal: false,
       levarAcessorios: false,
-      levarVidro: false,
       transporteConcluido: false,
     };
 
-    // Verifica gate apenas ao marcar como feito (não ao desmarcar)
     if (done) {
       const gates = getTransportGates(cuttingSteps, transportSteps);
       const gate = gates[step];
@@ -138,65 +134,9 @@ export async function updateTransportStepAction(
     revalidatePath(`/logistics/${osId}`);
     revalidatePath("/logistics");
     revalidatePath("/dashboard");
-    revalidatePath(`/installation/${osId}`);
     return { success: true };
   } catch (err) {
     console.error("[updateTransportStep]", err);
     return { success: false, message: "Erro ao atualizar etapa" };
-  }
-}
-
-const saveInfoSchema = z.object({
-  osId: z.string().uuid(),
-  vehicleId: z.string().uuid().optional(),
-  routeNotes: z.string().max(1000).optional(),
-});
-
-export type SaveTransportInfoResult =
-  | { success: true }
-  | { success: false; message: string };
-
-export async function saveTransportInfoAction(
-  raw: z.infer<typeof saveInfoSchema>,
-): Promise<SaveTransportInfoResult> {
-  const parsed = saveInfoSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: "Dados inválidos" };
-
-  try {
-    await requireRole(["admin", "gerente", "motorista"]);
-  } catch {
-    return { success: false, message: "Sem permissão para esta ação" };
-  }
-
-  const { osId, vehicleId, routeNotes } = parsed.data;
-
-  try {
-    const db = getDb();
-    const [existing] = await db
-      .select({ id: transportLogs.id })
-      .from(transportLogs)
-      .where(eq(transportLogs.idMedicao, osId))
-      .limit(1);
-
-    const updates = {
-      ...(vehicleId !== undefined ? { vehicleId } : {}),
-      ...(routeNotes !== undefined ? { routeNotes } : {}),
-    };
-
-    if (existing) {
-      await db
-        .update(transportLogs)
-        .set(updates)
-        .where(eq(transportLogs.id, existing.id));
-    } else {
-      await db.insert(transportLogs).values({ idMedicao: osId, ...updates });
-    }
-
-    revalidatePath(`/logistics/${osId}`);
-    revalidatePath("/logistics");
-    return { success: true };
-  } catch (err) {
-    console.error("[saveTransportInfo]", err);
-    return { success: false, message: "Erro ao salvar informações" };
   }
 }

@@ -1,5 +1,4 @@
 import type { UserRole } from "@/db/schema";
-import type { AdvanceTargetStatus } from "@/lib/workflow/advance-flow";
 
 export type { UserRole };
 
@@ -132,39 +131,6 @@ export function canViewAllOrders(roles: readonly UserRole[]): boolean {
 
 export function canUseKanban(roles: readonly UserRole[]): boolean {
   return hasAnyRole(roles, ["admin", "gerente"]);
-}
-
-export function getAdvanceAllowedRoles(
-  nextStatus: AdvanceTargetStatus,
-): readonly UserRole[] {
-  switch (nextStatus) {
-    case "medicao_orcamento":
-    case "medicao_final":
-      return ["medidor", "gerente", "admin"];
-    case "cortes":
-    case "embalagem":
-    case "acessorios_plano":
-      return ["cortador", "gerente", "admin"];
-    case "transporte_perfil":
-    case "transporte_estrutural":
-    case "transporte_perfis_total":
-    case "transporte_acessorios":
-    case "transporte_levar_vidro":
-      return ["motorista", "gerente", "admin"];
-    case "instalacao_estrutural":
-    case "instalacao_vidros":
-    case "concluido":
-      return ["instalador", "gerente", "admin"];
-    default:
-      return ["gerente", "admin"];
-  }
-}
-
-export function canAdvanceToStatus(
-  roles: readonly UserRole[],
-  nextStatus: AdvanceTargetStatus,
-): boolean {
-  return hasAnyRole(roles, getAdvanceAllowedRoles(nextStatus));
 }
 
 export type NavItem = {

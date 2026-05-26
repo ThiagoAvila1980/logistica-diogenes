@@ -71,7 +71,6 @@ export async function updateInstallationStepAction(
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
         levarPerfilTotal: transportLogs.levarPerfilTotal,
         levarAcessorios: transportLogs.levarAcessorios,
-        levarVidro: transportLogs.levarVidro,
         transporteConcluido: transportLogs.transporteConcluido,
       })
       .from(transportLogs)
@@ -82,7 +81,6 @@ export async function updateInstallationStepAction(
       levarPerfilEstrutural: false,
       levarPerfilTotal: false,
       levarAcessorios: false,
-      levarVidro: false,
       transporteConcluido: false,
     };
 

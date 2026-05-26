@@ -96,8 +96,7 @@ export type TransitionContext = {
   hasFinalMeasurement: boolean;
   hasBudgetMeasurement?: boolean;
   cuttingSteps: CuttingSteps;
-  transportItemsChecked: Record<string, boolean> | null;
-  installationHasPhotos: boolean;
+  installationComplete: boolean;
 };
 
 export type TransitionErrorCode =
@@ -107,9 +106,7 @@ export type TransitionErrorCode =
   | "CUTTING_NOT_COMPLETE"
   | "PACKAGING_INCOMPLETE"
   | "ACCESSORIES_INCOMPLETE"
-  | "TRANSPORT_INCOMPLETE"
-  | "INSTALLATION_PHOTOS_REQUIRED"
-  | "BIOMETRIC_CONFIRMATION_REQUIRED";
+  | "INSTALLATION_INCOMPLETE";
 
 export class TransitionValidationError extends Error {
   constructor(
@@ -171,64 +168,10 @@ export function assertTransitionGuards(
     );
   }
 
-  if (to === "concluido" && !ctx.installationHasPhotos) {
+  if (to === "concluido" && !ctx.installationComplete) {
     throw new TransitionValidationError(
-      "INSTALLATION_PHOTOS_REQUIRED",
-      "Instalação exige fotos antes e depois.",
+      "INSTALLATION_INCOMPLETE",
+      "Conclua as etapas de instalação antes de finalizar a OS.",
     );
   }
-}
-
-export function isPackagingComplete(
-  packaging: Record<string, boolean> | null | undefined,
-): boolean {
-  if (!packaging) return false;
-  const required = [
-    "structuralProfile",
-    "totalProfiles",
-    "accessories",
-    "glass",
-  ] as const;
-  return required.every((key) => packaging[key] === true);
-}
-
-export function isAccessoriesComplete(
-  accessories: Record<string, number> | null | undefined,
-): boolean {
-  if (!accessories) return false;
-  return Object.keys(accessories).length > 0;
-}
-
-export function isTransportStepComplete(
-  items: Record<string, boolean> | null | undefined,
-  step:
-    | "transporte_perfil"
-    | "transporte_estrutural"
-    | "transporte_perfis_total"
-    | "transporte_acessorios"
-    | "transporte_levar_vidro",
-): boolean {
-  if (!items) return false;
-  const keyMap: Record<string, string> = {
-    transporte_perfil: "perfil",
-    transporte_estrutural: "estrutural",
-    transporte_perfis_total: "perfisTotal",
-    transporte_acessorios: "accessories",
-    transporte_levar_vidro: "glass",
-  };
-  const key = keyMap[step];
-  return items[key] === true;
-}
-
-export function isTransportFullyComplete(
-  items: Record<string, boolean> | null | undefined,
-): boolean {
-  if (!items) return false;
-  return (
-    isTransportStepComplete(items, "transporte_perfil") &&
-    isTransportStepComplete(items, "transporte_estrutural") &&
-    isTransportStepComplete(items, "transporte_perfis_total") &&
-    isTransportStepComplete(items, "transporte_acessorios") &&
-    isTransportStepComplete(items, "transporte_levar_vidro")
-  );
 }
