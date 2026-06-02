@@ -1,4 +1,4 @@
-# Fluxo Diógenes
+# Logística Diógenes
 
 Sistema de gestão de vidraçaria com pipeline em **máquina de estados** (medição → orçamento → produção → logística → instalação).
 

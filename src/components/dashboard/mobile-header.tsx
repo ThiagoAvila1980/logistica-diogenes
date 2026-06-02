@@ -11,7 +11,7 @@ type MobileHeaderProps = {
 };
 
 export function MobileHeader({
-  title = "Fluxo Diógenes",
+  title = "Logística Diógenes",
   onMenuOpen,
   showNotifications = false,
 }: MobileHeaderProps) {

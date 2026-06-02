@@ -1,4 +1,4 @@
-# Estrutura Next.js — Fluxo Diógenes
+# Estrutura Next.js — Logística Diógenes
 
 Organização por **módulo de negócio** + **camadas compartilhadas**, alinhada ao pipeline de OS.
 

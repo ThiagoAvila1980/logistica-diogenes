@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getDefaultRouteForRoles } from "@/lib/auth/permissions";
@@ -29,7 +30,7 @@ export default async function AuthLayout({
         <div className="relative">
           <div className="brass-rule mb-6" aria-hidden />
           <h1 className="text-3xl font-bold tracking-tight xl:text-4xl">
-            Fluxo{" "}
+            Logística{" "}
             <span className="text-brass">Diógenes</span>
           </h1>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-primary-foreground/75">
@@ -61,7 +62,17 @@ export default async function AuthLayout({
       </aside>
 
       <div className="flex flex-1 items-center justify-center bg-background px-4 py-6 safe-bottom safe-top sm:px-6 sm:py-10 lg:py-10">
-        <div className="w-full max-w-md">{children}</div>
+        <div className="flex w-full max-w-md flex-col items-center gap-6">
+          <Image
+            src="/logotipo 01.png"
+            alt="Diógenes Envidraçamentos Especiais"
+            width={1024}
+            height={1024}
+            priority
+            className="h-auto w-full max-w-[220px] object-contain sm:max-w-[260px] lg:max-w-[280px]"
+          />
+          {children}
+        </div>
       </div>
     </div>
   );

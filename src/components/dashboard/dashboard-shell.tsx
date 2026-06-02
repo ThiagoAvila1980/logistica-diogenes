@@ -22,7 +22,7 @@ function getMobileTitle(pathname: string): string {
     return "Tipo de envidraçamento";
   }
   if (pathname.startsWith("/admin")) return "Configurações";
-  return "Fluxo Diógenes";
+  return "Logística Diógenes";
 }
 
 export function DashboardShell({

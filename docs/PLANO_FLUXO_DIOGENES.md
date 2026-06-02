@@ -1,4 +1,4 @@
-# Fluxo Diógenes — Plano e Documentação do Produto
+# Logística Diógenes — Plano e Documentação do Produto
 
 > Sistema de gestão operacional para vidraçarias, com pipeline de **Ordem de Serviço (OS)** guiado por **máquina de estados**, do primeiro contato até a instalação concluída.
 
@@ -29,7 +29,7 @@ Vidraçarias de médio porte costumam operar com planilhas, WhatsApp e anotaçõ
 
 ### Solução
 
-O **Fluxo Diógenes** centraliza cada **Ordem de Serviço** em um pipeline único, onde:
+O **Logística Diógenes** centraliza cada **Ordem de Serviço** em um pipeline único, onde:
 
 1. Cada etapa tem **status explícito** e regras de avanço.
 2. Dados obrigatórios (medição final, embalagem, fotos, confirmação biométrica do usuário) são **bloqueios de transição**, não apenas campos opcionais.
@@ -66,7 +66,7 @@ erDiagram
 
 ### Proposta de valor
 
-O Fluxo Diógenes transforma a operação de uma vidraçaria de **processos informais** em um **pipeline mensurável**, reduzindo custo de retrabalho e aumentando previsibilidade de entrega.
+O Logística Diógenes transforma a operação de uma vidraçaria de **processos informais** em um **pipeline mensurável**, reduzindo custo de retrabalho e aumentando previsibilidade de entrega.
 
 ### Segmento-alvo
 
@@ -841,4 +841,4 @@ O desenvolvimento segue fases incrementais, priorizando o fluxo crítico da OS e
 
 ---
 
-*Documento gerado com base no estado atual do repositório Fluxo Diógenes. Última atualização: maio/2026.*
+*Documento gerado com base no estado atual do repositório Logística Diógenes. Última atualização: maio/2026.*

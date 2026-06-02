@@ -42,7 +42,7 @@ export function getWebAuthnConfig(): WebAuthnConfig {
     "http://localhost:3000";
 
   return {
-    rpName: "Fluxo Diógenes",
+    rpName: "Logística Diógenes",
     rpID,
     origin,
   };
@@ -73,7 +73,7 @@ export async function resolveWebAuthnConfig(
 
   if (envRpId && envOrigin) {
     return {
-      rpName: "Fluxo Diógenes",
+      rpName: "Logística Diógenes",
       rpID: envRpId,
       origin: envOrigin.replace(/\/$/, ""),
     };
@@ -97,7 +97,7 @@ export async function resolveWebAuthnConfig(
   try {
     const url = new URL(origin);
     return {
-      rpName: "Fluxo Diógenes",
+      rpName: "Logística Diógenes",
       rpID: envRpId ?? url.hostname,
       origin: url.origin,
     };

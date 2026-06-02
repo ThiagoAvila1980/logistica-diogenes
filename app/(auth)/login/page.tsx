@@ -16,17 +16,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const { next } = await searchParams;
 
   return (
-    <Card className="premium-card overflow-hidden border-0 shadow-[var(--shadow-brand)]">
-      <div className="brand-panel relative px-6 py-5 lg:hidden">
-        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-brass" aria-hidden />
-        <CardTitle className="text-primary-foreground">
-          Fluxo <span className="text-brass">Diógenes</span>
-        </CardTitle>
-        <CardDescription className="text-primary-foreground/70">
-          Gestão de vidraçaria
-        </CardDescription>
-      </div>
-
+    <Card className="premium-card w-full overflow-hidden border-0 shadow-[var(--shadow-brand)]">
       <CardHeader className="hidden lg:block">
         <div className="brass-rule mb-3" aria-hidden />
         <CardTitle className="text-primary">Entrar</CardTitle>
@@ -37,7 +27,7 @@ export default async function LoginPage({ searchParams }: Props) {
       </CardHeader>
 
       <CardContent className="px-5 pb-6 pt-5 sm:px-6 lg:pt-0">
-        <p className="mb-4 text-sm text-muted-foreground lg:hidden">
+        <p className="mb-4 text-center text-sm text-muted-foreground lg:hidden">
           Entre com e-mail e senha para continuar.
         </p>
         <LoginForm nextPath={next} showDemoHint={useMockData()} />
