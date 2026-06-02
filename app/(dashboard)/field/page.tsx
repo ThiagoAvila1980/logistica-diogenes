@@ -34,7 +34,7 @@ export default async function FieldIndexPage() {
           </p>
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {fieldOrders.map((order) => (
             <li key={order.id}>
               <FieldOrderCardWithDelete order={order} canDelete={canCreate} />

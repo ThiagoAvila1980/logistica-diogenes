@@ -25,4 +25,5 @@ export type OrderDetail = OrderListItem & {
   description: string | null;
   clientPhone: string | null;
   sourcePdfUrl: string | null;
+  notes: string | null;
 };

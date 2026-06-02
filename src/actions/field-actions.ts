@@ -10,11 +10,7 @@ import { notifyMedidorsOnMeasurementCreated } from "@/lib/notifications/notify-m
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { parseBrDate } from "@/lib/date-format";
-import {
-  parseExistingUrls,
-  parsePhotoFiles,
-  saveUploadedFiles,
-} from "@/lib/upload/save-files";
+import { aggregateMeasurementPhotos } from "@/lib/measurement/item-photos";
 import { persistMeasurementDrawings } from "@/lib/upload/save-base64-image";
 import { parsePdfFileField } from "@/lib/upload/pdf-file-field";
 import { getOrderDisplayNumber } from "@/lib/order-display";
@@ -81,28 +77,6 @@ function parsePriorityField(formData: FormData) {
   }
 
   return parsed.data;
-}
-
-async function resolvePhotoUrls(
-  osId: string,
-  formData: FormData,
-): Promise<{ photos: string[]; error?: string }> {
-  const existing = parseExistingUrls(formData);
-  const files = parsePhotoFiles(formData);
-
-  if (files.length === 0) {
-    return { photos: existing };
-  }
-
-  const { urls, errors } = await saveUploadedFiles(files, "measurements", osId);
-  if (urls.length === 0 && errors.length > 0) {
-    return { photos: existing, error: errors.join("; ") };
-  }
-
-  return {
-    photos: [...existing, ...urls],
-    error: errors.length > 0 ? errors.join("; ") : undefined,
-  };
 }
 
 /**
@@ -411,7 +385,6 @@ export async function saveFieldMeasurement(
   const { osId, notes } = parsed.data;
   const items = itemsParsed.data;
   const priorityField = parsePriorityField(formData);
-  const { photos, error: photoError } = await resolvePhotoUrls(osId, formData);
 
   const { getServiceOrderById } = await import("@/lib/data/orders");
   const order = await getServiceOrderById(osId);
@@ -456,6 +429,8 @@ export async function saveFieldMeasurement(
     };
   }
 
+  const photos = aggregateMeasurementPhotos(itemsToSave);
+
   if (useMockData()) {
     const result = mockRepository.saveFieldMeasurement(osId, measurementType, {
       items: itemsToSave,
@@ -467,10 +442,9 @@ export async function saveFieldMeasurement(
     revalidatePath("/field");
     revalidatePath(`/field/${osId}`);
     revalidatePath("/dashboard");
-    const warn = photoError ? ` Aviso: ${photoError}` : "";
     return {
       success: true,
-      message: `${typeLabel} registrada (modo demo) — ${items.length} item(ns).${photos.length ? ` ${photos.length} foto(s).` : ""}${warn}`,
+      message: `${typeLabel} registrada (modo demo) — ${items.length} item(ns).${photos.length ? ` ${photos.length} foto(s).` : ""}`,
     };
   }
 
@@ -495,10 +469,9 @@ export async function saveFieldMeasurement(
     revalidatePath(`/field/${osId}`);
     revalidatePath("/dashboard");
 
-    const warn = photoError ? ` (${photoError})` : "";
     return {
       success: true,
-      message: `${typeLabel} registrada — ${items.length} item(ns).${photos.length ? ` ${photos.length} foto(s) anexada(s).` : ""}${warn}`,
+      message: `${typeLabel} registrada — ${items.length} item(ns).${photos.length ? ` ${photos.length} foto(s) anexada(s).` : ""}`,
     };
   } catch (error) {
     console.error("[saveFieldMeasurement]", error);

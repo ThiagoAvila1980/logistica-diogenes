@@ -15,6 +15,15 @@ const MEASUREMENT_PIPELINE: Partial<Record<OsStatus, OsStatus[]>> = {
   instalacao_estrutural: ["instalacao_vidros"],
   instalacao_vidros: ["concluido"],
   concluido: [],
+  // Legado — registros históricos sem transições permitidas
+  orcamento_enviado: [],
+  aprovado_cliente: [],
+  os_gerada: [],
+  em_corte: [],
+  corte_concluido: [],
+  em_transporte: [],
+  transporte_entregue: [],
+  instalacao_final: [],
 };
 
 export function getStatusFlowForMeasurement(): Partial<

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServiceOrderById, listServiceOrders } from "@/lib/data/orders";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -66,7 +67,8 @@ export async function ModuleOsPage({
           </CardTitle>
           <CardDescription>{order.clientName}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <MeasurementNotesCard notes={order.notes} />
           <p className="text-sm text-muted-foreground">
             Módulo em desenvolvimento.
           </p>

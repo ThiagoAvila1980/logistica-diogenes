@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getDb } from "@/lib/db";
 import { cuttingPlans, measurements, statusHistory } from "@/db/schema";
 import type { OsStatus } from "@/db/schema";
@@ -43,7 +43,10 @@ export async function updateCuttingStepAction(
   raw: z.infer<typeof updateStepSchema>,
 ): Promise<UpdateCuttingStepResult> {
   const parsed = updateStepSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: "Dados inválidos" };
+  if (!parsed.success) {
+    console.error("[updateCuttingStepAction] validação falhou", parsed.error.flatten());
+    return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
+  }
 
   try {
     await requireRole(["admin", "gerente", "cortador"]);
@@ -55,15 +58,7 @@ export async function updateCuttingStepAction(
 
   if (useMockData()) {
     const result = mockRepository.updateCuttingStep(osId, step, done);
-    if (result.success) {
-      revalidatePath(`/production/${osId}`);
-      revalidatePath("/production");
-      revalidatePath(`/logistics/${osId}`);
-      revalidatePath("/logistics");
-      revalidatePath(`/installation/${osId}`);
-      revalidatePath("/installation");
-      revalidatePath("/dashboard");
-    }
+    if (result.success) revalidateOSRoutes(osId);
     return result;
   }
 
@@ -139,13 +134,7 @@ export async function updateCuttingStepAction(
       });
     }
 
-    revalidatePath(`/production/${osId}`);
-    revalidatePath("/production");
-    revalidatePath(`/logistics/${osId}`);
-    revalidatePath("/logistics");
-    revalidatePath(`/installation/${osId}`);
-    revalidatePath("/installation");
-    revalidatePath("/dashboard");
+    revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
     console.error("[updateCuttingStep]", err);
@@ -165,7 +154,10 @@ export async function advanceCuttingToTransportAction(
   raw: z.infer<typeof advanceToTransportSchema>,
 ): Promise<AdvanceToTransportResult> {
   const parsed = advanceToTransportSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: "Dados inválidos" };
+  if (!parsed.success) {
+    console.error("[advanceCuttingToTransportAction] validação falhou", parsed.error.flatten());
+    return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
+  }
 
   try {
     await requireRole(["admin", "gerente", "cortador"]);
@@ -214,11 +206,7 @@ export async function advanceCuttingToTransportAction(
       });
     });
 
-    revalidatePath(`/production/${osId}`);
-    revalidatePath("/production");
-    revalidatePath("/dashboard");
-    revalidatePath(`/logistics/${osId}`);
-    revalidatePath("/logistics");
+    revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
     console.error("[advanceCuttingToTransport]", err);

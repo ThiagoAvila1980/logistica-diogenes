@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getDb } from "@/lib/db";
 import { installationLogs, transportLogs, cuttingPlans } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
@@ -26,7 +26,10 @@ export async function updateInstallationStepAction(
   raw: z.infer<typeof updateStepSchema>,
 ): Promise<UpdateInstallationStepResult> {
   const parsed = updateStepSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: "Dados inválidos" };
+  if (!parsed.success) {
+    console.error("[updateInstallationStepAction] validação falhou", parsed.error.flatten());
+    return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
+  }
 
   try {
     await requireRole(["admin", "gerente", "instalador"]);
@@ -124,9 +127,7 @@ export async function updateInstallationStepAction(
       });
     }
 
-    revalidatePath(`/installation/${osId}`);
-    revalidatePath("/installation");
-    revalidatePath("/dashboard");
+    revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
     console.error("[updateInstallationStep]", err);

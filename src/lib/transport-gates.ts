@@ -136,11 +136,17 @@ export type InstallationGates = {
   instalacaoVidros: InstallationGate;
 };
 
+export type TransportGateOptions = {
+  /** Veículo atribuído ao transporte — obrigatório para a 1ª entrega */
+  hasVehicle?: boolean;
+};
+
 export function getTransportGates(
   cutting: CuttingSteps,
   transport: TransportSteps,
-  _osStatus?: OsStatus,
+  options?: TransportGateOptions,
 ): TransportGates {
+  const hasVehicle = options?.hasVehicle ?? false;
   const perfilOk = cutting.corteFeito;
   const totalOk = cutting.embalagemFeita;
   const acessoriosOk = cutting.acessoriosFeitos;
@@ -152,8 +158,12 @@ export function getTransportGates(
 
   return {
     levarPerfilEstrutural: {
-      unlocked: perfilOk,
-      lockedReason: perfilOk ? null : "Aguardando corte ser concluído",
+      unlocked: perfilOk && hasVehicle,
+      lockedReason: !perfilOk
+        ? "Aguardando corte ser concluído"
+        : !hasVehicle
+          ? "Selecione o veículo antes de iniciar a entrega"
+          : null,
     },
     levarPerfilTotal: {
       unlocked: totalOk,

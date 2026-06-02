@@ -107,8 +107,20 @@ export function InstallationChecklist({
   async function handleToggle(step: Step, done: boolean) {
     setLoadingStep(step);
     setStepError(null);
-    const result = await updateInstallationStepAction({ osId, step, done });
-    if (result.success) {
+
+    let result: Awaited<ReturnType<typeof updateInstallationStepAction>> | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        result = await updateInstallationStepAction({ osId, step, done });
+        break;
+      } catch {
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+
+    if (!result) {
+      setStepError("Falha de conexão. Verifique sua internet e tente novamente.");
+    } else if (result.success) {
       setSteps((prev) => ({ ...prev, [step]: done }));
     } else {
       setStepError(result.message);

@@ -106,6 +106,7 @@ export async function getServiceOrderByIdDb(
       scheduledDate: measurements.scheduledDate,
       updatedAt: measurements.updatedAt,
       description: measurements.description,
+      notes: measurements.notes,
       assignedUserId: measurements.assignedUserId,
       clientName: measurementClientName,
       clientPhone: measurementClientPhone,
@@ -124,5 +125,6 @@ export async function getServiceOrderByIdDb(
     description: row.description,
     clientPhone: row.clientPhone,
     sourcePdfUrl: row.sourcePdfUrl,
+    notes: row.notes ?? null,
   };
 }

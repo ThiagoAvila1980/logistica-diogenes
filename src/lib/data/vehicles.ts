@@ -1,5 +1,6 @@
 import { useMockData } from "./config";
 import { vehicleMockStore, type VehicleRow } from "./admin-mock-store";
+import type { VehicleOptionForSelection } from "./vehicles-db";
 
 export type VehicleOption = {
   id: string;
@@ -25,6 +26,21 @@ export async function listActiveVehiclesForTransport(): Promise<
   }
   const { listActiveVehiclesDb } = await import("./vehicles-db");
   return listActiveVehiclesDb();
+}
+
+export async function listVehiclesForTransportSelection(
+  osId: string,
+): Promise<VehicleOptionForSelection[]> {
+  if (useMockData()) {
+    return vehicleMockStore.listActive().map(({ id, description, plate }) => ({
+      id,
+      description,
+      plate,
+      unavailable: vehicleMockStore.isInUseByOtherOs(osId, id),
+    }));
+  }
+  const { listVehiclesForTransportSelectionDb } = await import("./vehicles-db");
+  return listVehiclesForTransportSelectionDb(osId);
 }
 
 export async function resolveVehiclePlate(

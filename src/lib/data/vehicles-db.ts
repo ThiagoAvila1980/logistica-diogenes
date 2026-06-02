@@ -1,4 +1,4 @@
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, ne } from "drizzle-orm";
 import { getDb } from "@/db";
 import { vehicles, transportLogs, measurements } from "@/db/schema";
 import type { VehicleRow } from "./admin-mock-store";
@@ -81,6 +81,46 @@ export async function isVehicleInUseDb(vehicleId: string): Promise<boolean> {
     )
     .limit(1);
   return Boolean(row);
+}
+
+export async function isVehicleInUseByOtherOsDb(
+  vehicleId: string,
+  excludeOsId: string,
+): Promise<boolean> {
+  const db = getDb();
+  const [row] = await db
+    .select({ id: transportLogs.id })
+    .from(transportLogs)
+    .innerJoin(measurements, eq(transportLogs.idMedicao, measurements.id))
+    .where(
+      and(
+        eq(transportLogs.vehicleId, vehicleId),
+        ne(transportLogs.idMedicao, excludeOsId),
+        inArray(measurements.etapa, [...ACTIVE_TRANSPORT_STATUSES]),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+export type VehicleOptionForSelection = {
+  id: string;
+  description: string;
+  plate: string;
+  unavailable: boolean;
+};
+
+export async function listVehiclesForTransportSelectionDb(
+  osId: string,
+): Promise<VehicleOptionForSelection[]> {
+  const active = await listActiveVehiclesDb();
+  const rows = await Promise.all(
+    active.map(async (vehicle) => ({
+      ...vehicle,
+      unavailable: await isVehicleInUseByOtherOsDb(vehicle.id, osId),
+    })),
+  );
+  return rows;
 }
 
 export async function upsertVehicleDb(data: {

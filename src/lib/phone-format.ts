@@ -33,3 +33,18 @@ export function isCompleteBrPhone(value: string): boolean {
   const digits = digitsOnlyPhone(value);
   return digits.length === 10 || digits.length === 11;
 }
+
+/** Dígitos com DDI 55 para links wa.me */
+export function phoneDigitsForWhatsApp(phone: string): string | null {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  if (digits.startsWith("55") && digits.length >= 12) return digits;
+  if (digits.length >= 10 && digits.length <= 11) return `55${digits}`;
+  return digits;
+}
+
+export function buildWhatsAppUrl(phone: string): string | null {
+  const e164 = phoneDigitsForWhatsApp(phone);
+  if (!e164) return null;
+  return `https://wa.me/${e164}`;
+}

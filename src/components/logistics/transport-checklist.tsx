@@ -125,26 +125,42 @@ type Props = {
   osId: string;
   initialTransportSteps: TransportSteps;
   initialCuttingSteps: CuttingSteps;
+  vehicleId: string | null;
 };
 
 export function TransportChecklist({
   osId,
   initialTransportSteps,
   initialCuttingSteps,
+  vehicleId,
 }: Props) {
   const [steps, setSteps] = useState<TransportSteps>(initialTransportSteps);
   const [cuttingSteps] = useState<CuttingSteps>(initialCuttingSteps);
   const [loadingStep, setLoadingStep] = useState<Step | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
 
-  const gates = getTransportGates(cuttingSteps, steps);
+  const gates = getTransportGates(cuttingSteps, steps, {
+    hasVehicle: Boolean(vehicleId),
+  });
   const allDone = steps.transporteConcluido;
 
   async function handleToggle(step: Step, done: boolean) {
     setLoadingStep(step);
     setStepError(null);
-    const result = await updateTransportStepAction({ osId, step, done });
-    if (result.success) {
+
+    let result: Awaited<ReturnType<typeof updateTransportStepAction>> | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        result = await updateTransportStepAction({ osId, step, done });
+        break;
+      } catch {
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+
+    if (!result) {
+      setStepError("Falha de conexão. Verifique sua internet e tente novamente.");
+    } else if (result.success) {
       setSteps((prev) => ({ ...prev, [step]: done }));
     } else {
       setStepError(result.message);

@@ -15,6 +15,11 @@ async function resolveMeasurementItems(
       drawingUrl: item.drawingUrl
         ? await resolveUploadDisplayUrl(item.drawingUrl)
         : item.drawingUrl,
+      photos: item.photos?.length
+        ? await Promise.all(
+            item.photos.map((url) => resolveUploadDisplayUrl(url)),
+          )
+        : item.photos,
     })),
   );
 }

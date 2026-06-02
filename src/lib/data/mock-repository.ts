@@ -93,6 +93,7 @@ function toOrderDetail(m: MockMeasurement): OrderDetail {
     description: m.description,
     clientPhone: m.telefone,
     sourcePdfUrl: m.sourcePdfUrl,
+    notes: m.notes ?? null,
   };
 }
 

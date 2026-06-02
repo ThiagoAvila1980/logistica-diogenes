@@ -2,7 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Loader2, Plus, Upload, X } from "lucide-react";
+import { CheckCircle2, FileText, Loader2, Plus, Upload, X } from "lucide-react";
 import {
   createMeasurementFromPdf,
   type CreateMeasurementResult,
@@ -326,11 +326,16 @@ export function CreateMeasurementDialog() {
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Criando...
+                  Salvando...
+                </>
+              ) : parsing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Lendo PDF...
                 </>
               ) : (
                 <>
-                  <FileText className="mr-2 h-4 w-4" />
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
                   Criar medição
                 </>
               )}

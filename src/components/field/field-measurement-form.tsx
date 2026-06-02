@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Loader2,
   Pencil,
-  Phone,
   Plus,
   Ruler,
   XCircle,
@@ -27,12 +26,7 @@ import {
   hasSavedMeasurementForView,
 } from "@/components/field/measurement-item-view";
 import { MeasurementTypeField } from "@/components/field/measurement-type-field";
-import { MeasurementPhotosSection } from "@/components/field/measurement-photos-section";
-import { PhotoUpload } from "@/components/ui/photo-upload";
-import { PhotoGallery } from "@/components/ui/photo-gallery";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
@@ -61,11 +55,14 @@ import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-d
 import { SendToCuttingButton } from "@/components/field/send-to-cutting-button";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
-import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
 import { useScreenOrientationLock } from "@/hooks/use-screen-orientation-lock";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import type { MeasurementPriority } from "@/db/schema";
+import { buildWhatsAppUrl } from "@/lib/phone-format";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
+import { countItemPhotos, mergeLegacyDraftPhotos } from "@/lib/measurement/item-photos";
+import { uploadPendingItemPhotos } from "@/lib/measurement/upload-item-photos-client";
 
 type FieldMeasurementFormProps = {
   order: OrderDetail;
@@ -82,9 +79,11 @@ function resolveInitialItems(
   osId: string,
   draft?: FieldMeasurementDraft,
 ): MeasurementLineItem[] {
-  if (draft?.items?.length) return draft.items;
-  if (draft?.largura || draft?.altura) {
-    return [
+  let items: MeasurementLineItem[];
+  if (draft?.items?.length) {
+    items = draft.items;
+  } else if (draft?.largura || draft?.altura) {
+    items = [
       {
         id: `${osId}-item-0`,
         idAmbiente: null,
@@ -94,8 +93,10 @@ function resolveInitialItems(
         drawingUrl: null,
       },
     ];
+  } else {
+    items = [createEmptyMeasurementItem(`${osId}-item-0`)];
   }
-  return [createEmptyMeasurementItem(`${osId}-item-0`)];
+  return mergeLegacyDraftPhotos(items, draft?.photos ?? []);
 }
 
 function applyDraftSnapshot(
@@ -103,19 +104,18 @@ function applyDraftSnapshot(
   draft: FieldMeasurementDraft | undefined,
   setters: {
     setItems: (items: MeasurementLineItem[]) => void;
-    setPhotoUrls: (urls: string[]) => void;
-    setNotes: (notes: string) => void;
     setExpandedItemId: (id: string | null) => void;
-    setPendingFiles: (files: File[]) => void;
+    setPendingFilesByItemId: (value: Record<string, File[]>) => void;
     setDrawingDirtyById: (value: Record<string, boolean>) => void;
   },
+  options?: { expandFirstItem?: boolean },
 ) {
   const nextItems = resolveInitialItems(osId, draft);
   setters.setItems(nextItems);
-  setters.setPhotoUrls(filterDisplayableUploadUrls(draft?.photos ?? []));
-  setters.setNotes(draft?.notes ?? "");
-  setters.setExpandedItemId(null);
-  setters.setPendingFiles([]);
+  setters.setExpandedItemId(
+    options?.expandFirstItem ? (nextItems[0]?.id ?? null) : null,
+  );
+  setters.setPendingFilesByItemId({});
   setters.setDrawingDirtyById({});
 }
 
@@ -133,19 +133,18 @@ export function FieldMeasurementForm({
     draftsByType[initialType] ??
     draftsByType.orcamento ??
     draftsByType.final;
+  const initialItems = resolveInitialItems(order.id, initialDraft);
+  const initialViewMode = hasSavedMeasurementForView(initialDraft);
 
   const [measurementType, setMeasurementType] =
     useState<MeasurementDbType>(initialType);
-  const [items, setItems] = useState<MeasurementLineItem[]>(() =>
-    resolveInitialItems(order.id, initialDraft),
+  const [items, setItems] = useState<MeasurementLineItem[]>(initialItems);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(() =>
+    initialViewMode ? null : (initialItems[0]?.id ?? null),
   );
-  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
-  const [photosExpanded, setPhotosExpanded] = useState(false);
-  const [photoUrls, setPhotoUrls] = useState<string[]>(() =>
-    filterDisplayableUploadUrls(initialDraft?.photos ?? []),
-  );
-  const [notes, setNotes] = useState(initialDraft?.notes ?? "");
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingFilesByItemId, setPendingFilesByItemId] = useState<
+    Record<string, File[]>
+  >({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saveResultOpen, setSaveResultOpen] = useState(false);
   const [saveResult, setSaveResult] = useState<SaveFieldMeasurementResult | null>(
@@ -155,12 +154,7 @@ export function FieldMeasurementForm({
   const [drawingDirtyById, setDrawingDirtyById] = useState<
     Record<string, boolean>
   >({});
-  const [drawingFullscreenItemIds, setDrawingFullscreenItemIds] = useState<
-    Set<string>
-  >(() => new Set());
-  const [viewMode, setViewMode] = useState(() =>
-    hasSavedMeasurementForView(initialDraft),
-  );
+  const [viewMode, setViewMode] = useState(initialViewMode);
   const [specValues, setSpecValues] = useState({
     priority: order.priority,
   });
@@ -185,16 +179,21 @@ export function FieldMeasurementForm({
     draftsByType.orcamento ?? draftsByType.final ?? undefined;
 
   const applyCurrentDraftSnapshot = useCallback(
-    (draft?: FieldMeasurementDraft) => {
-      applyDraftSnapshot(order.id, draft, {
-        setItems,
-        setPhotoUrls,
-        setNotes,
-        setExpandedItemId,
-        setPendingFiles,
-        setDrawingDirtyById,
-      });
-      setPhotosExpanded(false);
+    (
+      draft?: FieldMeasurementDraft,
+      options?: { expandFirstItem?: boolean },
+    ) => {
+      applyDraftSnapshot(
+        order.id,
+        draft,
+        {
+          setItems,
+          setExpandedItemId,
+          setPendingFilesByItemId,
+          setDrawingDirtyById,
+        },
+        options,
+      );
     },
     [order.id],
   );
@@ -209,25 +208,35 @@ export function FieldMeasurementForm({
       _prev: SaveFieldMeasurementResult | null,
       formData: FormData,
     ): Promise<SaveFieldMeasurementResult> => {
-      photoUrls.forEach((url) => formData.append("existingPhotos", url));
-      pendingFiles.forEach((file) => formData.append("photos", file));
       const itemsToSubmit = items.filter(
         (item) => item.qty > 0 && item.largura > 0 && item.altura > 0,
       );
-      formData.set("items", JSON.stringify(itemsToSubmit));
+
+      const uploaded = await uploadPendingItemPhotos(
+        order.id,
+        itemsToSubmit,
+        pendingFilesByItemId,
+      );
+      if (!uploaded.success) {
+        const failure = { success: false as const, message: uploaded.message };
+        setSaveResult(failure);
+        setSaveResultOpen(true);
+        return failure;
+      }
+
+      formData.set("items", JSON.stringify(uploaded.items));
       formData.set("measurementType", measurementType);
-      formData.set("notes", notes);
       const result = await saveFieldMeasurement(formData);
       setConfirmOpen(false);
       setSaveResult(result);
       setSaveResultOpen(true);
       if (result.success) {
         setDrawingDirtyById({});
-        setPendingFiles([]);
+        setPendingFilesByItemId({});
       }
       return result;
     },
-    [photoUrls, pendingFiles, items, measurementType, notes],
+    [order.id, pendingFilesByItemId, items, measurementType],
   );
 
   const [, formAction, isPending] = useActionState<
@@ -239,8 +248,13 @@ export function FieldMeasurementForm({
     (nextType: MeasurementDbType) => {
       if (nextType === measurementType || isPending) return;
       setMeasurementType(nextType);
+      if (!viewMode) {
+        applyCurrentDraftSnapshot(draftsByType[nextType], {
+          expandFirstItem: true,
+        });
+      }
     },
-    [measurementType, isPending],
+    [measurementType, isPending, viewMode, draftsByType, applyCurrentDraftSnapshot],
   );
 
   function handleToggleViewMode() {
@@ -248,6 +262,10 @@ export function FieldMeasurementForm({
       const next = !current;
       if (next) {
         applyCurrentDraftSnapshot(draftsByType[measurementType]);
+      } else {
+        applyCurrentDraftSnapshot(draftsByType[measurementType], {
+          expandFirstItem: true,
+        });
       }
       return next;
     });
@@ -274,16 +292,6 @@ export function FieldMeasurementForm({
     );
     setItems((prev) => [newItem, ...prev]);
     setExpandedItemId(newItem.id);
-    setDrawingFullscreenItemIds((prev) => new Set(prev).add(newItem.id));
-  }
-
-  function clearDrawingFullscreenItem(itemId: string) {
-    setDrawingFullscreenItemIds((prev) => {
-      if (!prev.has(itemId)) return prev;
-      const next = new Set(prev);
-      next.delete(itemId);
-      return next;
-    });
   }
 
   function updateItem(index: number, next: MeasurementLineItem) {
@@ -300,10 +308,17 @@ export function FieldMeasurementForm({
           delete next[removed.id];
           return next;
         });
-        clearDrawingFullscreenItem(removed.id);
-        setExpandedItemId((current) =>
-          current !== removed.id ? current : null,
-        );
+        setExpandedItemId((current) => {
+          if (current !== removed.id) return current;
+          const remaining = prev.filter((_, i) => i !== index);
+          return remaining[0]?.id ?? null;
+        });
+        setPendingFilesByItemId((pending) => {
+          if (!pending[removed.id]) return pending;
+          const next = { ...pending };
+          delete next[removed.id];
+          return next;
+        });
       }
       return prev.filter((_, i) => i !== index);
     });
@@ -362,6 +377,13 @@ export function FieldMeasurementForm({
     (item) => item.qty > 0 && item.largura > 0 && item.altura > 0,
   );
 
+  const totalPhotoCount = validItems.reduce(
+    (sum, item) =>
+      sum +
+      countItemPhotos(item, (pendingFilesByItemId[item.id] ?? []).length),
+    0,
+  );
+
   const currentDraft = draftsByType[measurementType];
   const isCurrentTypeMeasured = hasSavedMeasurementForView(currentDraft);
   const showMeasurementTypeSelector = !isCurrentTypeMeasured || !viewMode;
@@ -369,16 +391,15 @@ export function FieldMeasurementForm({
     activeHeaderDraft?.cliente ?? currentDraft?.cliente ?? order.clientName;
   const displayTelefone =
     activeHeaderDraft?.telefone ?? currentDraft?.telefone ?? order.clientPhone;
+  const whatsAppUrl = displayTelefone
+    ? buildWhatsAppUrl(displayTelefone)
+    : null;
   const displayNumeroOrcamento = getOrderDisplayNumber({
     number: order.number,
     budgetReference: order.budgetReference,
     numeroOrcamento:
       activeHeaderDraft?.numeroOrcamento ?? currentDraft?.numeroOrcamento,
   });
-  const photoCount = viewMode
-    ? filterDisplayableUploadUrls(photoUrls).length
-    : photoUrls.length + pendingFiles.length;
-
   return (
     <div className="flex flex-col gap-4 pb-24">
       <section className="rounded-xl border bg-card p-4 shadow-sm">
@@ -406,15 +427,23 @@ export function FieldMeasurementForm({
 
             {(displayTelefone || canDelete) && (
               <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                {displayTelefone && (
-                  <a
-                    href={`tel:${displayTelefone.replace(/\D/g, "")}`}
-                    className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
-                  >
-                    <Phone className="h-3.5 w-3.5 shrink-0" />
-                    {displayTelefone}
-                  </a>
-                )}
+                {displayTelefone &&
+                  (whatsAppUrl ? (
+                    <a
+                      href={whatsAppUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-[#25D366] underline-offset-2 hover:underline"
+                      aria-label={`Abrir WhatsApp de ${displayTelefone}`}
+                    >
+                      <WhatsAppIcon className="h-3.5 w-3.5" />
+                      {displayTelefone}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      {displayTelefone}
+                    </span>
+                  ))}
                 {canDelete && (
                   <DeleteMeasurementDialog
                     osId={order.id}
@@ -529,11 +558,13 @@ export function FieldMeasurementForm({
                     expanded={expandedItemId === item.id}
                     canRemove={items.length > 1}
                     disabled={isPending}
-                    initialDrawingFullscreen={drawingFullscreenItemIds.has(
-                      item.id,
-                    )}
-                    onDrawingFullscreenApplied={() =>
-                      clearDrawingFullscreenItem(item.id)
+                    osId={order.id}
+                    pendingFiles={pendingFilesByItemId[item.id] ?? []}
+                    onPendingFilesChange={(files) =>
+                      setPendingFilesByItemId((prev) => ({
+                        ...prev,
+                        [item.id]: files,
+                      }))
                     }
                     onDrawingFullscreenChange={handleDrawingFullscreenChange}
                     onChange={(next) => updateItem(index, next)}
@@ -548,47 +579,6 @@ export function FieldMeasurementForm({
                 ))}
           </div>
         </div>
-
-        <MeasurementPhotosSection
-          expanded={photosExpanded}
-          onExpandedChange={setPhotosExpanded}
-          photoCount={photoCount}
-        >
-          {viewMode ? (
-            <PhotoGallery urls={photoUrls} showLabel={false} />
-          ) : (
-            <PhotoUpload
-              hint="Fotos gerais da visita — vinculadas ao tipo selecionado no cabeçalho ao salvar."
-              osId={order.id}
-              scope="measurements"
-              existingUrls={photoUrls}
-              mode="form"
-              disabled={isPending}
-              showLabel={false}
-              onUrlsChange={setPhotoUrls}
-              onFilesChange={setPendingFiles}
-            />
-          )}
-        </MeasurementPhotosSection>
-
-        <section className="rounded-xl border bg-card p-4 shadow-sm">
-          <Label htmlFor="notes">Observações</Label>
-          {viewMode ? (
-            <p className="mt-2 min-h-[100px] whitespace-pre-wrap text-sm text-muted-foreground">
-              {notes.trim() || "Nenhuma observação registrada."}
-            </p>
-          ) : (
-            <Textarea
-              id="notes"
-              name="notes"
-              rows={4}
-              placeholder="Recortes, nivelamento, impedimentos..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="mt-2 min-h-[100px] text-base"
-            />
-          )}
-        </section>
 
         {canSendToCutting && order.status === "medicao_final" ? (
           <section className="rounded-xl border bg-card p-4 shadow-sm">
@@ -607,7 +597,7 @@ export function FieldMeasurementForm({
 
         {allowedActions.length > 0 && !viewMode ? (
           <div className="fixed inset-x-0 bottom-[calc(3.25rem+env(safe-area-inset-bottom,0px))] z-30 border-t bg-card/95 p-3 backdrop-blur md:static md:mt-2 md:rounded-xl md:border md:p-4 md:shadow-sm">
-            <div className="mx-auto flex max-w-3xl gap-2">
+            <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -720,7 +710,7 @@ export function FieldMeasurementForm({
             </div>
 
             <p className="text-muted-foreground">
-              {photoUrls.length + pendingFiles.length} foto(s) anexada(s)
+              {totalPhotoCount} foto(s) anexada(s)
             </p>
           </div>
 

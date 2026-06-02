@@ -70,8 +70,20 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
   async function handleStepToggle(step: Step, done: boolean) {
     setLoadingStep(step);
     setStepError(null);
-    const result = await updateCuttingStepAction({ osId, step, done });
-    if (result.success) {
+
+    let result: Awaited<ReturnType<typeof updateCuttingStepAction>> | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        result = await updateCuttingStepAction({ osId, step, done });
+        break;
+      } catch {
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+
+    if (!result) {
+      setStepError("Falha de conexão. Verifique sua internet e tente novamente.");
+    } else if (result.success) {
       setSteps((prev) => ({ ...prev, [step]: done }));
     } else {
       setStepError(result.message);

@@ -20,6 +20,8 @@ export const measurementLineItemSchema = z.object({
   idTipoVidro: z.string().uuid().nullish(),
   idTipoEnvidracamento: z.string().uuid().nullish(),
   drawingUrl: z.string().nullable().optional(),
+  observacao: z.string().max(500).optional(),
+  photos: photosSchema.optional(),
 });
 
 export const measurementItemsSchema = z

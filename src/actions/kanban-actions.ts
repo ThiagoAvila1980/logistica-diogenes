@@ -1,11 +1,10 @@
 "use server";
 
 import { eq, sql } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
 import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
 import { getDb } from "@/lib/db";
-import { measurements, statusHistory, type OsStatus } from "@/db/schema";
+import { measurements, statusHistory, osStatus, type OsStatus } from "@/db/schema";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { loadClientNotificationContext } from "@/lib/notifications/order-context";
@@ -19,6 +18,13 @@ import { authErrorMessage, AuthError } from "@/lib/auth/auth-error";
 import { requireRole } from "@/lib/auth/require-role";
 import { getSession } from "@/lib/auth/session";
 import { listKanbanOrders, type KanbanOrderItem } from "@/lib/data/kanban";
+import { revalidateOSRoutes } from "@/lib/revalidate";
+
+const VALID_OS_STATUSES = new Set(osStatus.enumValues);
+
+function parseOsStatus(value: string): OsStatus | null {
+  return VALID_OS_STATUSES.has(value as OsStatus) ? (value as OsStatus) : null;
+}
 
 export type MoveOSCardResult =
   | { success: true; notificationSummary?: string }
@@ -68,7 +74,10 @@ export async function moveOSCard(
   }
 
   try {
-    const target = targetStatus as OsStatus;
+    const target = parseOsStatus(targetStatus);
+    if (!target) {
+      return { success: false, message: "Status inválido." };
+    }
 
     if (useMockData()) {
       const mockResult = mockRepository.moveCard(osId, target);
@@ -118,10 +127,7 @@ export async function moveOSCard(
       });
     });
 
-    revalidatePath("/dashboard");
-    revalidatePath("/field");
-    revalidatePath(`/field/${osId}`);
-    revalidatePath("/production");
+    revalidateOSRoutes(osId);
 
     return finishKanbanMove(osId, target);
   } catch (error) {

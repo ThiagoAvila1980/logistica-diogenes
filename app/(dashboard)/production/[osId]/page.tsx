@@ -6,6 +6,7 @@ import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
+import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CuttingChecklist } from "@/components/production/cutting-checklist";
@@ -51,6 +52,7 @@ export default async function ProductionOsPage({ params }: Props) {
             readOnly
           />
         </div>
+        <MeasurementNotesCard notes={order.notes} className="mt-4" />
       </div>
 
       <div className="space-y-6">
@@ -60,7 +62,6 @@ export default async function ProductionOsPage({ params }: Props) {
           <ProductionMeasurementMedia
             items={measurement.items}
             photos={measurement.photos}
-            notes={measurement.notes}
             lookups={lookups}
           />
         ) : (

@@ -25,6 +25,9 @@ export function collectMeasurementFileUrls(input: {
   for (const item of input.items ?? []) {
     const drawing = item.drawingUrl;
     if (drawing && isPersistedUploadUrl(drawing)) urls.add(drawing);
+    for (const photo of item.photos ?? []) {
+      if (isPersistedUploadUrl(photo)) urls.add(photo);
+    }
   }
 
   return [...urls];

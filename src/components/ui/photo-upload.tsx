@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Camera, Loader2, X } from "lucide-react";
+import { Camera, ImageIcon, Loader2, X } from "lucide-react";
 import { uploadPhotos } from "@/actions/upload-actions";
 import { UPLOAD_MAX_FILES } from "@/lib/upload/config";
 import type { UploadScope } from "@/lib/upload/config";
@@ -25,6 +25,12 @@ type PhotoUploadProps = {
   existingUrls?: string[];
   maxFiles?: number;
   multiple?: boolean;
+  /**
+   * Origem das fotos: câmera, galeria/arquivos ou ambos (lado a lado).
+   * @default "both"
+   */
+  sources?: "both" | "camera" | "files";
+  /** @deprecated Use `sources`. Mantido para compatibilidade. */
   capture?: boolean;
   /**
    * form: arquivos vão no submit do formulário pai (name="photos")
@@ -50,7 +56,8 @@ export function PhotoUpload({
   existingUrls = [],
   maxFiles = UPLOAD_MAX_FILES,
   multiple = true,
-  capture = true,
+  sources: sourcesProp,
+  capture,
   mode = "form",
   disabled,
   showLabel = true,
@@ -58,13 +65,27 @@ export function PhotoUpload({
   onFilesChange,
   className,
 }: PhotoUploadProps) {
-  const inputId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const sources =
+    sourcesProp ?? (capture === false ? "files" : capture === true ? "camera" : "both");
+  const showCamera = sources === "both" || sources === "camera";
+  const showFiles = sources === "both" || sources === "files";
+  const baseId = useId();
+  const cameraInputId = `${baseId}-camera`;
+  const filesInputId = `${baseId}-files`;
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<PhotoUploadItem[]>(() =>
     existingUrls.map((url) => ({ id: url, url })),
   );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const onUrlsChangeRef = useRef(onUrlsChange);
+  const onFilesChangeRef = useRef(onFilesChange);
+  const lastNotifiedUrlsRef = useRef<string | null>(null);
+  const lastNotifiedFilesRef = useRef<string | null>(null);
+
+  onUrlsChangeRef.current = onUrlsChange;
+  onFilesChangeRef.current = onFilesChange;
 
   useEffect(() => {
     setItems((prev) => {
@@ -73,14 +94,39 @@ export function PhotoUpload({
         const found = prev.find((p) => p.url === url && !p.file);
         return found ?? { id: url, url };
       });
-      return [...saved, ...pending].slice(0, maxFiles);
+      const next = [...saved, ...pending].slice(0, maxFiles);
+      if (
+        next.length === prev.length &&
+        next.every(
+          (item, index) =>
+            item.id === prev[index]?.id &&
+            item.url === prev[index]?.url &&
+            item.file === prev[index]?.file,
+        )
+      ) {
+        return prev;
+      }
+      return next;
     });
   }, [existingUrls.join("|"), maxFiles]);
 
   useEffect(() => {
-    onUrlsChange?.(items.filter((i) => !i.file).map((i) => i.url));
-    onFilesChange?.(items.filter((i) => i.file).map((i) => i.file!));
-  }, [items, onUrlsChange, onFilesChange]);
+    const urls = items.filter((i) => !i.file).map((i) => i.url);
+    const files = items.filter((i) => i.file).map((i) => i.file!);
+    const urlsKey = urls.join("|");
+    const filesKey = files
+      .map((file) => `${file.name}:${file.size}:${file.lastModified}`)
+      .join("|");
+
+    if (lastNotifiedUrlsRef.current !== urlsKey) {
+      lastNotifiedUrlsRef.current = urlsKey;
+      onUrlsChangeRef.current?.(urls);
+    }
+    if (lastNotifiedFilesRef.current !== filesKey) {
+      lastNotifiedFilesRef.current = filesKey;
+      onFilesChangeRef.current?.(files);
+    }
+  }, [items]);
 
   const syncItems = useCallback((next: PhotoUploadItem[]) => {
     setItems(next.slice(0, maxFiles));
@@ -130,7 +176,8 @@ export function PhotoUpload({
       if (res.warnings?.length) {
         setError(res.warnings.join("; "));
       }
-      if (inputRef.current) inputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      if (filesInputRef.current) filesInputRef.current.value = "";
       return;
     }
 
@@ -145,8 +192,17 @@ export function PhotoUpload({
     });
 
     syncItems([...items, ...pending]);
-    if (inputRef.current) inputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (filesInputRef.current) filesInputRef.current.value = "";
   };
+
+  const pickerDisabled = disabled || uploading;
+  const pickerZoneClass = cn(
+    "flex min-h-[100px] flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-4 transition-colors",
+    pickerDisabled && "pointer-events-none opacity-50",
+    !pickerDisabled &&
+      "hover:border-primary/50 hover:bg-muted/50 active:scale-[0.99]",
+  );
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -199,37 +255,71 @@ export function PhotoUpload({
       )}
 
       {items.length < maxFiles && (
-        <label
-          htmlFor={inputId}
+        <div
           className={cn(
-            "flex min-h-[100px] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-4 transition-colors",
-            (disabled || uploading) && "pointer-events-none opacity-50",
-            !disabled && "hover:border-primary/50 hover:bg-muted/50 active:scale-[0.99]",
+            "flex flex-col gap-2",
+            showCamera && showFiles && "sm:flex-row",
           )}
         >
-          {uploading ? (
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          ) : (
-            <Camera className="h-8 w-8 text-muted-foreground" />
+          {showCamera && (
+            <label htmlFor={cameraInputId} className={pickerZoneClass}>
+              {uploading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              ) : (
+                <Camera className="h-8 w-8 text-muted-foreground" />
+              )}
+              <span className="text-center text-sm font-medium">
+                {uploading ? "Enviando..." : "Câmera"}
+              </span>
+              <span className="text-center text-xs text-muted-foreground">
+                Tirar foto agora
+              </span>
+              <input
+                ref={cameraInputRef}
+                id={cameraInputId}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple={multiple}
+                className="sr-only"
+                disabled={pickerDisabled}
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </label>
           )}
-          <span className="text-center text-sm font-medium">
-            {uploading ? "Enviando..." : "Toque para adicionar fotos"}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            JPG, PNG ou WebP (convertidas para WebP ao salvar)
-          </span>
-          <input
-            ref={inputRef}
-            id={inputId}
-            type="file"
-            accept="image/*"
-            capture={capture ? "environment" : undefined}
-            multiple={multiple}
-            className="sr-only"
-            disabled={disabled || uploading}
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-        </label>
+
+          {showFiles && (
+            <label htmlFor={filesInputId} className={pickerZoneClass}>
+              {uploading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              ) : (
+                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+              )}
+              <span className="text-center text-sm font-medium">
+                {uploading ? "Enviando..." : "Galeria ou arquivos"}
+              </span>
+              <span className="text-center text-xs text-muted-foreground">
+                Escolher imagens já salvas (JPG, PNG ou WebP)
+              </span>
+              <input
+                ref={filesInputRef}
+                id={filesInputId}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/*"
+                multiple={multiple}
+                className="sr-only"
+                disabled={pickerDisabled}
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+      {items.length < maxFiles && showCamera && showFiles && (
+        <p className="text-center text-xs text-muted-foreground">
+          As imagens são convertidas para WebP ao salvar a medição.
+        </p>
       )}
 
       {error && (

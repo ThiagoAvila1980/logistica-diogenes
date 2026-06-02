@@ -126,6 +126,15 @@ export const vehicleMockStore = {
     if (!vehicleId) return null;
     return this.getById(vehicleId)?.plate ?? null;
   },
+
+  isInUseByOtherOs(osId: string, vehicleId: string): boolean {
+    for (const [assignedOsId, assignedVehicleId] of mockVehicleInUse.entries()) {
+      if (assignedVehicleId === vehicleId && assignedOsId !== osId) {
+        return true;
+      }
+    }
+    return false;
+  },
 };
 
 export type AdminUserRow = {

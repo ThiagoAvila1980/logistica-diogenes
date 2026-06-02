@@ -5,13 +5,18 @@ import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { resolveUploadDisplayUrlAction } from "@/actions/upload-actions";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { DrawingBoard } from "@/components/field/drawing-board";
+import { MeasurementPhotosSection } from "@/components/field/measurement-photos-section";
 import { MeasurementItemSpecFields } from "@/components/field/measurement-item-spec-fields";
+import { PhotoUpload } from "@/components/ui/photo-upload";
+import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
+import { countItemPhotos } from "@/lib/measurement/item-photos";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 type MeasurementItemCardProps = {
   item: MeasurementLineItem;
@@ -27,6 +32,9 @@ type MeasurementItemCardProps = {
   onRemove: () => void;
   onExpandedChange: (expanded: boolean) => void;
   onDrawingDirtyChange?: (dirty: boolean) => void;
+  osId: string;
+  pendingFiles?: File[];
+  onPendingFilesChange?: (files: File[]) => void;
 };
 
 export function MeasurementItemCard({
@@ -43,7 +51,11 @@ export function MeasurementItemCard({
   onRemove,
   onExpandedChange,
   onDrawingDirtyChange,
+  osId,
+  pendingFiles = [],
+  onPendingFilesChange,
 }: MeasurementItemCardProps) {
+  const [photosExpanded, setPhotosExpanded] = useState(false);
   const [resolvedDrawingUrl, setResolvedDrawingUrl] = useState<string | null>(
     item.drawingUrl ?? null,
   );
@@ -89,6 +101,8 @@ export function MeasurementItemCard({
     item.qty > 0 ||
     item.largura > 0 ||
     item.altura > 0;
+  const savedPhotoUrls = filterDisplayableUploadUrls(item.photos ?? []);
+  const photoCount = countItemPhotos(item, pendingFiles.length);
 
   return (
     <article
@@ -146,6 +160,14 @@ export function MeasurementItemCard({
               ? `${item.largura || "—"} × ${item.altura || "—"} mm`
               : null}
           </p>
+          {item.observacao?.trim() ? (
+            <p className="line-clamp-2 italic">{item.observacao.trim()}</p>
+          ) : null}
+          {photoCount > 0 ? (
+            <p>
+              {photoCount} foto{photoCount === 1 ? "" : "s"}
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -266,7 +288,39 @@ export function MeasurementItemCard({
                 })
               }
             />
+            <div className="mt-4 space-y-2">
+              <Label htmlFor={`observacao-${item.id}`}>Observação</Label>
+              <Textarea
+                id={`observacao-${item.id}`}
+                rows={3}
+                placeholder="Detalhes desta peça: recortes, nivelamento, impedimentos..."
+                value={item.observacao ?? ""}
+                onChange={(e) =>
+                  updateField("observacao", e.target.value || undefined)
+                }
+                disabled={disabled}
+                className="min-h-[80px] text-base"
+              />
+            </div>
           </div>
+
+          <MeasurementPhotosSection
+            expanded={photosExpanded}
+            onExpandedChange={setPhotosExpanded}
+            photoCount={photoCount}
+          >
+            <PhotoUpload
+              hint="Fotos desta medição (ambiente, detalhes, referências)."
+              osId={osId}
+              scope="measurements"
+              existingUrls={savedPhotoUrls}
+              mode="form"
+              disabled={disabled}
+              showLabel={false}
+              onUrlsChange={(urls) => updateField("photos", urls.length ? urls : undefined)}
+              onFilesChange={onPendingFilesChange}
+            />
+          </MeasurementPhotosSection>
         </div>
       )}
     </article>
@@ -284,5 +338,7 @@ export function createEmptyMeasurementItem(id: string): MeasurementLineItem {
     idTipoVidro: null,
     idTipoEnvidracamento: null,
     drawingUrl: null,
+    observacao: undefined,
+    photos: undefined,
   };
 }

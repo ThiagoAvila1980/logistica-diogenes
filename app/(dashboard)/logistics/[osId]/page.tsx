@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Truck } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getTransportDetailForOs } from "@/lib/data/transport-detail";
+import { listVehiclesForTransportSelection } from "@/lib/data/vehicles";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
+import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { Button } from "@/components/ui/button";
 import { TransportChecklist } from "@/components/logistics/transport-checklist";
+import { VehicleSelector } from "@/components/logistics/vehicle-selector";
 
 type Props = { params: Promise<{ osId: string }> };
 
@@ -17,10 +20,24 @@ export default async function LogisticsOsPage({ params }: Props) {
   if (!order) notFound();
 
   const detail = await getTransportDetailForOs(osId, order.status);
+  const vehicles = await listVehiclesForTransportSelection(osId);
+  const canChangeVehicle = !detail.transportSteps.levarPerfilEstrutural;
 
   if (!canOperateTransportModule(order.status, detail.cuttingSteps)) {
     return (
       <div className="p-6 lg:p-8">
+        <div className="mb-6">
+          <div className="flex items-center gap-2">
+            <Truck className="h-5 w-5 text-teal-600" />
+            <h1 className="font-mono text-2xl font-bold">
+              {getOrderDisplayNumber(order)}
+            </h1>
+          </div>
+          <p className="mt-1 text-base font-medium text-muted-foreground">
+            {order.clientName}
+          </p>
+          <MeasurementNotesCard notes={order.notes} className="mt-4" />
+        </div>
         <div className="rounded-xl border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">
             Aguardando conclusão do corte para liberar o transporte desta OS.
@@ -60,12 +77,23 @@ export default async function LogisticsOsPage({ params }: Props) {
             readOnly
           />
         </div>
+        <MeasurementNotesCard notes={order.notes} className="mt-4" />
       </div>
+
+      <VehicleSelector
+        osId={osId}
+        vehicleId={detail.vehicleId}
+        vehiclePlate={detail.vehiclePlate}
+        vehicleDescription={detail.vehicleDescription}
+        vehicles={vehicles}
+        canChange={canChangeVehicle}
+      />
 
       <TransportChecklist
         osId={osId}
         initialTransportSteps={detail.transportSteps}
         initialCuttingSteps={detail.cuttingSteps}
+        vehicleId={detail.vehicleId}
       />
     </div>
   );

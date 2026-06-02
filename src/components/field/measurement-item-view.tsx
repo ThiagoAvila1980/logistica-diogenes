@@ -1,12 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { MeasurementItemSpecSummary } from "@/components/field/measurement-item-spec-fields";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import { ResolvedImage } from "@/components/ui/resolved-image";
+import { PhotoGallery } from "@/components/ui/photo-gallery";
 import { Button } from "@/components/ui/button";
+import { MeasurementPhotosSection } from "@/components/field/measurement-photos-section";
+import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
+import { countItemPhotos } from "@/lib/measurement/item-photos";
 
 type MeasurementItemViewProps = {
   item: MeasurementLineItem;
@@ -23,6 +28,9 @@ export function MeasurementItemView({
   expanded,
   onExpandedChange,
 }: MeasurementItemViewProps) {
+  const [photosExpanded, setPhotosExpanded] = useState(false);
+  const photoUrls = filterDisplayableUploadUrls(item.photos ?? []);
+  const photoCount = countItemPhotos(item);
   const hasDrawing = Boolean(item.drawingUrl);
   const ambienteLabel = resolveLookupLabel(
     lookups?.ambientes ?? [],
@@ -75,6 +83,14 @@ export function MeasurementItemView({
               : null}
           </p>
           <MeasurementItemSpecSummary item={item} lookups={lookups} />
+          {item.observacao?.trim() ? (
+            <p className="line-clamp-2 italic">{item.observacao.trim()}</p>
+          ) : null}
+          {photoCount > 0 ? (
+            <p>
+              {photoCount} foto{photoCount === 1 ? "" : "s"}
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -99,6 +115,20 @@ export function MeasurementItemView({
           )}
 
           <MeasurementDimensionsSummary item={item} lookups={lookups} />
+
+          <MeasurementPhotosSection
+            expanded={photosExpanded}
+            onExpandedChange={setPhotosExpanded}
+            photoCount={photoCount}
+          >
+            {photoUrls.length > 0 ? (
+              <PhotoGallery urls={photoUrls} showLabel={false} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma foto registrada para esta medição.
+              </p>
+            )}
+          </MeasurementPhotosSection>
         </div>
       )}
     </article>
@@ -148,10 +178,18 @@ export function MeasurementDimensionsSummary({
             </dd>
           </div>
         </dl>
-        <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
-      </>
-    );
-  }
+      <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
+      {item.observacao?.trim() ? (
+        <div className="mt-4 min-w-0">
+          <dt className="text-xs text-muted-foreground">Observação</dt>
+          <dd className="mt-0.5 whitespace-pre-wrap text-sm">
+            {item.observacao.trim()}
+          </dd>
+        </div>
+      ) : null}
+    </>
+  );
+}
 
   return (
     <div className="rounded-lg border bg-muted/20 p-4">
@@ -183,6 +221,14 @@ export function MeasurementDimensionsSummary({
         </div>
       </dl>
       <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
+      {item.observacao?.trim() ? (
+        <div className="mt-4">
+          <dt className="text-xs text-muted-foreground">Observação</dt>
+          <dd className="mt-0.5 whitespace-pre-wrap text-sm">
+            {item.observacao.trim()}
+          </dd>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -191,18 +237,18 @@ export function hasSavedMeasurementForView(
   draft?: {
     items?: MeasurementLineItem[];
     photos?: string[];
-    notes?: string;
   },
 ): boolean {
   if (!draft) return false;
   if (draft.photos?.length) return true;
-  if (draft.notes?.trim()) return true;
   if (!draft.items?.length) return false;
 
   return draft.items.some(
     (item) =>
       Boolean(item.drawingUrl) ||
       Boolean(item.idAmbiente) ||
+      Boolean(item.observacao?.trim()) ||
+      Boolean(item.photos?.length) ||
       (item.qty > 0 && item.largura > 0 && item.altura > 0),
   );
 }

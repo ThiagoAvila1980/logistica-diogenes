@@ -71,6 +71,7 @@ export function StatusWizard({
         className={cn(
           "flex items-start gap-0 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           "md:items-center md:pb-0",
+          "xl:justify-between xl:overflow-visible",
         )}
         role="list"
         aria-label="Progresso da ordem de serviço"
@@ -113,7 +114,7 @@ export function StatusWizard({
                 </div>
                 <span
                   className={cn(
-                    "max-w-[3.25rem] text-center text-[10px] font-medium leading-tight sm:max-w-[3.75rem] md:ml-2 md:max-w-none md:whitespace-nowrap md:text-sm",
+                    "max-w-[3.25rem] text-center text-[10px] font-medium leading-tight sm:max-w-[3.75rem] md:ml-2 md:max-w-none md:whitespace-nowrap md:text-sm lg:text-base",
                     isCurrent && "font-semibold text-green-700 dark:text-green-400",
                     isPast && !isCurrent && "text-foreground",
                     !isPast && !isCurrent && "text-muted-foreground",
@@ -126,7 +127,7 @@ export function StatusWizard({
               {idx < steps.length - 1 && (
                 <div
                   className={cn(
-                    "mx-0.5 mt-3.5 h-0.5 w-3 shrink-0 transition-colors duration-300 sm:w-4 md:mx-2 md:mt-0 md:w-12 lg:w-16",
+                    "mx-0.5 mt-3.5 h-0.5 w-3 shrink-0 transition-colors duration-300 sm:w-4 md:mx-2 md:mt-0 md:w-12 lg:w-16 xl:min-w-8 xl:flex-1",
                     isPast || isCurrent
                       ? "bg-primary"
                       : "bg-muted-foreground/20",

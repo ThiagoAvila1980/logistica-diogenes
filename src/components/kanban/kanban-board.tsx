@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useSlowPending } from "@/hooks/use-slow-pending";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
-import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { KanbanPhaseColumn } from "./kanban-phase-column";
 import { KanbanFiltersBar } from "./kanban-filters";
 import { KanbanColumnStats } from "./kanban-column-stats";
@@ -57,6 +58,9 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
   );
   const [isPending, startTransition] = useTransition();
   const [isRefreshing, startRefresh] = useTransition();
+  const isMoveSlowPending = useSlowPending(isPending);
+  // Serializa moves: aguarda o anterior terminar antes de enviar o próximo
+  const pendingMoveRef = useRef<Promise<void>>(Promise.resolve());
   const [dragError, setDragError] = useState<string | null>(null);
   const [dragSuccess, setDragSuccess] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<KanbanPendingMove | null>(
@@ -188,26 +192,35 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         return next;
       });
 
-      startTransition(async () => {
-        const res = await moveOSCard(osId, destStatus);
-        if (!res.success && prevColumns) {
-          setColumns(prevColumns);
-          setDragError(res.message ?? "Não foi possível mover a OS");
-          return;
-        }
-        if (res.success && res.notificationSummary) {
-          setDragSuccess(res.notificationSummary);
-        }
-        if (res.success) {
-          setOrders((prev) =>
-            prev.map((o) =>
-              o.id === osId
-                ? { ...o, status: destStatus, updatedAt: new Date() }
-                : o,
-            ),
-          );
-        }
-      });
+      // Enfileira o move para evitar race condition entre drags simultâneos
+      pendingMoveRef.current = pendingMoveRef.current.then(() =>
+        new Promise<void>((resolve) => {
+          startTransition(async () => {
+            try {
+              const res = await moveOSCard(osId, destStatus);
+              if (!res.success && prevColumns) {
+                setColumns(prevColumns);
+                setDragError(res.message ?? "Não foi possível mover a OS");
+                return;
+              }
+              if (res.success && res.notificationSummary) {
+                setDragSuccess(res.notificationSummary);
+              }
+              if (res.success) {
+                setOrders((prev) =>
+                  prev.map((o) =>
+                    o.id === osId
+                      ? { ...o, status: destStatus, updatedAt: new Date() }
+                      : o,
+                  ),
+                );
+              }
+            } finally {
+              resolve();
+            }
+          });
+        }),
+      );
     },
     [findOrder],
   );
@@ -356,6 +369,15 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         <kbd className="rounded border px-0.5 text-[9px]">Alt</kbd>+
         <kbd className="rounded border px-0.5 text-[9px]">→</kbd> avança etapa
       </p>
+
+      {isMoveSlowPending && (
+        <Alert>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertDescription className="text-muted-foreground">
+            Aguardando resposta do servidor...
+          </AlertDescription>
+        </Alert>
+      )}
 
       {dragError && (
         <Alert variant="destructive">
