@@ -39,6 +39,7 @@ export async function getTransportDetailForOs(
         corteFeito: cuttingPlans.corteFeito,
         embalagemFeita: cuttingPlans.embalagemFeita,
         acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+        vidrosFeitos: cuttingPlans.vidrosFeitos,
       })
       .from(cuttingPlans)
       .where(eq(cuttingPlans.idMedicao, osId))
@@ -52,6 +53,7 @@ export async function getTransportDetailForOs(
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
         levarPerfilTotal: transportLogs.levarPerfilTotal,
         levarAcessorios: transportLogs.levarAcessorios,
+        levarVidros: transportLogs.levarVidros,
         transporteConcluido: transportLogs.transporteConcluido,
       })
       .from(transportLogs)
@@ -83,11 +85,17 @@ export async function getTransportDetailForOs(
         (osStatus.startsWith("transporte_") ||
           osStatus.startsWith("instalacao") ||
           osStatus === "concluido"),
+      vidrosFeitos:
+        cut?.vidrosFeitos ??
+        (osStatus.startsWith("transporte_") ||
+          osStatus.startsWith("instalacao") ||
+          osStatus === "concluido"),
     },
     transportSteps: {
       levarPerfilEstrutural: trans?.levarPerfilEstrutural ?? false,
       levarPerfilTotal: trans?.levarPerfilTotal ?? false,
       levarAcessorios: trans?.levarAcessorios ?? false,
+      levarVidros: trans?.levarVidros ?? false,
       transporteConcluido: trans?.transporteConcluido ?? false,
     },
     vehicleId: trans?.vehicleId ?? null,

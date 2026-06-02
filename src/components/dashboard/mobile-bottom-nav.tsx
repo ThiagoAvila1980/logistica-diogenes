@@ -24,7 +24,7 @@ const MOBILE_ICONS: Record<string, LucideIcon> = {
 const MOBILE_LABELS: Record<string, string> = {
   "/dashboard": "Painel",
   "/field": "Medições",
-  "/production": "Corte",
+  "/production": "Corte e Logística",
   "/logistics": "Transp.",
   "/installation": "Inst.",
 };

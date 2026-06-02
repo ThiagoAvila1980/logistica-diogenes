@@ -50,6 +50,7 @@ export async function updateInstallationStepAction(
         corteFeito: cuttingPlans.corteFeito,
         embalagemFeita: cuttingPlans.embalagemFeita,
         acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+        vidrosFeitos: cuttingPlans.vidrosFeitos,
       })
       .from(cuttingPlans)
       .where(eq(cuttingPlans.idMedicao, osId))
@@ -59,6 +60,7 @@ export async function updateInstallationStepAction(
       corteFeito: order.status.startsWith("instalacao") || order.status === "concluido",
       embalagemFeita: order.status.startsWith("instalacao") || order.status === "concluido",
       acessoriosFeitos: order.status.startsWith("instalacao") || order.status === "concluido",
+      vidrosFeitos: order.status.startsWith("instalacao") || order.status === "concluido",
     };
 
     if (!canOperateInstallationModule(order.status, cuttingSteps)) {
@@ -74,6 +76,7 @@ export async function updateInstallationStepAction(
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
         levarPerfilTotal: transportLogs.levarPerfilTotal,
         levarAcessorios: transportLogs.levarAcessorios,
+        levarVidros: transportLogs.levarVidros,
         transporteConcluido: transportLogs.transporteConcluido,
       })
       .from(transportLogs)
@@ -84,6 +87,7 @@ export async function updateInstallationStepAction(
       levarPerfilEstrutural: false,
       levarPerfilTotal: false,
       levarAcessorios: false,
+      levarVidros: false,
       transporteConcluido: false,
     };
 

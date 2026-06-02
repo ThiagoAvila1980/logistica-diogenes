@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 function getMobileTitle(pathname: string): string {
   if (pathname.startsWith("/field")) return "Medições";
   if (pathname === "/dashboard") return "Painel";
-  if (pathname.startsWith("/production")) return "Corte";
+  if (pathname.startsWith("/production")) return "Corte e Logística";
   if (pathname.startsWith("/logistics")) return "Transporte";
   if (pathname.startsWith("/installation")) return "Instalação";
   if (pathname.startsWith("/quote")) return "Orçamentos";

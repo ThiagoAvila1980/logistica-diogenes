@@ -40,6 +40,7 @@ function toCuttingStepsGate(os: KanbanOrderItem) {
     corteFeito: os.cuttingSteps.corte,
     embalagemFeita: os.cuttingSteps.embalagem,
     acessoriosFeitos: os.cuttingSteps.acessorios,
+    vidrosFeitos: os.cuttingSteps.vidros,
   };
 }
 

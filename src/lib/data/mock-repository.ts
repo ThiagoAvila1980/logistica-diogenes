@@ -42,6 +42,7 @@ type MockCutting = {
   corteFeito: boolean;
   embalagemFeita: boolean;
   acessoriosFeitos: boolean;
+  vidrosFeitos: boolean;
 };
 
 type MockTransport = {
@@ -244,12 +245,14 @@ let cuttingPlans: MockCutting[] = [
     corteFeito: true,
     embalagemFeita: false,
     acessoriosFeitos: false,
+    vidrosFeitos: false,
   },
   {
     idMedicao: "a1111111-1111-4111-8111-111111111104",
     corteFeito: true,
     embalagemFeita: true,
     acessoriosFeitos: true,
+    vidrosFeitos: true,
   },
 ];
 
@@ -307,6 +310,7 @@ export const mockRepository = {
             corte: cut.corteFeito,
             embalagem: cut.embalagemFeita,
             acessorios: cut.acessoriosFeitos,
+            vidros: cut.vidrosFeitos,
           }
         : null;
 
@@ -315,7 +319,8 @@ export const mockRepository = {
         cuttingStepsData &&
         (!cuttingStepsData.corte ||
           !cuttingStepsData.embalagem ||
-          !cuttingStepsData.acessorios);
+          !cuttingStepsData.acessorios ||
+          !cuttingStepsData.vidros);
 
       return {
         id: m.id,
@@ -338,6 +343,7 @@ export const mockRepository = {
               levarPerfilEstrutural: false,
               levarPerfilTotal: false,
               levarAcessorios: false,
+              levarVidros: false,
               transporteConcluido: false,
             }
           : null,
@@ -368,13 +374,14 @@ export const mockRepository = {
         corte: cut?.corteFeito ?? false,
         embalagem: cut?.embalagemFeita ?? false,
         acessorios: cut?.acessoriosFeitos ?? false,
+        vidros: cut?.vidrosFeitos ?? false,
       },
     };
   },
 
   updateCuttingStep(
     osId: string,
-    step: "corte" | "embalagem" | "acessorios",
+    step: "corte" | "embalagem" | "acessorios" | "vidros",
     done: boolean,
   ): { success: true } | { success: false; message: string } {
     const m = findMeasurement(osId);
@@ -387,13 +394,15 @@ export const mockRepository = {
       corteFeito: cut?.corteFeito ?? false,
       embalagemFeita: cut?.embalagemFeita ?? false,
       acessoriosFeitos: cut?.acessoriosFeitos ?? false,
+      vidrosFeitos: cut?.vidrosFeitos ?? false,
     };
     const canEditCutting =
       CUTTING_STATUSES.includes(m.etapa) ||
       (m.etapa.startsWith("transporte_") &&
         (!cuttingSteps.corteFeito ||
           !cuttingSteps.embalagemFeita ||
-          !cuttingSteps.acessoriosFeitos));
+          !cuttingSteps.acessoriosFeitos ||
+          !cuttingSteps.vidrosFeitos));
 
     if (!canEditCutting) {
       return { success: false, message: "OS não está em etapa de corte" };
@@ -405,13 +414,15 @@ export const mockRepository = {
         corteFeito: false,
         embalagemFeita: false,
         acessoriosFeitos: false,
+        vidrosFeitos: false,
       };
       cuttingPlans.push(cut);
     }
 
     if (step === "corte") cut.corteFeito = done;
     else if (step === "embalagem") cut.embalagemFeita = done;
-    else cut.acessoriosFeitos = done;
+    else if (step === "acessorios") cut.acessoriosFeitos = done;
+    else cut.vidrosFeitos = done;
 
     if (step === "corte" && done && cut.corteFeito && ["cortes", "embalagem", "acessorios_plano"].includes(m.etapa)) {
       m.etapa = "transporte_perfil";

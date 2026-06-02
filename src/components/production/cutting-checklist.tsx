@@ -16,12 +16,17 @@ import { cn } from "@/lib/utils";
 import { updateCuttingStepAction, advanceCuttingToTransportAction } from "@/actions/cutting-actions";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 
-type Step = "corte" | "embalagem" | "acessorios";
+type Step = "corte" | "embalagem" | "acessorios" | "vidros";
 
 type Props = {
   osId: string;
   osStatus: string;
-  initialSteps: { corte: boolean; embalagem: boolean; acessorios: boolean };
+  initialSteps: {
+    corte: boolean;
+    embalagem: boolean;
+    acessorios: boolean;
+    vidros: boolean;
+  };
 };
 
 const STEPS: { key: Step; label: string; description: string }[] = [
@@ -40,6 +45,11 @@ const STEPS: { key: Step; label: string; description: string }[] = [
     label: "Acessórios",
     description: "Dobradiças, parafusos e demais acessórios separados",
   },
+  {
+    key: "vidros",
+    label: "Vidros",
+    description: "Vidros cortados e separados conforme medição",
+  },
 ];
 
 export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
@@ -49,7 +59,8 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
   const [stepError, setStepError] = useState<string | null>(null);
   const [isAdvancing, startAdvancing] = useTransition();
 
-  const allDone = steps.corte && steps.embalagem && steps.acessorios;
+  const allDone =
+    steps.corte && steps.embalagem && steps.acessorios && steps.vidros;
 
   async function handleAdvanceToTransport() {
     startAdvancing(async () => {
@@ -104,7 +115,7 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map(({ key, label, description }) => {
             const done = steps[key];
             const isLoading = loadingStep === key;

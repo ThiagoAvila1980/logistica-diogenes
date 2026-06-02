@@ -5,7 +5,7 @@ import { Draggable } from "@hello-pangea/dnd";
 import { GripVertical } from "lucide-react";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { formatBrDate } from "@/lib/date-format";
-import { getOsModuleHref } from "@/lib/os-module-href";
+import { getOsModuleHrefForKanbanPhase } from "@/lib/os-module-href";
 import { cn } from "@/lib/utils";
 import type { KanbanOrderItem } from "@/lib/data/kanban";
 import { KanbanStatusBadge } from "./kanban-status-badge";
@@ -55,7 +55,11 @@ export function KanbanCard({
   const priorityClass =
     PRIORITY_BORDER[os.priority] ?? PRIORITY_BORDER.normal;
   const displayNumber = getOrderDisplayNumber(os);
-  const detailHref = getOsModuleHref(os.id, os.status);
+  const detailHref = getOsModuleHrefForKanbanPhase(
+    os.id,
+    phaseId,
+    os.status,
+  );
   const isMeasurementColumn = phaseId === MEASUREMENT_PHASE;
   const isFinal = os.type === "final";
   const isCuttingColumn = phaseId === CUTTING_PHASE;
@@ -147,6 +151,7 @@ export function KanbanCard({
                       { key: "corte", label: "Corte" },
                       { key: "embalagem", label: "Embal." },
                       { key: "acessorios", label: "Acess." },
+                      { key: "vidros", label: "Vidr." },
                     ] as const
                   ).map(({ key, label }) => {
                     const done = os.cuttingSteps?.[key] ?? false;
@@ -172,6 +177,7 @@ export function KanbanCard({
                       { key: "levarPerfilEstrutural", label: "Perf." },
                       { key: "levarPerfilTotal", label: "Total" },
                       { key: "levarAcessorios", label: "Ac." },
+                      { key: "levarVidros", label: "Vidr." },
                     ] as const
                   ).map(({ key, label }) => {
                     const done = os.transportSteps?.[key] ?? false;

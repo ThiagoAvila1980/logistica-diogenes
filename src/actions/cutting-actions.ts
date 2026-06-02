@@ -15,7 +15,7 @@ import { sendStageProblemAlertAction } from "@/actions/stage-alert-actions";
 
 const updateStepSchema = z.object({
   osId: z.string().uuid(),
-  step: z.enum(["corte", "embalagem", "acessorios"]),
+  step: z.enum(["corte", "embalagem", "acessorios", "vidros"]),
   done: z.boolean(),
 });
 
@@ -29,6 +29,7 @@ function getCuttingStepsFromPlan(
         corteFeito: boolean;
         embalagemFeita: boolean;
         acessoriosFeitos: boolean;
+        vidrosFeitos: boolean;
       }
     | undefined,
 ) {
@@ -36,6 +37,7 @@ function getCuttingStepsFromPlan(
     corteFeito: plan?.corteFeito ?? false,
     embalagemFeita: plan?.embalagemFeita ?? false,
     acessoriosFeitos: plan?.acessoriosFeitos ?? false,
+    vidrosFeitos: plan?.vidrosFeitos ?? false,
   };
 }
 
@@ -73,6 +75,7 @@ export async function updateCuttingStepAction(
         corteFeito: cuttingPlans.corteFeito,
         embalagemFeita: cuttingPlans.embalagemFeita,
         acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+        vidrosFeitos: cuttingPlans.vidrosFeitos,
       })
       .from(cuttingPlans)
       .where(eq(cuttingPlans.idMedicao, osId))
@@ -93,6 +96,7 @@ export async function updateCuttingStepAction(
       corte: { corteFeito: done },
       embalagem: { embalagemFeita: done },
       acessorios: { acessoriosFeitos: done },
+      vidros: { vidrosFeitos: done },
     } as const;
 
     let updatedPlan: typeof cuttingPlans.$inferSelect | undefined;
@@ -184,12 +188,19 @@ export async function advanceCuttingToTransportAction(
         corteFeito: cuttingPlans.corteFeito,
         embalagemFeita: cuttingPlans.embalagemFeita,
         acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+        vidrosFeitos: cuttingPlans.vidrosFeitos,
       })
       .from(cuttingPlans)
       .where(eq(cuttingPlans.idMedicao, osId))
       .limit(1);
 
-    if (!cutting || !cutting.corteFeito || !cutting.embalagemFeita || !cutting.acessoriosFeitos) {
+    if (
+      !cutting ||
+      !cutting.corteFeito ||
+      !cutting.embalagemFeita ||
+      !cutting.acessoriosFeitos ||
+      !cutting.vidrosFeitos
+    ) {
       return { success: false, message: "Conclua todos os checkboxes de corte antes de avançar" };
     }
 

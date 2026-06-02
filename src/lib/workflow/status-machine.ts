@@ -90,6 +90,7 @@ export type CuttingSteps = {
   corteFeito: boolean;
   embalagemFeita: boolean;
   acessoriosFeitos: boolean;
+  vidrosFeitos: boolean;
 };
 
 export type TransitionContext = {
@@ -161,11 +162,15 @@ export function assertTransitionGuards(
     );
   }
 
-  if (to === "transporte_perfil" && !ctx.cuttingSteps.acessoriosFeitos) {
-    throw new TransitionValidationError(
-      "ACCESSORIES_INCOMPLETE",
-      "Registre os acessórios do plano de corte antes do transporte.",
-    );
+  if (to === "transporte_perfil") {
+    const { corteFeito, embalagemFeita, acessoriosFeitos, vidrosFeitos } =
+      ctx.cuttingSteps;
+    if (!corteFeito || !embalagemFeita || !acessoriosFeitos || !vidrosFeitos) {
+      throw new TransitionValidationError(
+        "ACCESSORIES_INCOMPLETE",
+        "Conclua todas as etapas do plano de corte antes do transporte.",
+      );
+    }
   }
 
   if (to === "concluido" && !ctx.installationComplete) {

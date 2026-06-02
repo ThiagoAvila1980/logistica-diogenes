@@ -42,10 +42,12 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       corteFeito: cuttingPlans.corteFeito,
       embalagemFeita: cuttingPlans.embalagemFeita,
       acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+      vidrosFeitos: cuttingPlans.vidrosFeitos,
       // Transport steps
       levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
       levarPerfilTotal: transportLogs.levarPerfilTotal,
       levarAcessorios: transportLogs.levarAcessorios,
+      levarVidros: transportLogs.levarVidros,
       transporteConcluido: transportLogs.transporteConcluido,
       // Installation steps
       instalacaoEstruturalFeita: installationLogs.instalacaoEstruturalFeita,
@@ -70,6 +72,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       corte: r.corteFeito ?? false,
       embalagem: r.embalagemFeita ?? false,
       acessorios: r.acessoriosFeitos ?? false,
+      vidros: r.vidrosFeitos ?? false,
     };
 
     const hasPendingCutting =
@@ -78,6 +81,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
         corteFeito: cuttingStepsData.corte,
         embalagemFeita: cuttingStepsData.embalagem,
         acessoriosFeitos: cuttingStepsData.acessorios,
+        vidrosFeitos: cuttingStepsData.vidros,
       });
 
     return {
@@ -99,6 +103,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
             levarPerfilEstrutural: r.levarPerfilEstrutural ?? false,
             levarPerfilTotal: r.levarPerfilTotal ?? false,
             levarAcessorios: r.levarAcessorios ?? false,
+            levarVidros: r.levarVidros ?? false,
             transporteConcluido: r.transporteConcluido ?? false,
           }
         : null,

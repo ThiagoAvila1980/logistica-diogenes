@@ -207,6 +207,7 @@ export const cuttingPlans = pgTable(
     corteFeito: boolean("corte_feito").default(false).notNull(),
     embalagemFeita: boolean("embalagem_feita").default(false).notNull(),
     acessoriosFeitos: boolean("acessorios_feitos").default(false).notNull(),
+    vidrosFeitos: boolean("vidros_feitos").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -260,6 +261,7 @@ export const transportLogs = pgTable(
     levarPerfilEstrutural: boolean("levar_perfil_estrutural").default(false).notNull(),
     levarPerfilTotal: boolean("levar_perfis_total").default(false).notNull(),
     levarAcessorios: boolean("levar_acessorios").default(false).notNull(),
+    levarVidros: boolean("levar_vidros").default(false).notNull(),
     transporteConcluido: boolean("transporte_concluido").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

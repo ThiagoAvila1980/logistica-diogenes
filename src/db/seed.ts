@@ -151,6 +151,7 @@ async function main() {
       corteFeito: true,
       embalagemFeita: false,
       acessoriosFeitos: false,
+      vidrosFeitos: false,
     },
   ]);
 

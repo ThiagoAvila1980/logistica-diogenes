@@ -142,7 +142,7 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Painel", match: "/dashboard" },
   { href: "/field", label: "Medições", match: "/field" },
-  { href: "/production", label: "Corte", match: "/production" },
+  { href: "/production", label: "Corte e Logística", match: "/production" },
   { href: "/logistics", label: "Transporte", match: "/logistics" },
   { href: "/installation", label: "Instalação", match: "/installation" },
 ];

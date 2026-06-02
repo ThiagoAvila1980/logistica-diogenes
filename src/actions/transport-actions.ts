@@ -20,6 +20,7 @@ const updateStepSchema = z.object({
     "levarPerfilEstrutural",
     "levarPerfilTotal",
     "levarAcessorios",
+    "levarVidros",
     "transporteConcluido",
   ]),
   done: z.boolean(),
@@ -73,6 +74,7 @@ export async function assignVehicleToTransportAction(
         corteFeito: cuttingPlans.corteFeito,
         embalagemFeita: cuttingPlans.embalagemFeita,
         acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+        vidrosFeitos: cuttingPlans.vidrosFeitos,
       })
       .from(cuttingPlans)
       .where(eq(cuttingPlans.idMedicao, osId))
@@ -88,6 +90,10 @@ export async function assignVehicleToTransportAction(
         order.status.startsWith("instalacao") ||
         order.status === "concluido",
       acessoriosFeitos:
+        order.status.startsWith("transporte_") ||
+        order.status.startsWith("instalacao") ||
+        order.status === "concluido",
+      vidrosFeitos:
         order.status.startsWith("transporte_") ||
         order.status.startsWith("instalacao") ||
         order.status === "concluido",
@@ -190,6 +196,7 @@ export async function updateTransportStepAction(
         corteFeito: cuttingPlans.corteFeito,
         embalagemFeita: cuttingPlans.embalagemFeita,
         acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+        vidrosFeitos: cuttingPlans.vidrosFeitos,
       })
       .from(cuttingPlans)
       .where(eq(cuttingPlans.idMedicao, osId))
@@ -203,6 +210,9 @@ export async function updateTransportStepAction(
         order.status.startsWith("instalacao") ||
         order.status === "concluido",
       acessoriosFeitos: order.status.startsWith("transporte_") ||
+        order.status.startsWith("instalacao") ||
+        order.status === "concluido",
+      vidrosFeitos: order.status.startsWith("transporte_") ||
         order.status.startsWith("instalacao") ||
         order.status === "concluido",
     };
@@ -220,6 +230,7 @@ export async function updateTransportStepAction(
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
         levarPerfilTotal: transportLogs.levarPerfilTotal,
         levarAcessorios: transportLogs.levarAcessorios,
+        levarVidros: transportLogs.levarVidros,
         transporteConcluido: transportLogs.transporteConcluido,
       })
       .from(transportLogs)
@@ -230,6 +241,7 @@ export async function updateTransportStepAction(
       levarPerfilEstrutural: false,
       levarPerfilTotal: false,
       levarAcessorios: false,
+      levarVidros: false,
       transporteConcluido: false,
     };
 
@@ -259,6 +271,7 @@ export async function updateTransportStepAction(
       levarPerfilEstrutural: { levarPerfilEstrutural: done },
       levarPerfilTotal: { levarPerfilTotal: done },
       levarAcessorios: { levarAcessorios: done },
+      levarVidros: { levarVidros: done },
       transporteConcluido: { transporteConcluido: done },
     } as const;
 

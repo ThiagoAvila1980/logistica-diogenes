@@ -32,6 +32,7 @@ export async function getInstallationDetailForOs(
         corteFeito: cuttingPlans.corteFeito,
         embalagemFeita: cuttingPlans.embalagemFeita,
         acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+        vidrosFeitos: cuttingPlans.vidrosFeitos,
       })
       .from(cuttingPlans)
       .where(eq(cuttingPlans.idMedicao, osId))
@@ -41,6 +42,7 @@ export async function getInstallationDetailForOs(
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
         levarPerfilTotal: transportLogs.levarPerfilTotal,
         levarAcessorios: transportLogs.levarAcessorios,
+        levarVidros: transportLogs.levarVidros,
         transporteConcluido: transportLogs.transporteConcluido,
       })
       .from(transportLogs)
@@ -70,11 +72,13 @@ export async function getInstallationDetailForOs(
       corteFeito: cut?.corteFeito ?? false,
       embalagemFeita: cut?.embalagemFeita ?? false,
       acessoriosFeitos: cut?.acessoriosFeitos ?? false,
+      vidrosFeitos: cut?.vidrosFeitos ?? false,
     },
     transportSteps: {
       levarPerfilEstrutural: trans?.levarPerfilEstrutural ?? false,
       levarPerfilTotal: trans?.levarPerfilTotal ?? false,
       levarAcessorios: trans?.levarAcessorios ?? false,
+      levarVidros: trans?.levarVidros ?? false,
       transporteConcluido: trans?.transporteConcluido ?? false,
     },
     installationSteps: {

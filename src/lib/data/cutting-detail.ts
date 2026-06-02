@@ -36,6 +36,7 @@ export type CuttingDetail = {
     corte: boolean;
     embalagem: boolean;
     acessorios: boolean;
+    vidros: boolean;
   };
 };
 
@@ -63,6 +64,7 @@ export async function getCuttingDetailForOs(osId: string): Promise<CuttingDetail
       corteFeito: cuttingPlans.corteFeito,
       embalagemFeita: cuttingPlans.embalagemFeita,
       acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+      vidrosFeitos: cuttingPlans.vidrosFeitos,
     })
     .from(cuttingPlans)
     .where(eq(cuttingPlans.idMedicao, osId))
@@ -85,6 +87,7 @@ export async function getCuttingDetailForOs(osId: string): Promise<CuttingDetail
       corte: cut?.corteFeito ?? false,
       embalagem: cut?.embalagemFeita ?? false,
       acessorios: cut?.acessoriosFeitos ?? false,
+      vidros: cut?.vidrosFeitos ?? false,
     },
   };
 }

@@ -25,7 +25,7 @@ export function KanbanPhaseColumn({
 }: KanbanPhaseColumnProps) {
   return (
     <div className="flex h-full min-w-0 flex-col rounded-md border bg-muted/30 p-1 sm:p-1.5">
-      <div className="mb-1 rounded-sm bg-muted px-1 py-1.5 sm:mb-1.5 sm:px-2 sm:py-2">
+      <div className="mb-1 rounded-sm bg-primary/20 text-primary px-1 py-1.5 sm:mb-1.5 sm:px-2 sm:py-2">
         <div className="flex items-center justify-between gap-0.5 sm:gap-1">
           <span
             className="truncate text-[9px] font-bold leading-tight tracking-wide sm:text-xs"
@@ -34,7 +34,7 @@ export function KanbanPhaseColumn({
             <span className="sm:hidden">{phase.shortTitle}</span>
             <span className="hidden sm:inline">{phase.title}</span>
           </span>
-          <span className="shrink-0 rounded-full bg-primary/15 px-1 py-px text-[9px] font-semibold tabular-nums text-primary sm:px-2 sm:py-0.5 sm:text-[10px]">
+          <span className="shrink-0 rounded-full bg-primary/50 px-1 py-px text-[9px] font-semibold tabular-nums text-primary-foreground sm:px-2 sm:py-0.5 sm:text-[10px]">
             {items.length}
           </span>
         </div>

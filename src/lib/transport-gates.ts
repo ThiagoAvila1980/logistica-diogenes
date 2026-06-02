@@ -6,7 +6,8 @@
  *   levarPerfilEstrutural → corteFeito
  *   levarPerfilTotal      → embalagemFeita
  *   levarAcessorios       → acessoriosFeitos
- *   transporteConcluido   → as 3 entregas anteriores concluídas
+ *   levarVidros           → vidrosFeitos
+ *   transporteConcluido   → as 4 entregas anteriores concluídas
  */
 
 import type { OsStatus } from "@/db/schema";
@@ -71,6 +72,7 @@ export function isTransportFullyDone(transport: TransportSteps): boolean {
     transport.levarPerfilEstrutural &&
     transport.levarPerfilTotal &&
     transport.levarAcessorios &&
+    transport.levarVidros &&
     transport.transporteConcluido
   );
 }
@@ -79,7 +81,8 @@ export function hasPendingCuttingSteps(cutting: CuttingSteps): boolean {
   return (
     !cutting.corteFeito ||
     !cutting.embalagemFeita ||
-    !cutting.acessoriosFeitos
+    !cutting.acessoriosFeitos ||
+    !cutting.vidrosFeitos
   );
 }
 
@@ -96,12 +99,14 @@ export type CuttingSteps = {
   corteFeito: boolean;
   embalagemFeita: boolean;
   acessoriosFeitos: boolean;
+  vidrosFeitos: boolean;
 };
 
 export type TransportSteps = {
   levarPerfilEstrutural: boolean;
   levarPerfilTotal: boolean;
   levarAcessorios: boolean;
+  levarVidros: boolean;
   transporteConcluido: boolean;
 };
 
@@ -120,6 +125,7 @@ export type TransportGates = {
   levarPerfilEstrutural: TransportGate;
   levarPerfilTotal: TransportGate;
   levarAcessorios: TransportGate;
+  levarVidros: TransportGate;
   transporteConcluido: TransportGate;
 };
 
@@ -150,11 +156,13 @@ export function getTransportGates(
   const perfilOk = cutting.corteFeito;
   const totalOk = cutting.embalagemFeita;
   const acessoriosOk = cutting.acessoriosFeitos;
+  const vidrosOk = cutting.vidrosFeitos;
 
   const deliveriesDone =
     transport.levarPerfilEstrutural &&
     transport.levarPerfilTotal &&
-    transport.levarAcessorios;
+    transport.levarAcessorios &&
+    transport.levarVidros;
 
   return {
     levarPerfilEstrutural: {
@@ -173,6 +181,10 @@ export function getTransportGates(
       unlocked: acessoriosOk,
       lockedReason: acessoriosOk ? null : "Aguardando acessórios serem separados",
     },
+    levarVidros: {
+      unlocked: vidrosOk,
+      lockedReason: vidrosOk ? null : "Aguardando vidros serem separados",
+    },
     transporteConcluido: {
       unlocked: deliveriesDone,
       lockedReason: deliveriesDone
@@ -187,7 +199,11 @@ export function getInstallationGates(
   cutting: CuttingSteps,
 ): InstallationGates {
   const estruturalOk = cutting.corteFeito;
-  const vidrosOk = cutting.acessoriosFeitos || transport.levarAcessorios;
+  const vidrosOk =
+    cutting.vidrosFeitos ||
+    transport.levarVidros ||
+    cutting.acessoriosFeitos ||
+    transport.levarAcessorios;
 
   return {
     instalacaoEstrutural: {
@@ -200,7 +216,7 @@ export function getInstallationGates(
       unlocked: vidrosOk,
       lockedReason: vidrosOk
         ? null
-        : "Aguardando separação dos acessórios ou entrega na obra",
+        : "Aguardando separação dos vidros ou entrega na obra",
     },
   };
 }

@@ -327,7 +327,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight lg:text-xl">
+          <h1 className="text-lg font-bold tracking-tight text-primary lg:text-xl">
             Kanban — Ordens de Serviço
           </h1>
           <p className="text-[11px] tabular-nums text-muted-foreground">

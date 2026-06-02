@@ -10,6 +10,7 @@ import {
   Wrench,
   Layers,
   BadgeCheck,
+  PanelTop,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -94,6 +95,21 @@ const STEPS: StepConfig[] = [
     },
   },
   {
+    key: "levarVidros",
+    label: "Levar Vidros",
+    shortLabel: "Vidros",
+    description: "Vidros carregados e entregues na obra",
+    icon: PanelTop,
+    color: {
+      unlocked: "border-info-border bg-info-muted/80",
+      done: "border-success-border bg-success-muted",
+      locked: "border-border bg-muted/30",
+      badge: "bg-info-muted text-info-foreground",
+      badgeDone: "bg-success-subtle text-success-foreground",
+      icon: "text-info",
+    },
+  },
+  {
     key: "transporteConcluido",
     label: "Transporte Total Concluído",
     shortLabel: "Concluído",
@@ -167,7 +183,7 @@ export function TransportChecklist({
 
         {/* Mini barra de progresso */}
         <div className="flex gap-1.5 pt-1">
-          {STEPS.slice(0, 3).map((s) => {
+          {STEPS.filter((s) => s.key !== "transporteConcluido").map((s) => {
             const done = steps[s.key];
             const gate = gates[s.key];
             return (

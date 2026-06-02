@@ -8,12 +8,14 @@ export type CuttingSteps = {
   corte: boolean;
   embalagem: boolean;
   acessorios: boolean;
+  vidros: boolean;
 };
 
 export type TransportKanbanSteps = {
   levarPerfilEstrutural: boolean;
   levarPerfilTotal: boolean;
   levarAcessorios: boolean;
+  levarVidros: boolean;
   transporteConcluido: boolean;
 };
 

@@ -12,6 +12,7 @@ const STEP_LABELS = [
   { key: "corte" as const, label: "Corte" },
   { key: "embalagem" as const, label: "Embal." },
   { key: "acessorios" as const, label: "Acess." },
+  { key: "vidros" as const, label: "Vidr." },
 ];
 
 export default async function ProductionIndexPage() {
@@ -36,6 +37,7 @@ export default async function ProductionIndexPage() {
       corteFeito: steps.corte,
       embalagemFeita: steps.embalagem,
       acessoriosFeitos: steps.acessorios,
+      vidrosFeitos: steps.vidros,
     });
   });
 
@@ -58,9 +60,10 @@ export default async function ProductionIndexPage() {
               corte: false,
               embalagem: false,
               acessorios: false,
+              vidros: false,
             };
             const doneCount = Object.values(steps).filter(Boolean).length;
-            const allDone = doneCount === 3;
+            const allDone = doneCount === 4;
 
             return (
               <li key={o.id}>
