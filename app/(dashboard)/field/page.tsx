@@ -1,6 +1,7 @@
 import { listServiceOrders } from "@/lib/data/orders";
 import { FieldOrderCardWithDelete } from "@/components/field/field-order-card-with-delete";
 import { CreateMeasurementDialog } from "@/components/field/create-measurement-dialog";
+import { PageHeading } from "@/components/dashboard/page-heading";
 import { getSession } from "@/lib/auth/session";
 import { hasAnyRole } from "@/lib/auth/permissions";
 
@@ -13,20 +14,12 @@ export default async function FieldIndexPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold sm:text-2xl">Medições</h1>
-          {fieldOrders.length > 0 && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-              {fieldOrders.length}
-            </span>
-          )}
-        </div>
+      <PageHeading title="Medições" count={fieldOrders.length}>
         {canCreate && <CreateMeasurementDialog />}
-      </div>
+      </PageHeading>
 
       {fieldOrders.length === 0 ? (
-        <div className="rounded-xl border border-dashed bg-card p-8 text-center">
+        <div className="rounded-xl border border-dashed border-primary/20 bg-card p-8 text-center premium-card">
           <p className="text-sm text-muted-foreground">
             {canCreate
               ? "Nenhuma medição pendente. Toque em Nova Medição para iniciar."

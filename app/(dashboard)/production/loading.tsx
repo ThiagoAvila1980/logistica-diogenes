@@ -1,7 +1,7 @@
 export default function ProductionLoading() {
   return (
-    <div className="p-6 lg:p-8">
-      <header className="mb-6">
+    <>
+      <header className="mb-4 sm:mb-6">
         <div className="h-7 w-40 animate-pulse rounded bg-muted" />
         <div className="mt-1 h-4 w-64 animate-pulse rounded bg-muted" />
       </header>
@@ -22,6 +22,6 @@ export default function ProductionLoading() {
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
 }

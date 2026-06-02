@@ -26,16 +26,16 @@ export default async function ProductionOsPage({ params }: Props) {
   const { measurement, cuttingSteps } = detail;
 
   return (
-    <div className="p-6 lg:p-8">
-      <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2">
+    <>
+      <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2 sm:mb-4">
         <Link href="/production">
           <ArrowLeft className="h-4 w-4" />
           Voltar ao plano de corte
         </Link>
       </Button>
 
-      <div className="mb-6">
-        <h1 className="font-mono text-2xl font-bold">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="font-mono text-xl font-bold sm:text-2xl">
           {getOrderDisplayNumber(order)}
         </h1>
         <p className="mt-1 text-base font-medium text-muted-foreground">
@@ -72,6 +72,6 @@ export default async function ProductionOsPage({ params }: Props) {
           </Card>
         )}
       </div>
-    </div>
+    </>
   );
 }

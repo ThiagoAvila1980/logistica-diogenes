@@ -6,15 +6,14 @@ import { formatBrDate } from "@/lib/date-format";
 import { cn } from "@/lib/utils";
 
 const PRIORITY_BORDER: Record<string, string> = {
-  urgente: "border-l-[3px] border-l-red-500",
-  alta: "border-l-[3px] border-l-amber-500",
-  normal: "border-l-[3px] border-l-transparent",
+  urgente: "border-l-[3px] border-l-destructive",
+  alta: "border-l-[3px] border-l-brass",
+  normal: "border-l-[3px] border-l-primary/20",
 };
 
 const PRIORITY_PILL: Record<string, string | undefined> = {
-  urgente:
-    "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  alta: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  urgente: "bg-destructive/10 text-destructive",
+  alta: "bg-brass-subtle text-brass-foreground",
 };
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -35,14 +34,14 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
     <Link
       href={`/field/${order.id}`}
       className={cn(
-        "flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-all",
-        "active:scale-[0.98] hover:border-primary/30 hover:shadow-md",
+        "group flex items-center gap-3 rounded-xl border border-primary/10 bg-card p-4 shadow-[var(--shadow-card)] transition-all",
+        "active:scale-[0.98] hover:border-primary/30 hover:shadow-[var(--shadow-brand)]",
         PRIORITY_BORDER[order.priority],
       )}
     >
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-semibold text-muted-foreground">
+          <span className="font-mono text-sm font-semibold text-primary">
             {displayNumber}
           </span>
           {priorityPill && (
@@ -64,8 +63,8 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
             className={cn(
               "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
               order.hasMeasurement
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                : "bg-muted text-muted-foreground",
+                ? "bg-success-subtle text-success-foreground"
+                : "bg-primary/8 text-primary",
             )}
           >
             {order.hasMeasurement ? "Medida" : "Pendente"}
@@ -75,8 +74,8 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
             className={cn(
               "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
               isFinal
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                ? "bg-brass-subtle text-brass-foreground ring-1 ring-brass-border/60"
+                : "bg-accent text-accent-foreground",
             )}
           >
             {isFinal ? "Final" : "Orçamento"}
@@ -91,7 +90,7 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
         </div>
       </div>
 
-      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+      <ChevronRight className="h-5 w-5 shrink-0 text-primary/30 transition-colors group-hover:text-primary" />
     </Link>
   );
 }

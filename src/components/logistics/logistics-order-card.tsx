@@ -53,7 +53,7 @@ export function LogisticsOrderCard({
                 order.status.startsWith("transporte_") &&
                   order.status !== "transporte_levar_vidro" &&
                   !logistics?.vehiclePlate &&
-                  "text-amber-600 dark:text-amber-500",
+                  "text-warning",
               )}
             >
               <Truck className="h-3 w-3 shrink-0" />

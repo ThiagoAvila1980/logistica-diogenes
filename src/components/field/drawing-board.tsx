@@ -434,7 +434,7 @@ export function DrawingBoard({
   };
 
   const toolbar = (
-    <div className="flex w-12 shrink-0 flex-col items-center gap-1.5 overflow-y-auto border-l bg-slate-800 p-1.5 sm:w-14">
+    <div className="flex w-12 shrink-0 flex-col items-center gap-1.5 overflow-y-auto border-l bg-inverse p-1.5 sm:w-14">
       <ToolbarButton
         onClick={() => {
           setFullscreen((current) => {
@@ -454,7 +454,7 @@ export function DrawingBoard({
         )}
       </ToolbarButton>
 
-      <div className="my-0.5 h-px w-full bg-slate-600" />
+      <div className="my-0.5 h-px w-full bg-inverse-muted" />
 
       <ToolbarButton
         active={tool === "pen"}
@@ -473,7 +473,7 @@ export function DrawingBoard({
         <Eraser className="h-4 w-4" />
       </ToolbarButton>
 
-      <div className="my-0.5 h-px w-full bg-slate-600" />
+      <div className="my-0.5 h-px w-full bg-inverse-muted" />
 
       <label
         className="cursor-pointer"
@@ -501,7 +501,7 @@ export function DrawingBoard({
         className="h-16 w-8 accent-primary [writing-mode:vertical-lr]"
       />
 
-      <div className="my-0.5 h-px w-full bg-slate-600" />
+      <div className="my-0.5 h-px w-full bg-inverse-muted" />
 
       <ToolbarButton
         onClick={undo}
@@ -562,7 +562,7 @@ export function DrawingBoard({
     <div
       className={cn(
         "overflow-hidden rounded-lg border bg-muted/20",
-        dirty && !disabled && "border-amber-500 ring-1 ring-amber-500/40",
+        dirty && !disabled && "border-warning ring-1 ring-warning/40",
         fullscreen && "fixed inset-0 z-[100] flex flex-col rounded-none border-0",
         disabled && "pointer-events-none opacity-60",
         className,
@@ -579,7 +579,7 @@ export function DrawingBoard({
       </div>
 
       {dirty && !disabled && !savedHint && (
-        <p className="shrink-0 border-t bg-amber-500/10 px-3 py-1.5 text-center text-xs font-medium text-amber-800 dark:text-amber-200">
+        <p className="shrink-0 border-t bg-warning-muted px-3 py-1.5 text-center text-xs font-medium text-warning-foreground">
           Desenho alterado — toque em Salvar na barra lateral
         </p>
       )}
@@ -620,7 +620,7 @@ function ToolbarButton({
       disabled={disabled}
       title={title}
       className={cn(
-        "h-9 w-9 text-white hover:bg-slate-700 hover:text-white",
+        "h-9 w-9 text-inverse-foreground hover:bg-inverse-muted hover:text-inverse-foreground",
         active && "bg-primary text-primary-foreground hover:bg-primary/90",
         disabled && "opacity-30",
       )}

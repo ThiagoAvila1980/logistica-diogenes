@@ -114,7 +114,7 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
                 className={cn(
                   "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors",
                   done
-                    ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20"
+                    ? "border-success-border bg-success-muted"
                     : "border-border bg-card hover:bg-muted/50",
                   isLoading && "opacity-60",
                 )}
@@ -129,7 +129,7 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
                     className={cn(
                       "shrink-0",
                       done &&
-                        "border-emerald-500 bg-emerald-500 dark:border-emerald-400 dark:bg-emerald-600",
+                        "border-success bg-success",
                     )}
                   />
                 )}
@@ -138,7 +138,7 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
                     className={cn(
                       "block text-sm font-semibold leading-tight",
                       done
-                        ? "text-emerald-700 dark:text-emerald-400"
+                        ? "text-success-foreground"
                         : "text-foreground",
                     )}
                   >
@@ -152,7 +152,7 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
                   </p>
                 </div>
                 {done ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
                 ) : null}
               </label>
             );
@@ -160,15 +160,15 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
         </div>
 
         {allDone && (
-          <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <AlertDescription className="flex items-center justify-between gap-3 text-emerald-700 dark:text-emerald-400">
+          <Alert variant="success">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between gap-3">
               <span>Todas as etapas de corte concluídas.</span>
               <Button
                 size="sm"
                 onClick={handleAdvanceToTransport}
                 disabled={isAdvancing}
-                className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="shrink-0 bg-success text-primary-foreground hover:bg-success/90"
               >
                 {isAdvancing ? (
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />

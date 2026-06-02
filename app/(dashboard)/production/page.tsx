@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeading } from "@/components/dashboard/page-heading";
 import { listServiceOrders } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { getOrderDisplayNumber } from "@/lib/order-display";
@@ -39,13 +40,12 @@ export default async function ProductionIndexPage() {
   });
 
   return (
-    <div className="p-6 lg:p-8">
-      <header className="mb-6">
-        <h1 className="text-xl font-bold sm:text-2xl">Plano de corte</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Perfis, vidros, acessórios e embalagem.
-        </p>
-      </header>
+    <div className="space-y-4">
+      <PageHeading
+        title="Plano de corte"
+        count={orders.length}
+        description="Perfis, vidros, acessórios e embalagem."
+      />
 
       <ul className="space-y-3">
         {orders.length === 0 ? (
@@ -67,28 +67,28 @@ export default async function ProductionIndexPage() {
                 <Link
                   href={`/production/${o.id}`}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-muted/50",
+                    "flex flex-col gap-3 rounded-xl border px-4 py-3 transition-all hover:border-primary/25 hover:shadow-[var(--shadow-card)] sm:flex-row sm:items-center",
                     allDone
-                      ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/10"
-                      : "border-border bg-card",
+                      ? "border-success-border bg-success-muted premium-card"
+                      : "border-primary/10 bg-card premium-card",
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-mono text-sm font-semibold">
+                    <p className="font-mono text-sm font-semibold text-primary">
                       {getOrderDisplayNumber(o)}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {o.clientName}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-1.5">
+                  <div className="flex flex-wrap gap-1.5 sm:shrink-0">
                     {STEP_LABELS.map(({ key, label }) => (
                       <span
                         key={key}
                         className={cn(
                           "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
                           steps[key]
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
                         )}
                       >

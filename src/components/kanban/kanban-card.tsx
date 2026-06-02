@@ -12,8 +12,8 @@ import { KanbanStatusBadge } from "./kanban-status-badge";
 
 const PRIORITY_BORDER: Record<string, string> = {
   normal: "border-l-border",
-  alta: "border-l-orange-500",
-  urgente: "border-l-red-500",
+  alta: "border-l-brass",
+  urgente: "border-l-destructive",
 };
 
 const MEASUREMENT_PHASE = "medicao";
@@ -123,7 +123,7 @@ export function KanbanCard({
                     className={cn(
                       "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
                       os.hasMeasurement
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        ? "bg-success-subtle text-success-foreground"
                         : "bg-muted text-muted-foreground",
                     )}
                   >
@@ -133,8 +133,8 @@ export function KanbanCard({
                     className={cn(
                       "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
                       isFinal
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                        ? "bg-accent text-primary"
+                        : "bg-warning-subtle text-warning-foreground",
                     )}
                   >
                     {isFinal ? "Final" : "Orçamento"}
@@ -156,7 +156,7 @@ export function KanbanCard({
                         className={cn(
                           "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
                           done
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
                         )}
                       >
@@ -181,7 +181,7 @@ export function KanbanCard({
                         className={cn(
                           "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
                           done
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
                         )}
                       >
@@ -205,7 +205,7 @@ export function KanbanCard({
                         className={cn(
                           "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
                           done
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
                         )}
                       >

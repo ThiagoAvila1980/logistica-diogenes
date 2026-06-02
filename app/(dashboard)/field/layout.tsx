@@ -3,9 +3,5 @@ export default function FieldLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="w-full p-4 sm:p-6 lg:p-8">
-      {children}
-    </div>
-  );
+  return <div className="w-full">{children}</div>;
 }

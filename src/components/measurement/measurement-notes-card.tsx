@@ -18,13 +18,13 @@ export function MeasurementNotesCard({ notes, className }: Props) {
   return (
     <Card
       className={cn(
-        "border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10",
+        "border-warning-border bg-warning-muted/50",
         className,
       )}
     >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <StickyNote className="h-4 w-4 text-amber-600" />
+          <StickyNote className="h-4 w-4 text-warning" />
           Observações da medição
         </CardTitle>
       </CardHeader>

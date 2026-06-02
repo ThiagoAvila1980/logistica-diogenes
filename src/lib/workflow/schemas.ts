@@ -9,13 +9,22 @@ export const installationPhotosStorageSchema = z.object({
   service: z.array(z.string()).optional(),
 });
 
+const positiveDimension = z.coerce.number().positive();
+const extraDimensions = z.array(positiveDimension).optional();
+
 /** Item de medição em campo (desenho + ambiente + dimensões por peça) */
 export const measurementLineItemSchema = z.object({
   id: z.string().min(1),
   idAmbiente: z.string().uuid().nullish(),
   qty: z.coerce.number().int().positive(),
-  largura: z.coerce.number().positive(),
-  altura: z.coerce.number().positive(),
+  largura: positiveDimension,
+  altura: positiveDimension,
+  /** Larguras adicionais (ex.: vão superior e inferior em arco) */
+  largurasExtras: extraDimensions,
+  /** Alturas adicionais (ex.: lateral e central em arco) */
+  alturasExtras: extraDimensions,
+  /** UI: seção de medidas irregulares expandida no formulário */
+  mostrarMedidasExtras: z.boolean().optional(),
   idCor: z.string().uuid().nullish(),
   idTipoVidro: z.string().uuid().nullish(),
   idTipoEnvidracamento: z.string().uuid().nullish(),

@@ -64,7 +64,7 @@ export function StageProblemReport({
       variant="ghost"
       size="sm"
       className={cn(
-        "h-8 gap-1.5 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20",
+        "h-8 gap-1.5 text-warning hover:bg-warning-muted hover:text-warning-foreground",
         variant === "card-header" && "shrink-0",
         className,
       )}
@@ -85,16 +85,16 @@ export function StageProblemReport({
       )}
 
       {alertSuccess && (
-        <Alert className="border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-900/20">
-          <AlertDescription className="text-sky-800 dark:text-sky-300">
+        <Alert variant="info">
+          <AlertDescription>
             Notificação enviada para admin e gerente.
           </AlertDescription>
         </Alert>
       )}
 
       {showAlert && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-          <p className="mb-2 text-sm font-medium text-amber-800 dark:text-amber-300">
+        <div className="rounded-lg border border-warning-border bg-warning-muted p-4">
+          <p className="mb-2 text-sm font-medium text-warning-foreground">
             Descreva o problema na etapa de {STAGE_LABELS[stage]} para notificar
             admin e gerente:
           </p>
@@ -116,7 +116,7 @@ export function StageProblemReport({
               type="button"
               onClick={handleSendAlert}
               disabled={alertPending || !alertText.trim()}
-              className="gap-1.5 bg-amber-600 hover:bg-amber-700"
+              className="gap-1.5 bg-warning text-primary-foreground hover:bg-warning/90"
             >
               {alertPending ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

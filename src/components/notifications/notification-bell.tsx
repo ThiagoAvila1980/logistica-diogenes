@@ -245,7 +245,7 @@ export function NotificationBell({
       ? createPortal(
           <>
             <div
-              className="fixed inset-0 z-[200] bg-black/20"
+              className="fixed inset-0 z-[200] bg-overlay/20"
               aria-hidden
               onClick={() => setOpen(false)}
             />

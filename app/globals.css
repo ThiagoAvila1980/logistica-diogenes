@@ -5,40 +5,140 @@
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, "Liberation Mono", "Courier New", monospace;
-  --color-background: oklch(0.99 0 0);
-  --color-foreground: oklch(0.2 0.02 260);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.2 0.02 260);
-  --color-primary: oklch(0.45 0.12 250);
-  --color-primary-foreground: oklch(0.99 0 0);
-  --color-secondary: oklch(0.95 0.01 260);
-  --color-secondary-foreground: oklch(0.3 0.02 260);
-  --color-muted: oklch(0.96 0.005 260);
-  --color-muted-foreground: oklch(0.5 0.02 260);
-  --color-accent: oklch(0.94 0.02 250);
-  --color-accent-foreground: oklch(0.25 0.03 260);
-  --color-destructive: oklch(0.55 0.2 25);
-  --color-destructive-foreground: oklch(0.99 0 0);
-  --color-border: oklch(0.9 0.01 260);
-  --color-input: oklch(0.9 0.01 260);
-  --color-ring: oklch(0.45 0.12 250);
+
+  /* Marca */
+  --color-background: #fcfcfc;
+  --color-foreground: #11161f;
+  --color-primary: #0e5794;
+  --color-primary-dark: #0a4270;
+  --color-primary-light: #1570b8;
+  --color-primary-foreground: #fcfcfc;
+  --color-brass: #c9a55a;
+  --color-brass-foreground: #6b4e2e;
+  --color-brass-muted: #f7f2ea;
+  --color-brass-subtle: #ede4d4;
+  --color-brass-border: #dcc99a;
+
+  /* Superfícies */
+  --color-card: #ffffff;
+  --color-card-foreground: #11161f;
+  --color-secondary: #e8f0f8;
+  --color-secondary-foreground: #1a3048;
+  --color-muted: #f2f6fa;
+  --color-muted-foreground: #4a5568;
+  --color-accent: #dbeaf5;
+  --color-accent-foreground: #0e5794;
+  --color-border: #d0dbe8;
+  --color-input: #d0dbe8;
+  --color-ring: #0e5794;
+
+  /* Semânticas */
+  --color-destructive: #cc272e;
+  --color-destructive-foreground: #fcfcfc;
+  --color-success: #059669;
+  --color-success-foreground: #047857;
+  --color-success-muted: #ecfdf5;
+  --color-success-subtle: #d1fae5;
+  --color-success-border: #a7f3d0;
+  --color-warning: #d97706;
+  --color-warning-foreground: #92400e;
+  --color-warning-muted: #fffbeb;
+  --color-warning-subtle: #fef3c7;
+  --color-warning-border: #fde68a;
+  --color-info: #0284c7;
+  --color-info-foreground: #075985;
+  --color-info-muted: #f0f9ff;
+  --color-info-border: #bae6fd;
+  --color-overlay: #11161f;
+  --color-inverse: #0a4270;
+  --color-inverse-foreground: #fcfcfc;
+  --color-inverse-muted: #5d8ab0;
+
   --radius-lg: 0.75rem;
+  --shadow-brand: 0 4px 24px -4px color-mix(in srgb, #0e5794 18%, transparent);
+  --shadow-card: 0 1px 3px color-mix(in srgb, #0e5794 6%, transparent),
+    0 4px 16px -6px color-mix(in srgb, #0e5794 10%, transparent);
+
+  /* Chrome mobile (header + bottom nav) */
+  --mobile-bar: 3.5rem;
+  --spacing-safe-top: env(safe-area-inset-top, 0px);
+  --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-header-total: calc(var(--mobile-bar) + var(--spacing-safe-top));
+  --mobile-nav-total: calc(var(--mobile-bar) + var(--spacing-safe-bottom));
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(
+      ellipse 120% 80% at 50% -20%,
+      color-mix(in srgb, var(--color-primary) 5%, transparent),
+      transparent 55%
+    );
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    color: var(--color-primary-dark);
   }
 }
 
 @layer utilities {
   .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--spacing-safe-top);
   }
+
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--spacing-safe-bottom);
+  }
+
+  .mobile-header-offset {
+    padding-top: var(--mobile-header-total);
+  }
+
+  .mobile-nav-offset {
+    padding-bottom: var(--mobile-nav-total);
+  }
+
+  .mobile-page {
+    @apply px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 lg:px-8 lg:py-8;
+  }
+
+  .mobile-form-offset {
+    padding-bottom: calc(var(--mobile-nav-total) + 4.75rem);
+  }
+
+  .mobile-action-bar {
+    bottom: var(--mobile-nav-total);
+  }
+
+  .brand-panel {
+    background: linear-gradient(
+      165deg,
+      var(--color-primary-dark) 0%,
+      var(--color-primary) 45%,
+      color-mix(in srgb, var(--color-primary-light) 80%, var(--color-primary)) 100%
+    );
+  }
+
+  .brass-rule {
+    @apply h-0.5 w-10 rounded-full bg-brass;
+  }
+
+  .page-heading {
+    @apply text-xl font-bold tracking-tight text-primary sm:text-2xl;
+  }
+
+  .page-heading-rule {
+    @apply mt-1.5 h-0.5 w-10 rounded-full bg-brass;
+  }
+
+  .premium-card {
+    box-shadow: var(--shadow-card);
+    @apply border-primary/10;
   }
 }

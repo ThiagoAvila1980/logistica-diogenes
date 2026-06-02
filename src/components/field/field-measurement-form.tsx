@@ -63,6 +63,12 @@ import { buildWhatsAppUrl } from "@/lib/phone-format";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { countItemPhotos, mergeLegacyDraftPhotos } from "@/lib/measurement/item-photos";
 import { uploadPendingItemPhotos } from "@/lib/measurement/upload-item-photos-client";
+import {
+  formatDimensionsSummary,
+  hasValidItemDimensions,
+  sanitizeMeasurementItem,
+} from "@/lib/measurement/dimensions";
+import { cn } from "@/lib/utils";
 
 type FieldMeasurementFormProps = {
   order: OrderDetail;
@@ -208,9 +214,9 @@ export function FieldMeasurementForm({
       _prev: SaveFieldMeasurementResult | null,
       formData: FormData,
     ): Promise<SaveFieldMeasurementResult> => {
-      const itemsToSubmit = items.filter(
-        (item) => item.qty > 0 && item.largura > 0 && item.altura > 0,
-      );
+      const itemsToSubmit = items
+        .filter(hasValidItemDimensions)
+        .map(sanitizeMeasurementItem);
 
       const uploaded = await uploadPendingItemPhotos(
         order.id,
@@ -369,13 +375,9 @@ export function FieldMeasurementForm({
     setConfirmOpen(true);
   }
 
-  const hasValidItem = items.some(
-    (item) => item.qty > 0 && item.largura > 0 && item.altura > 0,
-  );
+  const hasValidItem = items.some(hasValidItemDimensions);
 
-  const validItems = items.filter(
-    (item) => item.qty > 0 && item.largura > 0 && item.altura > 0,
-  );
+  const validItems = items.filter(hasValidItemDimensions);
 
   const totalPhotoCount = validItems.reduce(
     (sum, item) =>
@@ -401,8 +403,18 @@ export function FieldMeasurementForm({
       activeHeaderDraft?.numeroOrcamento ?? currentDraft?.numeroOrcamento,
   });
   return (
-    <div className="flex flex-col gap-4 pb-24">
-      <section className="rounded-xl border bg-card p-4 shadow-sm">
+    <div className="flex flex-col gap-4 mobile-form-offset md:pb-0">
+      <section className="relative rounded-xl border bg-card p-4 shadow-sm">
+        {canDelete && (
+          <div className="absolute right-1 top-1 z-10 sm:right-2 sm:top-2">
+            <DeleteMeasurementDialog
+              osId={order.id}
+              displayNumber={displayNumeroOrcamento}
+              clientName={displayCliente ?? order.clientName}
+            />
+          </div>
+        )}
+
         <div className="flex items-start gap-2">
           <Button
             asChild
@@ -415,41 +427,33 @@ export function FieldMeasurementForm({
             </Link>
           </Button>
 
-          <div className="min-w-0 flex-1">
+          <div className={cn("min-w-0 flex-1", canDelete && "pr-8")}>
             <div className="min-w-0">
-              <p className="truncate font-semibold leading-tight">
+              <p className="truncate text-xl font-semibold leading-tight text-primary">
                 {displayCliente}
               </p>
-              <p className="font-mono text-xs tabular-nums text-muted-foreground">
+              <p className="font-mono text-xl tabular-nums text-muted-foreground">
                 {displayNumeroOrcamento}
               </p>
             </div>
 
-            {(displayTelefone || canDelete) && (
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                {displayTelefone &&
-                  (whatsAppUrl ? (
-                    <a
-                      href={whatsAppUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm text-[#25D366] underline-offset-2 hover:underline"
-                      aria-label={`Abrir WhatsApp de ${displayTelefone}`}
-                    >
-                      <WhatsAppIcon className="h-3.5 w-3.5" />
-                      {displayTelefone}
-                    </a>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">
-                      {displayTelefone}
-                    </span>
-                  ))}
-                {canDelete && (
-                  <DeleteMeasurementDialog
-                    osId={order.id}
-                    displayNumber={displayNumeroOrcamento}
-                    clientName={displayCliente ?? order.clientName}
-                  />
+            {displayTelefone && (
+              <div className="mt-2.5">
+                {whatsAppUrl ? (
+                  <a
+                    href={whatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
+                    aria-label={`Abrir WhatsApp de ${displayTelefone}`}
+                  >
+                    <WhatsAppIcon className="h-3.5 w-3.5" />
+                    {displayTelefone}
+                  </a>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    {displayTelefone}
+                  </span>
                 )}
               </div>
             )}
@@ -596,7 +600,7 @@ export function FieldMeasurementForm({
         ) : null}
 
         {allowedActions.length > 0 && !viewMode ? (
-          <div className="fixed inset-x-0 bottom-[calc(3.25rem+env(safe-area-inset-bottom,0px))] z-30 border-t bg-card/95 p-3 backdrop-blur md:static md:mt-2 md:rounded-xl md:border md:p-4 md:shadow-sm">
+          <div className="mobile-action-bar fixed inset-x-0 z-30 border-t bg-card/95 p-3 backdrop-blur md:static md:mt-2 md:rounded-xl md:border md:p-4 md:shadow-sm">
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -637,7 +641,7 @@ export function FieldMeasurementForm({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+              <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
               Desenho não salvo
             </DialogTitle>
             <DialogDescription>
@@ -647,7 +651,7 @@ export function FieldMeasurementForm({
             </DialogDescription>
           </DialogHeader>
 
-          <ul className="list-inside list-disc space-y-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm">
+          <ul className="list-inside list-disc space-y-1 rounded-md border border-warning/30 bg-warning-muted px-3 py-2 text-sm">
             {unsavedDrawingItems.map(({ index }) => (
               <li key={index}>Medição {index + 1}</li>
             ))}
@@ -699,7 +703,7 @@ export function FieldMeasurementForm({
                         `Medição ${index + 1}`}
                     </span>
                     <span className="font-mono tabular-nums">
-                      {item.qty} × {item.largura} × {item.altura} mm
+                      {formatDimensionsSummary(item)}
                     </span>
                     <span className="w-full text-xs text-muted-foreground">
                       {item.drawingUrl ? "Com desenho" : "Sem desenho"}
@@ -748,7 +752,7 @@ export function FieldMeasurementForm({
             <DialogTitle className="flex items-center gap-2">
               {saveResult?.success ? (
                 <>
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                   Medição salva
                 </>
               ) : (

@@ -69,13 +69,13 @@ export function InstallationServicePhotos({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Camera className="h-4 w-4 text-lime-600" />
+          <Camera className="h-4 w-4 text-success" />
           Fotos do serviço
           {saving && (
             <Loader2 className="ml-auto h-4 w-4 animate-spin text-muted-foreground" />
           )}
           {!saving && saved && (
-            <CheckCircle2 className="ml-auto h-4 w-4 text-emerald-600" />
+            <CheckCircle2 className="ml-auto h-4 w-4 text-success" />
           )}
         </CardTitle>
       </CardHeader>

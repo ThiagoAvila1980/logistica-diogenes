@@ -80,7 +80,7 @@ export function ProductionMeasurementMedia({
                   className="overflow-hidden"
                 >
                   {slide.item.drawingUrl ? (
-                    <div className="border-b bg-white">
+                    <div className="border-b bg-card">
                       <DrawingPreview
                         src={slide.item.drawingUrl}
                         alt={`Desenho ${slide.index + 1}`}

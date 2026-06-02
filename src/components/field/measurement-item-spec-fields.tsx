@@ -28,7 +28,7 @@ export function MeasurementItemSpecFields({
   disabled = false,
 }: MeasurementItemSpecFieldsProps) {
   return (
-    <div className="mt-4 grid grid-cols-1 gap-4 min-[400px]:grid-cols-3">
+    <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
       <div className="space-y-2">
         <Label htmlFor={`cor-${itemId}`}>Cor do perfil</Label>
         <Select
@@ -75,7 +75,7 @@ export function MeasurementItemSpecFields({
         </Select>
       </div>
 
-      <div className="space-y-2">
+      <div className="col-span-2 space-y-2 md:col-span-1">
         <Label htmlFor={`envidracamento-${itemId}`}>Tipo de envidraçamento</Label>
         <Select
           id={`envidracamento-${itemId}`}

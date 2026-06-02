@@ -92,7 +92,7 @@ export function StatusWizard({
                     "flex shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300",
                     "h-7 w-7 md:h-10 md:w-10",
                     isCurrent &&
-                      "border-green-600 bg-green-600 text-white shadow-sm ring-2 ring-green-500/35 ring-offset-1 md:ring-offset-2",
+                      "border-brass bg-primary text-primary-foreground shadow-md ring-2 ring-brass/40 ring-offset-1 md:ring-offset-2",
                     isPast &&
                       !isCurrent &&
                       "border-primary bg-primary text-primary-foreground",
@@ -115,7 +115,7 @@ export function StatusWizard({
                 <span
                   className={cn(
                     "max-w-[3.25rem] text-center text-[10px] font-medium leading-tight sm:max-w-[3.75rem] md:ml-2 md:max-w-none md:whitespace-nowrap md:text-sm lg:text-base",
-                    isCurrent && "font-semibold text-green-700 dark:text-green-400",
+                    isCurrent && "font-semibold text-primary",
                     isPast && !isCurrent && "text-foreground",
                     !isPast && !isCurrent && "text-muted-foreground",
                   )}

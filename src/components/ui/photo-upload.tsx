@@ -242,7 +242,7 @@ export function PhotoUpload({
               )}
               <button
                 type="button"
-                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                className="absolute right-1 top-1 rounded-full bg-overlay/60 p-1 text-primary-foreground hover:bg-overlay/80"
                 onClick={() => removeItem(item.id)}
                 disabled={disabled || uploading}
                 aria-label="Remover foto"

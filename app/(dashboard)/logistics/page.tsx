@@ -1,6 +1,7 @@
 import { listServiceOrders } from "@/lib/data/orders";
 import { getLogisticsSummaries } from "@/lib/data/logistics";
 import { LogisticsOrderCard } from "@/components/logistics/logistics-order-card";
+import { PageHeading } from "@/components/dashboard/page-heading";
 import { Truck } from "lucide-react";
 
 export default async function LogisticsIndexPage() {
@@ -17,16 +18,13 @@ export default async function LogisticsIndexPage() {
   );
 
   return (
-    <div className="p-6 lg:p-8">
-      <header className="mb-6">
-        <div className="flex items-center gap-2">
-          <Truck className="h-6 w-6 text-primary" aria-hidden />
-          <h1 className="text-xl font-bold sm:text-2xl">Transporte</h1>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Checklist de carga, veículo em uso e comprovante de entrega.
-        </p>
-      </header>
+    <>
+      <PageHeading
+        title="Transporte"
+        count={logisticsOrders.length}
+        description="Checklist de carga, veículo em uso e comprovante de entrega."
+        icon={Truck}
+      />
 
       {logisticsOrders.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center">
@@ -46,6 +44,6 @@ export default async function LogisticsIndexPage() {
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }

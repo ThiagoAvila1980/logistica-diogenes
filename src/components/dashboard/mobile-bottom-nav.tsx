@@ -42,11 +42,11 @@ export function MobileBottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/90 md:hidden safe-bottom"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/10 bg-card/95 shadow-[0_-4px_24px_-8px_rgba(14,87,148,0.12)] backdrop-blur supports-[backdrop-filter]:bg-card/90 safe-bottom md:hidden"
       aria-label="Navegação principal"
     >
       <ul
-        className="grid"
+        className="grid h-14"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map(({ href, match }) => {
@@ -56,20 +56,29 @@ export function MobileBottomNav({
             pathname === match || pathname.startsWith(`${match}/`);
 
           return (
-            <li key={href}>
+            <li key={href} className="min-w-0">
               <Link
                 href={href}
                 prefetch={false}
                 className={cn(
-                  "flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 py-2 text-[10px] font-medium transition-colors",
+                  "relative flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium leading-none transition-colors",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
+                {active && (
+                  <span
+                    className="absolute inset-x-2 top-0 h-0.5 rounded-b-full bg-brass"
+                    aria-hidden
+                  />
+                )}
                 <Icon
-                  className={cn("h-5 w-5", active && "stroke-[2.5]")}
+                  className={cn(
+                    "h-[1.375rem] w-[1.375rem] shrink-0",
+                    active && "stroke-[2.5]",
+                  )}
                   aria-hidden
                 />
-                <span className="truncate">{label}</span>
+                <span className="max-w-full truncate">{label}</span>
               </Link>
             </li>
           );

@@ -63,7 +63,7 @@ export function DashboardShell({
       {menuOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-overlay/40 md:hidden"
           aria-label="Fechar menu"
           onClick={() => setMenuOpen(false)}
         />
@@ -90,12 +90,11 @@ export function DashboardShell({
         <main
           className={cn(
             "flex-1 overflow-x-hidden overflow-y-auto",
-            "pt-14 md:pt-0",
-            "pb-[calc(3.25rem+env(safe-area-inset-bottom,0px))] md:pb-0",
-            isField && "bg-muted",
+            "mobile-header-offset mobile-nav-offset md:pt-0 md:pb-0",
+            isField && "bg-gradient-to-b from-accent/40 to-muted/60",
           )}
         >
-          {children}
+          <div className="mobile-page">{children}</div>
         </main>
 
         <MobileBottomNav pathname={pathname} session={session} />

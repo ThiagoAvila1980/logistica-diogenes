@@ -161,7 +161,7 @@ export function DrawingPreview({
           "group relative block cursor-zoom-in border-0 p-0 text-left",
           isThumbnail
             ? "aspect-square w-full overflow-hidden rounded-lg border bg-muted"
-            : "w-full bg-white",
+            : "w-full bg-card",
           className,
         )}
         aria-label={`Ampliar ${alt}`}
@@ -178,7 +178,7 @@ export function DrawingPreview({
         />
         <span
           className={cn(
-            "pointer-events-none absolute flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+            "pointer-events-none absolute flex items-center gap-1 rounded-md bg-overlay/60 px-2 py-1 text-xs font-medium text-primary-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
             isThumbnail ? "bottom-2 right-2" : "bottom-3 right-3",
           )}
         >

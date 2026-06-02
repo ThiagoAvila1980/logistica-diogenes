@@ -12,10 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { clearStoredRoute } from "@/lib/navigation/masked-url";
+import { cn } from "@/lib/utils";
 
 const LOGOUT_URL = "/api/auth/logout";
 
-export function LogoutButton() {
+export function LogoutButton({ className }: { className?: string }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -34,7 +35,7 @@ export function LogoutButton() {
         type="button"
         variant="ghost"
         size="sm"
-        className="w-full justify-start gap-2 px-2"
+        className={cn("w-full justify-start gap-2 px-2", className)}
         disabled={pending}
         onClick={() => setOpen(true)}
       >

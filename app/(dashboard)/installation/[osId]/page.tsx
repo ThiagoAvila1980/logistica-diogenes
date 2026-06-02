@@ -22,11 +22,11 @@ export default async function InstallationOsPage({ params }: Props) {
 
   if (!canOperateInstallationModule(order.status, detail.cuttingSteps)) {
     return (
-      <div className="p-6 lg:p-8">
-        <div className="mb-6">
+      <>
+        <div className="mb-4 sm:mb-6">
           <div className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-lime-600" />
-            <h1 className="font-mono text-2xl font-bold">
+            <Wrench className="h-5 w-5 shrink-0 text-success" />
+            <h1 className="font-mono text-xl font-bold sm:text-2xl">
               {getOrderDisplayNumber(order)}
             </h1>
           </div>
@@ -40,23 +40,23 @@ export default async function InstallationOsPage({ params }: Props) {
             Aguardando conclusão do corte para liberar a instalação desta OS.
           </p>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="p-6 lg:p-8">
-      <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2">
+    <>
+      <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2 sm:mb-4">
         <Link href="/installation">
           <ArrowLeft className="h-4 w-4" />
           Voltar à instalação
         </Link>
       </Button>
 
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-lime-600" />
-          <h1 className="font-mono text-2xl font-bold">
+          <Wrench className="h-5 w-5 shrink-0 text-success" />
+          <h1 className="font-mono text-xl font-bold sm:text-2xl">
             {getOrderDisplayNumber(order)}
           </h1>
         </div>
@@ -77,7 +77,7 @@ export default async function InstallationOsPage({ params }: Props) {
         <MeasurementNotesCard notes={order.notes} className="mt-4" />
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <InstallationChecklist
           osId={osId}
           initialInstallationSteps={detail.installationSteps}
@@ -90,6 +90,6 @@ export default async function InstallationOsPage({ params }: Props) {
           initialPhotos={detail.servicePhotos}
         />
       </div>
-    </div>
+    </>
   );
 }

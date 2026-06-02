@@ -12,8 +12,12 @@ import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
 import { countItemPhotos } from "@/lib/measurement/item-photos";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
+import { MeasurementDimensionsFields } from "@/components/field/measurement-dimensions-fields";
+import {
+  formatDimensionsSummary,
+  hasAnyDimensionValue,
+} from "@/lib/measurement/dimensions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -97,10 +101,8 @@ export function MeasurementItemCard({
   );
 
   const hasDimensions =
-    Boolean(item.idAmbiente) ||
-    item.qty > 0 ||
-    item.largura > 0 ||
-    item.altura > 0;
+    Boolean(item.idAmbiente) || item.qty > 0 || hasAnyDimensionValue(item);
+  const dimensionsSummary = formatDimensionsSummary(item);
   const savedPhotoUrls = filterDisplayableUploadUrls(item.photos ?? []);
   const photoCount = countItemPhotos(item, pendingFiles.length);
 
@@ -154,12 +156,9 @@ export function MeasurementItemCard({
           {ambienteLabel ? (
             <p className="font-medium text-foreground">{ambienteLabel}</p>
           ) : null}
-          <p className="tabular-nums">
-            {item.qty > 0 ? `${item.qty} × ` : ""}
-            {item.largura > 0 || item.altura > 0
-              ? `${item.largura || "—"} × ${item.altura || "—"} mm`
-              : null}
-          </p>
+          {dimensionsSummary ? (
+            <p className="tabular-nums">{dimensionsSummary}</p>
+          ) : null}
           {item.observacao?.trim() ? (
             <p className="line-clamp-2 italic">{item.observacao.trim()}</p>
           ) : null}
@@ -212,66 +211,11 @@ export function MeasurementItemCard({
                 ))}
               </Select>
             </div>
-            <h4 className="mt-4 text-sm font-medium">Dimensões (mm)</h4>
-            <div className="mt-3 grid grid-cols-1 gap-4 min-[400px]:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor={`qty-${item.id}`}>Quantidade</Label>
-                <Input
-                  id={`qty-${item.id}`}
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  step={1}
-                  placeholder="0"
-                  value={item.qty === 0 ? "" : item.qty}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === "") {
-                      updateField("qty", 0);
-                      return;
-                    }
-                    const parsed = Number.parseInt(raw, 10);
-                    if (!Number.isNaN(parsed)) {
-                      updateField("qty", parsed);
-                    }
-                  }}
-                  disabled={disabled}
-                  className="h-12 text-base"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`largura-${item.id}`}>Largura</Label>
-                <Input
-                  id={`largura-${item.id}`}
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  placeholder="ex: 1200"
-                  value={item.largura || ""}
-                  onChange={(e) =>
-                    updateField("largura", Number(e.target.value) || 0)
-                  }
-                  disabled={disabled}
-                  className="h-12 text-base"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`altura-${item.id}`}>Altura</Label>
-                <Input
-                  id={`altura-${item.id}`}
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  placeholder="ex: 2100"
-                  value={item.altura || ""}
-                  onChange={(e) =>
-                    updateField("altura", Number(e.target.value) || 0)
-                  }
-                  disabled={disabled}
-                  className="h-12 text-base"
-                />
-              </div>
-            </div>
+            <MeasurementDimensionsFields
+              item={item}
+              disabled={disabled}
+              onChange={onChange}
+            />
             <MeasurementItemSpecFields
               lookups={lookups}
               itemId={item.id}

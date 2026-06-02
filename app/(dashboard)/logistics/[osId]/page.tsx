@@ -25,10 +25,10 @@ export default async function LogisticsOsPage({ params }: Props) {
 
   if (!canOperateTransportModule(order.status, detail.cuttingSteps)) {
     return (
-      <div className="p-6 lg:p-8">
-        <div className="mb-6">
+      <>
+        <div className="mb-4 sm:mb-6">
           <div className="flex items-center gap-2">
-            <Truck className="h-5 w-5 text-teal-600" />
+            <Truck className="h-5 w-5 text-primary" />
             <h1 className="font-mono text-2xl font-bold">
               {getOrderDisplayNumber(order)}
             </h1>
@@ -43,13 +43,13 @@ export default async function LogisticsOsPage({ params }: Props) {
             Aguardando conclusão do corte para liberar o transporte desta OS.
           </p>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="p-6 lg:p-8">
-      <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2">
+    <>
+      <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2 sm:mb-4">
         <Link href="/logistics">
           <ArrowLeft className="h-4 w-4" />
           Voltar ao transporte
@@ -58,7 +58,7 @@ export default async function LogisticsOsPage({ params }: Props) {
 
       <div className="mb-6">
         <div className="flex items-center gap-2">
-          <Truck className="h-5 w-5 text-teal-600" />
+          <Truck className="h-5 w-5 text-primary" />
           <h1 className="font-mono text-2xl font-bold">
             {getOrderDisplayNumber(order)}
           </h1>
@@ -95,6 +95,6 @@ export default async function LogisticsOsPage({ params }: Props) {
         initialCuttingSteps={detail.cuttingSteps}
         vehicleId={detail.vehicleId}
       />
-    </div>
+    </>
   );
 }

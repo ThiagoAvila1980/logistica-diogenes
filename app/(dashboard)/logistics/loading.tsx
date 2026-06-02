@@ -2,8 +2,8 @@ import { Truck } from "lucide-react";
 
 export default function LogisticsLoading() {
   return (
-    <div className="p-6 lg:p-8">
-      <header className="mb-6">
+    <>
+      <header className="mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
           <Truck className="h-6 w-6 text-muted-foreground/40" aria-hidden />
           <div className="h-7 w-32 animate-pulse rounded bg-muted" />
@@ -30,6 +30,6 @@ export default function LogisticsLoading() {
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
 }

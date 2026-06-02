@@ -55,14 +55,12 @@ const STEPS: StepConfig[] = [
     description: "Perfil estrutural carregado e entregue na obra",
     icon: Truck,
     color: {
-      unlocked:
-        "border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-900/20",
-      done: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20",
+      unlocked: "border-accent bg-accent/50",
+      done: "border-success-border bg-success-muted",
       locked: "border-border bg-muted/30",
-      badge: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
-      badgeDone:
-        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-      icon: "text-teal-600 dark:text-teal-400",
+      badge: "bg-accent text-accent-foreground",
+      badgeDone: "bg-success-subtle text-success-foreground",
+      icon: "text-primary",
     },
   },
   {
@@ -72,15 +70,12 @@ const STEPS: StepConfig[] = [
     description: "Todos os perfis embalados e entregues na obra",
     icon: Layers,
     color: {
-      unlocked:
-        "border-cyan-200 bg-cyan-50 dark:border-cyan-800 dark:bg-cyan-900/20",
-      done: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20",
+      unlocked: "border-info-border bg-info-muted",
+      done: "border-success-border bg-success-muted",
       locked: "border-border bg-muted/30",
-      badge:
-        "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
-      badgeDone:
-        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-      icon: "text-cyan-600 dark:text-cyan-400",
+      badge: "bg-info-muted text-info-foreground",
+      badgeDone: "bg-success-subtle text-success-foreground",
+      icon: "text-info",
     },
   },
   {
@@ -90,15 +85,12 @@ const STEPS: StepConfig[] = [
     description: "Dobradiças, parafusos e demais acessórios entregues",
     icon: Package,
     color: {
-      unlocked:
-        "border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20",
-      done: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20",
+      unlocked: "border-primary/20 bg-accent",
+      done: "border-success-border bg-success-muted",
       locked: "border-border bg-muted/30",
-      badge:
-        "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-      badgeDone:
-        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-      icon: "text-indigo-600 dark:text-indigo-400",
+      badge: "bg-accent text-primary",
+      badgeDone: "bg-success-subtle text-success-foreground",
+      icon: "text-primary",
     },
   },
   {
@@ -108,15 +100,12 @@ const STEPS: StepConfig[] = [
     description: "Todas as entregas realizadas — transporte finalizado",
     icon: BadgeCheck,
     color: {
-      unlocked:
-        "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-900/20",
-      done: "border-emerald-400 bg-emerald-100 dark:border-emerald-600 dark:bg-emerald-900/30",
+      unlocked: "border-success-border bg-success-muted",
+      done: "border-success-border bg-success-subtle",
       locked: "border-border bg-muted/30",
-      badge:
-        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-      badgeDone:
-        "bg-emerald-200 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200",
-      icon: "text-emerald-600 dark:text-emerald-400",
+      badge: "bg-success-subtle text-success-foreground",
+      badgeDone: "bg-success-subtle text-success-foreground",
+      icon: "text-success",
     },
   },
 ];
@@ -172,7 +161,7 @@ export function TransportChecklist({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Truck className="h-4 w-4 text-teal-600" />
+          <Truck className="h-4 w-4 text-primary" />
           Etapas de Transporte
         </CardTitle>
 
@@ -188,9 +177,9 @@ export function TransportChecklist({
                   className={cn(
                     "h-1.5 w-8 rounded-full transition-colors",
                     done
-                      ? "bg-emerald-500"
+                      ? "bg-success"
                       : gate.unlocked
-                        ? "bg-teal-300 dark:bg-teal-700"
+                        ? "bg-primary/30"
                         : "bg-muted",
                   )}
                 />
@@ -244,7 +233,7 @@ export function TransportChecklist({
                     className={cn(
                       "text-sm font-semibold leading-tight",
                       done
-                        ? "text-emerald-700 dark:text-emerald-400"
+                        ? "text-success-foreground"
                         : isLocked
                           ? "text-muted-foreground"
                           : "text-foreground",
@@ -285,7 +274,7 @@ export function TransportChecklist({
                   className={cn(
                     "mt-0.5 shrink-0",
                     done &&
-                      "border-emerald-500 bg-emerald-500 dark:border-emerald-400 dark:bg-emerald-600",
+                      "border-success bg-success",
                   )}
                 />
               )}
@@ -294,9 +283,9 @@ export function TransportChecklist({
         })}
 
         {allDone && (
-          <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <AlertDescription className="text-emerald-700 dark:text-emerald-400">
+          <Alert variant="success">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>
               Transporte concluído! O instalador pode seguir com os vidros quando liberado.
             </AlertDescription>
           </Alert>

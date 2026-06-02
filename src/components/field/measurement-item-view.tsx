@@ -10,8 +10,14 @@ import { ResolvedImage } from "@/components/ui/resolved-image";
 import { PhotoGallery } from "@/components/ui/photo-gallery";
 import { Button } from "@/components/ui/button";
 import { MeasurementPhotosSection } from "@/components/field/measurement-photos-section";
+import { MeasurementDimensionsDisplay } from "@/components/field/measurement-dimensions-display";
 import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
 import { countItemPhotos } from "@/lib/measurement/item-photos";
+import {
+  formatDimensionsSummary,
+  hasAnyDimensionValue,
+  hasValidItemDimensions,
+} from "@/lib/measurement/dimensions";
 
 type MeasurementItemViewProps = {
   item: MeasurementLineItem;
@@ -37,10 +43,8 @@ export function MeasurementItemView({
     item.idAmbiente ?? null,
   );
   const hasDimensions =
-    Boolean(item.idAmbiente) ||
-    item.qty > 0 ||
-    item.largura > 0 ||
-    item.altura > 0;
+    Boolean(item.idAmbiente) || item.qty > 0 || hasAnyDimensionValue(item);
+  const dimensionsSummary = formatDimensionsSummary(item);
 
   return (
     <article
@@ -76,12 +80,9 @@ export function MeasurementItemView({
           {ambienteLabel ? (
             <p className="font-medium text-foreground">{ambienteLabel}</p>
           ) : null}
-          <p className="tabular-nums">
-            {item.qty > 0 ? `${item.qty} × ` : ""}
-            {item.largura > 0 || item.altura > 0
-              ? `${item.largura || "—"} × ${item.altura || "—"} mm`
-              : null}
-          </p>
+          {dimensionsSummary ? (
+            <p className="tabular-nums">{dimensionsSummary}</p>
+          ) : null}
           <MeasurementItemSpecSummary item={item} lookups={lookups} />
           {item.observacao?.trim() ? (
             <p className="line-clamp-2 italic">{item.observacao.trim()}</p>
@@ -100,7 +101,7 @@ export function MeasurementItemView({
           className="mt-3 space-y-3"
         >
           {hasDrawing ? (
-            <div className="overflow-hidden rounded-lg border bg-white">
+            <div className="overflow-hidden rounded-lg border bg-card">
               <ResolvedImage
                 src={item.drawingUrl!}
                 alt={`Desenho da medição ${index + 1}`}
@@ -159,24 +160,7 @@ export function MeasurementDimensionsSummary({
               <dd className="mt-0.5 text-sm font-medium">{ambienteLabel}</dd>
             </div>
           ) : null}
-          <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Quantidade</dt>
-            <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-              {item.qty > 0 ? item.qty : "—"}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Largura</dt>
-            <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-              {item.largura > 0 ? `${item.largura} mm` : "—"}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Altura</dt>
-            <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-              {item.altura > 0 ? `${item.altura} mm` : "—"}
-            </dd>
-          </div>
+          <MeasurementDimensionsDisplay item={item} />
         </dl>
       <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
       {item.observacao?.trim() ? (
@@ -200,25 +184,8 @@ export function MeasurementDimensionsSummary({
         </div>
       ) : null}
       <h4 className="text-sm font-medium">Dimensões (mm)</h4>
-      <dl className="mt-3 grid grid-cols-3 gap-3 text-sm">
-        <div>
-          <dt className="text-xs text-muted-foreground">Quantidade</dt>
-          <dd className="mt-0.5 font-mono font-semibold tabular-nums">
-            {item.qty > 0 ? item.qty : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Largura</dt>
-          <dd className="mt-0.5 font-mono font-semibold tabular-nums">
-            {item.largura > 0 ? item.largura : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Altura</dt>
-          <dd className="mt-0.5 font-mono font-semibold tabular-nums">
-            {item.altura > 0 ? item.altura : "—"}
-          </dd>
-        </div>
+      <dl className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+        <MeasurementDimensionsDisplay item={item} />
       </dl>
       <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
       {item.observacao?.trim() ? (
@@ -249,6 +216,6 @@ export function hasSavedMeasurementForView(
       Boolean(item.idAmbiente) ||
       Boolean(item.observacao?.trim()) ||
       Boolean(item.photos?.length) ||
-      (item.qty > 0 && item.largura > 0 && item.altura > 0),
+      hasValidItemDimensions(item),
   );
 }

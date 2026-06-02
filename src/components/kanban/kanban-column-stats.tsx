@@ -80,8 +80,8 @@ function ColumnStatBar({
         <div
           className={cn(
             "w-full rounded-sm bg-primary transition-all",
-            metric.avgHours > 48 && "bg-orange-500",
-            metric.avgHours > 120 && "bg-red-500",
+            metric.avgHours > 48 && "bg-warning",
+            metric.avgHours > 120 && "bg-destructive",
           )}
           style={{ height: `${Math.max(12, pct)}%` }}
           role="presentation"

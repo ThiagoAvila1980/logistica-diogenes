@@ -65,16 +65,16 @@ export function VehicleSelector({
 
   if (vehicleId && !canChange) {
     return (
-      <Card className="mb-4 border-teal-200 bg-teal-50/50 dark:border-teal-800 dark:bg-teal-900/10">
+      <Card className="mb-4 border-success-border bg-success-muted/50">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Car className="h-4 w-4 text-teal-600" />
+            <Car className="h-4 w-4 text-primary" />
             Veículo em uso
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
             <span className="font-medium">{assignedLabel}</span>
           </div>
         </CardContent>
@@ -83,10 +83,10 @@ export function VehicleSelector({
   }
 
   return (
-    <Card className="mb-4 border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-900/10">
+    <Card className="mb-4 border-warning-border bg-warning-muted/60">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Car className="h-4 w-4 text-amber-600" />
+          <Car className="h-4 w-4 text-warning" />
           {vehicleId ? "Alterar veículo" : "Selecionar veículo"}
         </CardTitle>
       </CardHeader>
@@ -99,7 +99,7 @@ export function VehicleSelector({
 
         {vehicleId && assignedLabel && (
           <div className="flex items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
             <span>
               Atual: <span className="font-medium">{assignedLabel}</span>
             </span>

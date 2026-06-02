@@ -65,16 +65,16 @@ export function DeleteMeasurementDialog({
       ) : (
         <Button
           type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 gap-1 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          aria-label="Excluir medição"
           onClick={() => {
             setError(null);
             setOpen(true);
           }}
         >
           <Trash2 className="h-4 w-4" />
-          Excluir
         </Button>
       )}
 
