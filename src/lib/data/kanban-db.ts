@@ -6,7 +6,10 @@ import {
   measurementClientName,
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
-import { hasPendingCuttingSteps } from "@/lib/transport-gates";
+import {
+  hasPendingCuttingSteps,
+  isTransportFullyDone,
+} from "@/lib/transport-gates";
 import type { KanbanOrderItem } from "./kanban";
 
 const TRANSPORT_STATUSES = new Set([
@@ -84,6 +87,17 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
         vidrosFeitos: cuttingStepsData.vidros,
       });
 
+    const transportStepsData = {
+      levarPerfilEstrutural: r.levarPerfilEstrutural ?? false,
+      levarPerfilTotal: r.levarPerfilTotal ?? false,
+      levarAcessorios: r.levarAcessorios ?? false,
+      levarVidros: r.levarVidros ?? false,
+      transporteConcluido: r.transporteConcluido ?? false,
+    };
+
+    const transportFullyDone =
+      isTransportPhase && isTransportFullyDone(transportStepsData);
+
     return {
       id: r.id,
       number: r.number,
@@ -98,21 +112,14 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       hasMeasurement: Boolean(r.hasMeasurement),
       cuttingSteps:
         isCortePhase || hasPendingCutting ? cuttingStepsData : null,
-      transportSteps: isTransportPhase
-        ? {
-            levarPerfilEstrutural: r.levarPerfilEstrutural ?? false,
-            levarPerfilTotal: r.levarPerfilTotal ?? false,
-            levarAcessorios: r.levarAcessorios ?? false,
-            levarVidros: r.levarVidros ?? false,
-            transporteConcluido: r.transporteConcluido ?? false,
-          }
-        : null,
-      installationSteps: isInstallationPhase
-        ? {
-            instalacaoEstruturalFeita: r.instalacaoEstruturalFeita ?? false,
-            instalacaoVidrosFeita: r.instalacaoVidrosFeita ?? false,
-          }
-        : null,
+      transportSteps: isTransportPhase ? transportStepsData : null,
+      installationSteps:
+        isInstallationPhase || transportFullyDone
+          ? {
+              instalacaoEstruturalFeita: r.instalacaoEstruturalFeita ?? false,
+              instalacaoVidrosFeita: r.instalacaoVidrosFeita ?? false,
+            }
+          : null,
     };
   });
 }

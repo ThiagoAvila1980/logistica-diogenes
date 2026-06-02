@@ -41,6 +41,23 @@ function buildSupabasePublicUrl(
   return `${base}/storage/v1/object/public/${bucket}/${encodedKey}`;
 }
 
+function toLocalUploadPath(key: string): string {
+  return `/uploads/${key.replace(/\\/g, "/")}`;
+}
+
+/** Extrai a chave relativa (ex.: measurements/osId/drawings/file.webp) de URL persistida. */
+export function storageKeyFromPersistedUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("/uploads/")) {
+    return trimmed.replace(/^\/uploads\//, "");
+  }
+  const supabaseRef = parseSupabaseStorageUrl(trimmed);
+  if (supabaseRef) return supabaseRef.key;
+  if (trimmed.startsWith("measurements/")) return trimmed;
+  return null;
+}
+
 /** Resolve URL persistida para exibição no browser (signed URL quando necessário). */
 export async function resolveUploadDisplayUrl(url: string): Promise<string> {
   const trimmed = url.trim();
@@ -94,6 +111,11 @@ export async function resolveUploadDisplayUrl(url: string): Promise<string> {
     } catch (err) {
       console.warn("[resolveUploadDisplayUrl] signed URL failed:", err);
     }
+  }
+
+  const storageKey = storageKeyFromPersistedUrl(trimmed);
+  if (storageKey && !config.supabase) {
+    return toLocalUploadPath(storageKey);
   }
 
   return trimmed;

@@ -13,6 +13,7 @@ import {
   osStatusFromMeasurementType,
 } from "@/lib/workflow/measurement-actions";
 import { vehicleMockStore } from "@/lib/data/admin-mock-store";
+import { canOperateInstallationModule } from "@/lib/transport-gates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 
 type MockMeasurement = {
@@ -591,13 +592,19 @@ export const mockRepository = {
     if (!m) {
       return { success: false, message: "OS não encontrada" };
     }
-    if (
-      !m.etapa.startsWith("instalacao") &&
-      m.etapa !== "concluido"
-    ) {
+
+    const cut = cuttingPlans.find((c) => c.idMedicao === osId);
+    const cuttingSteps = {
+      corteFeito: cut?.corteFeito ?? false,
+      embalagemFeita: cut?.embalagemFeita ?? false,
+      acessoriosFeitos: cut?.acessoriosFeitos ?? false,
+      vidrosFeitos: cut?.vidrosFeitos ?? false,
+    };
+
+    if (!canOperateInstallationModule(m.etapa, cuttingSteps)) {
       return {
         success: false,
-        message: "Esta OS não está em etapa de instalação.",
+        message: "Aguardando conclusão do corte para liberar instalação.",
       };
     }
 

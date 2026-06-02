@@ -1,6 +1,7 @@
 import type { KanbanOrderItem } from "@/lib/data/kanban";
 import {
   hasPendingCuttingSteps,
+  isTransportFullyDone,
   isTransportPhaseStatus,
 } from "@/lib/transport-gates";
 import { KANBAN_PHASES, getPhaseIdForStatus } from "./column-groups";
@@ -44,7 +45,7 @@ function toCuttingStepsGate(os: KanbanOrderItem) {
   };
 }
 
-/** Fases em que a OS deve aparecer no kanban (suporta corte + transporte em paralelo). */
+/** Fases em que a OS deve aparecer no kanban (suporta colunas paralelas). */
 export function getKanbanPhaseIdsForOrder(os: KanbanOrderItem): string[] {
   const statusPhaseId = getPhaseIdForStatus(os.status);
   const phases = new Set<string>();
@@ -60,6 +61,15 @@ export function getKanbanPhaseIdsForOrder(os: KanbanOrderItem): string[] {
     isTransportPhaseStatus(os.status)
   ) {
     phases.add("plano_corte");
+  }
+
+  const transport = os.transportSteps;
+  if (
+    transport &&
+    isTransportFullyDone(transport) &&
+    isTransportPhaseStatus(os.status)
+  ) {
+    phases.add("instalacao");
   }
 
   return [...phases];

@@ -37,11 +37,54 @@ function hashForTag(tag) {
 
 await client.connect();
 
-const { rows: dbRows } = await client.query(`
-  SELECT hash, created_at::text AS created_at
-  FROM drizzle.__drizzle_migrations
-  ORDER BY created_at::bigint
-`);
+let dbRows = [];
+let trackingInitialized = true;
+
+try {
+  const result = await client.query(`
+    SELECT hash, created_at::text AS created_at
+    FROM drizzle.__drizzle_migrations
+    ORDER BY created_at::bigint
+  `);
+  dbRows = result.rows;
+} catch (error) {
+  if (error && typeof error === "object" && error.code === "42P01") {
+    trackingInitialized = false;
+    console.log(
+      "⚠️  Tabela drizzle.__drizzle_migrations não existe — o banco ainda não foi sincronizado com o Drizzle.\n",
+    );
+    console.log(
+      "Isso é comum em produção quando o schema foi criado antes do rastreamento de migrations.\n",
+    );
+    console.log("--- Próximos passos (produção) ---");
+    console.log("1. npm run db:ping:prod");
+    console.log(
+      "2. Se o app já roda em prod, aplique só o SQL novo (0022 + 0023) no Supabase:",
+    );
+    console.log(
+      '   ALTER TABLE "cutting_plans" ADD COLUMN IF NOT EXISTS "vidros_feitos" boolean NOT NULL DEFAULT false;',
+    );
+    console.log(
+      '   ALTER TABLE "transport_logs" ADD COLUMN IF NOT EXISTS "levar_vidros" boolean NOT NULL DEFAULT false;',
+    );
+    console.log(
+      "3. Registre todas as migrations no Drizzle (sem reexecutar SQL antigo):",
+    );
+    console.log("   node scripts/db-sync-drizzle-journal.mjs");
+    console.log(
+      "   (ou, se o banco estiver vazio: node scripts/db-sync-drizzle-journal.mjs -- --apply)\n",
+    );
+    console.log(
+      "Depois disso, npm run db:migration-status:prod deve funcionar.\n",
+    );
+  } else {
+    throw error;
+  }
+}
+
+if (!trackingInitialized) {
+  console.log("--- Journal local (todas apareceriam como não registradas) ---");
+}
 
 const appliedByHash = new Map(dbRows.map((row) => [row.hash, row.created_at]));
 const maxCreatedAt = dbRows.reduce(
@@ -98,8 +141,17 @@ if (issues.length > 0) {
 }
 
 console.log("\n--- Como corrigir ---");
-console.log("1. Migrations já aplicadas manualmente: npm run db:sync-drizzle-journal");
-console.log("2. Migrations pendentes com SQL novo: npm run db:sync-drizzle-journal -- --apply");
-console.log("3. Depois de sincronizar: npm run db:migrate (deve ficar sem pendências)");
+if (!trackingInitialized) {
+  console.log(
+    "• Banco existente: SQL 0022/0023 → node scripts/db-sync-drizzle-journal.mjs",
+  );
+  console.log(
+    "• Banco vazio: node scripts/db-sync-drizzle-journal.mjs -- --apply",
+  );
+} else {
+  console.log("1. Migrations já aplicadas manualmente: npm run db:sync-drizzle-journal");
+  console.log("2. Migrations pendentes com SQL novo: npm run db:sync-drizzle-journal -- --apply");
+  console.log("3. Depois de sincronizar: npm run db:migrate (deve ficar sem pendências)");
+}
 
 await client.end();

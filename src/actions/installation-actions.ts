@@ -9,8 +9,9 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/require-role";
 import { getDb } from "@/lib/db";
-import { installationLogs } from "@/db/schema";
+import { cuttingPlans, installationLogs } from "@/db/schema";
 import type { InstallationPhotos } from "@/lib/workflow/schemas";
+import { canOperateInstallationModule } from "@/lib/transport-gates";
 
 export type SaveInstallationServicePhotosResult =
   | { success: true; message: string }
@@ -72,13 +73,33 @@ export async function saveInstallationServicePhotos(
     return { success: false, message: "OS não encontrada." };
   }
 
-  if (
-    !order.status.startsWith("instalacao") &&
-    order.status !== "concluido"
-  ) {
+  const db = getDb();
+  const [cutting] = await db
+    .select({
+      corteFeito: cuttingPlans.corteFeito,
+      embalagemFeita: cuttingPlans.embalagemFeita,
+      acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+      vidrosFeitos: cuttingPlans.vidrosFeitos,
+    })
+    .from(cuttingPlans)
+    .where(eq(cuttingPlans.idMedicao, osId))
+    .limit(1);
+
+  const cuttingSteps = cutting ?? {
+    corteFeito:
+      order.status.startsWith("instalacao") || order.status === "concluido",
+    embalagemFeita:
+      order.status.startsWith("instalacao") || order.status === "concluido",
+    acessoriosFeitos:
+      order.status.startsWith("instalacao") || order.status === "concluido",
+    vidrosFeitos:
+      order.status.startsWith("instalacao") || order.status === "concluido",
+  };
+
+  if (!canOperateInstallationModule(order.status, cuttingSteps)) {
     return {
       success: false,
-      message: "Esta OS não está em etapa de instalação.",
+      message: "Aguardando conclusão do corte para liberar instalação.",
     };
   }
 

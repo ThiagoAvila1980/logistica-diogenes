@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ResolvedImage } from "@/components/ui/resolved-image";
 import { cn } from "@/lib/utils";
 
 const MIN_SCALE = 1;
@@ -129,8 +130,7 @@ function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <ResolvedImage
         src={src}
         alt={alt}
         draggable={false}
@@ -166,8 +166,7 @@ export function DrawingPreview({
         )}
         aria-label={`Ampliar ${alt}`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <ResolvedImage
           src={src}
           alt={alt}
           className={

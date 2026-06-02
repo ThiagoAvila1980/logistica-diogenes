@@ -13,7 +13,7 @@ function env(name: string): string | undefined {
 export function getStorageConfig() {
   const supabaseUrl = normalizeSupabaseUrl(env("NEXT_PUBLIC_SUPABASE_URL"));
   const supabaseServiceKey = getSupabaseServiceRoleKey();
-  const supabaseBucket = env("SUPABASE_STORAGE_BUCKET") ?? "uploads";
+  const supabaseBucket = env("SUPABASE_STORAGE_BUCKET") ?? "imagens_diogenes";
 
   const r2AccountId = env("R2_ACCOUNT_ID");
   const r2AccessKey = env("R2_ACCESS_KEY_ID");
@@ -28,11 +28,14 @@ export function getStorageConfig() {
 
   const primaryEnv = env("STORAGE_PRIMARY") as StorageProviderName | undefined;
   let primary: StorageProviderName = "local";
-  if (primaryEnv === "local" || primaryEnv === "r2") {
-    primary = primaryEnv;
+  if (primaryEnv === "local") {
+    primary = "local";
+  } else if (primaryEnv === "r2" && hasR2) {
+    primary = "r2";
   } else if (primaryEnv === "supabase" && hasSupabase) {
     primary = "supabase";
   } else if (hasSupabase) {
+    // Com credenciais Supabase: storage na nuvem (BD pode estar no VPS)
     primary = "supabase";
   }
 
