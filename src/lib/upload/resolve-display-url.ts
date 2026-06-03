@@ -54,7 +54,12 @@ export function storageKeyFromPersistedUrl(url: string): string | null {
   }
   const supabaseRef = parseSupabaseStorageUrl(trimmed);
   if (supabaseRef) return supabaseRef.key;
-  if (trimmed.startsWith("measurements/")) return trimmed;
+  if (
+    trimmed.startsWith("measurements/") ||
+    trimmed.startsWith("catalog/")
+  ) {
+    return trimmed;
+  }
   return null;
 }
 
@@ -77,7 +82,11 @@ export async function resolveUploadDisplayUrl(url: string): Promise<string> {
   const config = getStorageConfig();
   const supabaseRef = parseSupabaseStorageUrl(trimmed);
 
-  if (!supabaseRef && config.supabase && trimmed.startsWith("measurements/")) {
+  if (
+    !supabaseRef &&
+    config.supabase &&
+    (trimmed.startsWith("measurements/") || trimmed.startsWith("catalog/"))
+  ) {
     try {
       const supabase = getSupabaseAdmin();
       const { data, error } = await supabase.storage

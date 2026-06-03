@@ -60,7 +60,7 @@
     0 4px 16px -6px color-mix(in srgb, #0e5794 10%, transparent);
 
   /* Chrome mobile (header + bottom nav) */
-  --mobile-bar: 25px;
+  --mobile-bar: 3.5rem;
   --spacing-safe-top: env(safe-area-inset-top, 0px);
   --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
   --mobile-header-total: calc(var(--mobile-bar) + var(--spacing-safe-top));
@@ -105,7 +105,7 @@
   }
 
   .mobile-page {
-    @apply px-4 pb-0 sm:px-5 md:px-6 lg:px-8;
+    @apply px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-3 lg:px-8 lg:py-4;
   }
 
   .mobile-form-offset {

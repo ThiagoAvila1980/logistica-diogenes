@@ -93,6 +93,7 @@ export const tipoEnvidracamento = pgTable("tipo_envidracamento", {
     .defaultRandom()
     .primaryKey(),
   descricao: varchar("descricao", { length: 255 }).notNull(),
+  imagemUrl: varchar("imagem_url", { length: 2048 }),
 });
 
 export const ambientes = pgTable("ambientes", {

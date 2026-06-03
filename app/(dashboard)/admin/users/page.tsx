@@ -1,5 +1,6 @@
 import { getUsersForAdmin } from "@/actions/user-admin-actions";
 import { UserAdminPanel } from "@/components/admin/user-admin-panel";
+import { PageHeading } from "@/components/dashboard/page-heading";
 import { Users } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 
@@ -11,13 +12,12 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Users className="h-5 w-5 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">Usuários</h2>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Gerencie contas internas, papéis e acesso ao sistema.
-      </p>
+      <PageHeading
+        title="Usuários"
+        count={users.length}
+        description="Gerencie contas internas, papéis e acesso ao sistema."
+        icon={Users}
+      />
       <UserAdminPanel
         users={users}
         currentUserId={session?.userId ?? ""}

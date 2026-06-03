@@ -1,19 +1,12 @@
-import Link from "next/link";
 import { PageHeading } from "@/components/dashboard/page-heading";
+import { Scissors } from "lucide-react";
+import { ProductionOrderCard } from "@/components/production/production-order-card";
 import { listServiceOrders } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
-import { getOrderDisplayNumber } from "@/lib/order-display";
 import { hasPendingCuttingSteps } from "@/lib/transport-gates";
-import { cn } from "@/lib/utils";
+import { ORDER_INDEX_GRID_CLASS } from "@/lib/ui/order-index-grid";
 
 const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
-
-const STEP_LABELS = [
-  { key: "corte" as const, label: "Corte" },
-  { key: "embalagem" as const, label: "Embal." },
-  { key: "acessorios" as const, label: "Acess." },
-  { key: "vidros" as const, label: "Vidr." },
-];
 
 export default async function ProductionIndexPage() {
   const allOrders = await listServiceOrders();
@@ -47,64 +40,34 @@ export default async function ProductionIndexPage() {
         title="Plano de corte"
         count={orders.length}
         description="Perfis, vidros, acessórios e embalagem."
+        icon={Scissors}
       />
 
-      <ul className="space-y-3">
-        {orders.length === 0 ? (
-          <li className="text-sm text-muted-foreground">
+      {orders.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-primary/20 bg-card p-8 text-center premium-card">
+          <p className="text-sm text-muted-foreground">
             Nenhuma medição nesta etapa.
-          </li>
-        ) : (
-          orders.map((o) => {
-            const steps = stepsMap[o.id] ?? {
-              corte: false,
-              embalagem: false,
-              acessorios: false,
-              vidros: false,
-            };
-            const doneCount = Object.values(steps).filter(Boolean).length;
-            const allDone = doneCount === 4;
-
-            return (
-              <li key={o.id}>
-                <Link
-                  href={`/production/${o.id}`}
-                  className={cn(
-                    "flex flex-col gap-3 rounded-xl border px-4 py-3 transition-all hover:border-primary/25 hover:shadow-[var(--shadow-card)] sm:flex-row sm:items-center",
-                    allDone
-                      ? "border-success-border bg-success-muted premium-card"
-                      : "border-primary/10 bg-card premium-card",
-                  )}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-mono text-sm font-semibold text-primary">
-                      {getOrderDisplayNumber(o)}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {o.clientName}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 sm:shrink-0">
-                    {STEP_LABELS.map(({ key, label }) => (
-                      <span
-                        key={key}
-                        className={cn(
-                          "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-                          steps[key]
-                            ? "bg-success-subtle text-success-foreground"
-                            : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                </Link>
-              </li>
-            );
-          })
-        )}
-      </ul>
+          </p>
+        </div>
+      ) : (
+        <ul className={ORDER_INDEX_GRID_CLASS}>
+          {orders.map((order) => (
+            <li key={order.id} className="min-h-0">
+              <ProductionOrderCard
+                order={order}
+                steps={
+                  stepsMap[order.id] ?? {
+                    corte: false,
+                    embalagem: false,
+                    acessorios: false,
+                    vidros: false,
+                  }
+                }
+              />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

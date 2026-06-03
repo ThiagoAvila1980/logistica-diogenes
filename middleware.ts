@@ -10,7 +10,6 @@ import { parseSessionFromToken } from "@/lib/auth/session-edge";
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/field",
-  "/quote",
   "/production",
   "/logistics",
   "/installation",
@@ -58,7 +57,6 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/field/:path*",
-    "/quote/:path*",
     "/production/:path*",
     "/logistics/:path*",
     "/installation/:path*",

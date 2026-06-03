@@ -6,6 +6,7 @@ export type LookupAdminRow = {
   id: string;
   descricao: string;
   usageCount: number;
+  imagemUrl?: string | null;
 };
 
 function normalizeDescricao(descricao: string): string {
@@ -132,6 +133,7 @@ export async function listTipoEnvidracamentoAdminDb(): Promise<LookupAdminRow[]>
     .select({
       id: tipoEnvidracamento.idTipoEnvidracamento,
       descricao: tipoEnvidracamento.descricao,
+      imagemUrl: tipoEnvidracamento.imagemUrl,
       usageCount: sql<number>`(
         select count(*)::int
         from ${measurements} m
@@ -145,24 +147,39 @@ export async function listTipoEnvidracamentoAdminDb(): Promise<LookupAdminRow[]>
   return rows.map((r) => ({
     id: r.id,
     descricao: r.descricao,
+    imagemUrl: r.imagemUrl,
     usageCount: r.usageCount,
   }));
+}
+
+export async function getTipoEnvidracamentoImagemUrlDb(
+  id: string,
+): Promise<string | null> {
+  const db = getDb();
+  const [row] = await db
+    .select({ imagemUrl: tipoEnvidracamento.imagemUrl })
+    .from(tipoEnvidracamento)
+    .where(eq(tipoEnvidracamento.idTipoEnvidracamento, id))
+    .limit(1);
+  return row?.imagemUrl ?? null;
 }
 
 export async function upsertTipoEnvidracamentoDb(data: {
   id?: string;
   descricao: string;
+  imagemUrl?: string | null;
 }): Promise<void> {
   const db = getDb();
   const descricao = data.descricao.trim();
+  const imagemUrl = data.imagemUrl ?? null;
   if (data.id) {
     await db
       .update(tipoEnvidracamento)
-      .set({ descricao })
+      .set({ descricao, imagemUrl })
       .where(eq(tipoEnvidracamento.idTipoEnvidracamento, data.id));
     return;
   }
-  await db.insert(tipoEnvidracamento).values({ descricao });
+  await db.insert(tipoEnvidracamento).values({ descricao, imagemUrl });
 }
 
 export async function deleteTipoEnvidracamentoDb(id: string): Promise<void> {

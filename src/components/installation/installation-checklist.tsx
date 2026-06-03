@@ -5,7 +5,7 @@ import {
   CheckCircle2,
   Loader2,
   Lock,
-  Wrench,
+  Hammer,
   GlassWater,
   BadgeCheck,
 } from "lucide-react";
@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { updateInstallationStepAction } from "@/actions/installation-step-actions";
+import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import {
   getInstallationGates,
   type InstallationSteps,
@@ -50,9 +51,9 @@ const STEPS: StepConfig[] = [
     gateKey: "instalacaoEstrutural",
     label: "Instalação Estrutural",
     description: "Perfil estrutural instalado e fixado na obra",
-    icon: Wrench,
+    icon: Hammer,
     color: {
-      unlocked: "border-success-border bg-success-muted",
+      unlocked: "border-border bg-background",
       done: "border-success-border bg-success-muted",
       icon: "text-success",
       badge: "bg-success-subtle text-success-foreground",
@@ -66,7 +67,7 @@ const STEPS: StepConfig[] = [
     description: "Vidros encaixados, vedados e conferidos",
     icon: GlassWater,
     color: {
-      unlocked: "border-success-border bg-success-muted",
+      unlocked: "border-border bg-background",
       done: "border-success-border bg-success-muted",
       icon: "text-success",
       badge: "bg-success-subtle text-success-foreground",
@@ -126,7 +127,7 @@ export function InstallationChecklist({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Wrench className="h-4 w-4 text-success" />
+          <Hammer className="h-4 w-4 text-success" />
           Etapas de Instalação
         </CardTitle>
 
@@ -154,6 +155,7 @@ export function InstallationChecklist({
       </CardHeader>
 
       <CardContent className="space-y-2.5">
+        <StageProblemReport osId={osId} stage="installation" />
         {stepError && (
           <Alert variant="destructive">
             <AlertDescription>{stepError}</AlertDescription>
@@ -173,7 +175,11 @@ export function InstallationChecklist({
               key={key}
               className={cn(
                 "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-all duration-150",
-                done ? color.done : isLocked ? "border-border bg-muted/30" : color.unlocked,
+                done
+                  ? color.done
+                  : isLocked
+                    ? "border-border bg-background"
+                    : color.unlocked,
                 isLocked && "cursor-not-allowed opacity-70",
                 isLoading && "opacity-60",
               )}
@@ -250,8 +256,8 @@ export function InstallationChecklist({
           className={cn(
             "flex items-start gap-3 rounded-xl border px-3 py-3",
             allDone
-              ? "border-success-border bg-success-subtle"
-              : "border-border bg-muted/20 opacity-60",
+              ? "border-success-border bg-success-muted"
+              : "border-border bg-background",
           )}
         >
           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-background/70">

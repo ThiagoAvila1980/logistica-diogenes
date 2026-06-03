@@ -224,6 +224,39 @@ export const tipoEnvidracamentoMockStore = createLookupMockStore([
   { id: "mock-env-fixo", descricao: "Fixo" },
 ]);
 
+const tipoEnvidracamentoImagemById = new Map<string, string | null>();
+
+export const tipoEnvidracamentoAdminMockStore = {
+  list() {
+    return tipoEnvidracamentoMockStore.list().map((item) => ({
+      ...item,
+      imagemUrl: tipoEnvidracamentoImagemById.get(item.id) ?? null,
+      usageCount: 0,
+    }));
+  },
+
+  create(descricao: string, imagemUrl: string | null) {
+    const row = tipoEnvidracamentoMockStore.create(descricao);
+    tipoEnvidracamentoImagemById.set(row.id, imagemUrl);
+    return row;
+  },
+
+  update(id: string, descricao: string, imagemUrl: string | null) {
+    const row = tipoEnvidracamentoMockStore.update(id, descricao);
+    tipoEnvidracamentoImagemById.set(id, imagemUrl);
+    return row;
+  },
+
+  delete(id: string) {
+    tipoEnvidracamentoMockStore.delete(id);
+    tipoEnvidracamentoImagemById.delete(id);
+  },
+
+  getImagemUrl(id: string): string | null {
+    return tipoEnvidracamentoImagemById.get(id) ?? null;
+  },
+};
+
 export const ambienteMockStore = createLookupMockStore([
   { id: "mock-amb-sala", descricao: "Sala" },
   { id: "mock-amb-quarto", descricao: "Quarto" },

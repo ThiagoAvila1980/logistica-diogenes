@@ -10,12 +10,12 @@ const KANBAN_PHASE_MODULE_PATH: Record<string, string> = {
  * Base path do módulo operacional para uma OS, conforme etapa atual.
  */
 export function getOsModuleBasePath(status: string): string {
-  if (status.startsWith("medicao")) return "/field";
   if (
+    status.startsWith("medicao") ||
     status.includes("orcamento") ||
     status === "aprovado_cliente"
   ) {
-    return "/quote";
+    return "/field";
   }
   if (
     status === "cortes" ||

@@ -5,19 +5,18 @@ import {
   saveTipoVidro,
 } from "@/actions/lookup-admin-actions";
 import { LookupAdminPanel } from "@/components/admin/lookup-admin-panel";
+import { PageHeading } from "@/components/dashboard/page-heading";
 
 export default async function AdminTipoVidroPage() {
   const items = await getLookupItemsForAdmin("tipo_vidro");
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Layers className="h-5 w-5 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">Tipos de vidro</h2>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Catálogo de tipos de vidro usados nas medições.
-      </p>
+      <PageHeading
+        title="Tipos de vidro"
+        description="Catálogo de tipos de vidro usados nas medições."
+        icon={Layers}
+      />
       <LookupAdminPanel
         title="Tipos cadastrados"
         description="Informe a descrição do tipo de vidro."

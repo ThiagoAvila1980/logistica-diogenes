@@ -141,6 +141,13 @@
       "when": 1748900000000,
       "tag": "0023_transport_levar_vidros",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1749000000000,
+      "tag": "0024_tipo_envidracamento_imagem",
+      "breakpoints": true
     }
   ]
 }

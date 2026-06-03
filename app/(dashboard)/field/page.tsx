@@ -2,6 +2,8 @@ import { listServiceOrders } from "@/lib/data/orders";
 import { FieldOrderCardWithDelete } from "@/components/field/field-order-card-with-delete";
 import { CreateMeasurementDialog } from "@/components/field/create-measurement-dialog";
 import { PageHeading } from "@/components/dashboard/page-heading";
+import { ORDER_INDEX_GRID_CLASS } from "@/lib/ui/order-index-grid";
+import { Ruler } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { hasAnyRole } from "@/lib/auth/permissions";
 
@@ -14,7 +16,7 @@ export default async function FieldIndexPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Medições" count={fieldOrders.length}>
+      <PageHeading title="Medições" count={fieldOrders.length} icon={Ruler}>
         {canCreate && <CreateMeasurementDialog />}
       </PageHeading>
 
@@ -27,7 +29,7 @@ export default async function FieldIndexPage() {
           </p>
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ul className={ORDER_INDEX_GRID_CLASS}>
           {fieldOrders.map((order) => (
             <li key={order.id}>
               <FieldOrderCardWithDelete order={order} canDelete={canCreate} />

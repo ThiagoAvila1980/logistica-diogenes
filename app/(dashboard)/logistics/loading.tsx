@@ -10,7 +10,7 @@ export default function LogisticsLoading() {
         </div>
         <div className="mt-1 h-4 w-72 animate-pulse rounded bg-muted" />
       </header>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <li key={i}>
             <div className="rounded-xl border bg-card p-4 space-y-3">

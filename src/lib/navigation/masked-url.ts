@@ -4,7 +4,6 @@ export const GOTO_QUERY_PARAM = "goto";
 const INTERNAL_PATH_PREFIXES = [
   "/dashboard",
   "/field",
-  "/quote",
   "/production",
   "/logistics",
   "/installation",

@@ -1,31 +1,76 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Wrench } from "lucide-react";
+import { ArrowLeft, Hammer } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
+import {
+  getCuttingDetailForOs,
+  type CuttingDetail,
+} from "@/lib/data/cutting-detail";
+import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { getInstallationDetailForOs } from "@/lib/data/installation-detail";
+import { listMeasurementLookups } from "@/lib/data/lookups";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { InstallationChecklist } from "@/components/installation/installation-checklist";
 import { InstallationServicePhotos } from "@/components/installation/installation-service-photos";
+import { ProductionMeasurementMedia } from "@/components/production/production-measurement-media";
 
 type Props = { params: Promise<{ osId: string }> };
+
+function MeasurementMediaSection({
+  measurement,
+  lookups,
+}: {
+  measurement: CuttingDetail["measurement"];
+  lookups: MeasurementLookups;
+}) {
+  if (!measurement) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+          Nenhuma medição registrada para este item.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <ProductionMeasurementMedia
+      items={measurement.items}
+      photos={measurement.photos}
+      lookups={lookups}
+    />
+  );
+}
 
 export default async function InstallationOsPage({ params }: Props) {
   const { osId } = await params;
   const order = await getServiceOrderById(osId);
   if (!order) notFound();
 
-  const detail = await getInstallationDetailForOs(osId, order.status);
+  const [detail, cuttingDetail, lookups] = await Promise.all([
+    getInstallationDetailForOs(osId, order.status),
+    getCuttingDetailForOs(osId),
+    listMeasurementLookups(),
+  ]);
+
+  const measurementMedia = (
+    <MeasurementMediaSection
+      measurement={cuttingDetail.measurement}
+      lookups={lookups}
+    />
+  );
 
   if (!canOperateInstallationModule(order.status, detail.cuttingSteps)) {
     return (
       <>
         <div className="mb-4 sm:mb-6">
           <div className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 shrink-0 text-success" />
+            <Hammer className="h-5 w-5 shrink-0 text-success" />
             <h1 className="font-mono text-xl font-bold sm:text-2xl">
               {getOrderDisplayNumber(order)}
             </h1>
@@ -35,10 +80,13 @@ export default async function InstallationOsPage({ params }: Props) {
           </p>
           <MeasurementNotesCard notes={order.notes} className="mt-4" />
         </div>
-        <div className="rounded-xl border bg-card p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Aguardando conclusão do corte para liberar a instalação desta OS.
-          </p>
+        <div className="space-y-4 sm:space-y-6">
+          {measurementMedia}
+          <div className="rounded-xl border bg-card p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Aguardando conclusão do corte para liberar a instalação desta OS.
+            </p>
+          </div>
         </div>
       </>
     );
@@ -55,7 +103,7 @@ export default async function InstallationOsPage({ params }: Props) {
 
       <div className="mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 shrink-0 text-success" />
+          <Hammer className="h-5 w-5 shrink-0 text-success" />
           <h1 className="font-mono text-xl font-bold sm:text-2xl">
             {getOrderDisplayNumber(order)}
           </h1>
@@ -84,6 +132,8 @@ export default async function InstallationOsPage({ params }: Props) {
           initialTransportSteps={detail.transportSteps}
           initialCuttingSteps={detail.cuttingSteps}
         />
+
+        {measurementMedia}
 
         <InstallationServicePhotos
           osId={osId}

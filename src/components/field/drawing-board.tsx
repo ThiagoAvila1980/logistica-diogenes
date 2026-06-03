@@ -24,6 +24,9 @@ export type DrawingBoardProps = {
   onSave: (base64Image: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
   initialImageUrl?: string | null;
+  /** Imagem de referência (ex.: tipo de envidraçamento); recarrega quando `templateKey` muda. */
+  templateImageUrl?: string | null;
+  templateKey?: number;
   initialFullscreen?: boolean;
   onInitialFullscreenApplied?: () => void;
   onFullscreenChange?: (fullscreen: boolean) => void;
@@ -35,6 +38,8 @@ export function DrawingBoard({
   onSave,
   onDirtyChange,
   initialImageUrl,
+  templateImageUrl,
+  templateKey = 0,
   initialFullscreen = false,
   onInitialFullscreenApplied,
   onFullscreenChange,
@@ -50,6 +55,7 @@ export function DrawingBoard({
   const strokeColorRef = useRef("#000000");
   const strokeWidthRef = useRef(2);
   const initialLoadedRef = useRef(false);
+  const lastTemplateLoadRef = useRef("");
   const disabledRef = useRef(disabled);
 
   const [tool, setTool] = useState<Tool>("pen");
@@ -269,6 +275,14 @@ export function DrawingBoard({
     loadInitialImage,
     restoreFromHistory,
   ]);
+
+  useEffect(() => {
+    if (!templateImageUrl) return;
+    const signature = `${templateKey}:${templateImageUrl}`;
+    if (lastTemplateLoadRef.current === signature) return;
+    lastTemplateLoadRef.current = signature;
+    loadInitialImage(templateImageUrl, () => markDirty());
+  }, [templateImageUrl, templateKey, loadInitialImage, markDirty]);
 
   useEffect(() => {
     if (!mounted) return;

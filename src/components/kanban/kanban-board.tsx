@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useSlowPending } from "@/hooks/use-slow-pending";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
-import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  RefreshCw,
+  LayoutDashboard,
+} from "lucide-react";
 import { KanbanPhaseColumn } from "./kanban-phase-column";
 import { KanbanFiltersBar } from "./kanban-filters";
 import { KanbanColumnStats } from "./kanban-column-stats";
@@ -327,9 +333,15 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-primary lg:text-xl">
-            Kanban — Ordens de Serviço
-          </h1>
+          <div className="flex min-w-0 items-center gap-2">
+            <LayoutDashboard
+              className="h-5 w-5 shrink-0 text-primary lg:h-6 lg:w-6"
+              aria-hidden
+            />
+            <h1 className="text-lg font-bold tracking-tight text-primary lg:text-2xl">
+              Painel Administrativo
+            </h1>
+          </div>
           <p className="text-[11px] tabular-nums text-muted-foreground">
             {orders.length} OS
           </p>

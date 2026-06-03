@@ -27,6 +27,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ORDER_INDEX_GRID_CLASS } from "@/lib/ui/order-index-grid";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -115,51 +117,63 @@ export function UserAdminPanel({
             Criar usuário
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {users.map((user) => (
-            <div
-              key={user.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
-            >
-              <div>
-                <p className="font-medium">{user.name}</p>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {user.roles.map((role) => (
-                    <Badge key={role} variant="secondary">
-                      {ROLE_LABELS[role] ?? role}
-                    </Badge>
-                  ))}
-                  <Badge variant={user.active ? "default" : "outline"}>
-                    {user.active ? "Ativo" : "Inativo"}
-                  </Badge>
-                  {user.id === currentUserId && (
-                    <Badge variant="outline">Você</Badge>
+        <CardContent>
+          {users.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum usuário cadastrado.
+            </p>
+          ) : (
+            <ul className={ORDER_INDEX_GRID_CLASS}>
+              {users.map((user) => (
+                <li
+                  key={user.id}
+                  className={cn(
+                    "flex min-h-0 flex-col gap-3 rounded-xl border border-primary/10 bg-card p-4 premium-card",
                   )}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEditing(user);
-                    setEditOpen(true);
-                  }}
                 >
-                  <Pencil className="h-4 w-4" />
-                  Editar
-                </Button>
-                <DeleteUserDialog
-                  userId={user.id}
-                  userName={user.name}
-                  userEmail={user.email}
-                  disabled={user.id === currentUserId}
-                />
-              </div>
-            </div>
-          ))}
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <p className="font-medium leading-tight">{user.name}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {user.email}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {user.roles.map((role) => (
+                        <Badge key={role} variant="secondary">
+                          {ROLE_LABELS[role] ?? role}
+                        </Badge>
+                      ))}
+                      <Badge variant={user.active ? "default" : "outline"}>
+                        {user.active ? "Ativo" : "Inativo"}
+                      </Badge>
+                      {user.id === currentUserId && (
+                        <Badge variant="outline">Você</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditing(user);
+                        setEditOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Editar
+                    </Button>
+                    <DeleteUserDialog
+                      userId={user.id}
+                      userName={user.name}
+                      userEmail={user.email}
+                      disabled={user.id === currentUserId}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 

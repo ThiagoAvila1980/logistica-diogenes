@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { resolveUploadDisplayUrlAction } from "@/actions/upload-actions";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
@@ -63,6 +63,11 @@ export function MeasurementItemCard({
   const [resolvedDrawingUrl, setResolvedDrawingUrl] = useState<string | null>(
     item.drawingUrl ?? null,
   );
+  const [resolvedTemplateUrl, setResolvedTemplateUrl] = useState<string | null>(
+    null,
+  );
+  const [templateKey, setTemplateKey] = useState(0);
+  const prevTipoEnvidracamentoRef = useRef(item.idTipoEnvidracamento);
 
   useEffect(() => {
     if (!item.drawingUrl) {
@@ -87,6 +92,46 @@ export function MeasurementItemCard({
       cancelled = true;
     };
   }, [item.drawingUrl]);
+
+  const selectedTipoEnvidracamento = lookups.tipoEnvidracamento.find(
+    (tipo) => tipo.id === item.idTipoEnvidracamento,
+  );
+
+  useEffect(() => {
+    const imagemUrl = selectedTipoEnvidracamento?.imagemUrl;
+    if (!imagemUrl) {
+      setResolvedTemplateUrl(null);
+      return;
+    }
+
+    if (imagemUrl.startsWith("data:") || imagemUrl.startsWith("/uploads/")) {
+      setResolvedTemplateUrl(imagemUrl);
+      return;
+    }
+
+    let cancelled = false;
+    void resolveUploadDisplayUrlAction(imagemUrl).then((resolved) => {
+      if (!cancelled) setResolvedTemplateUrl(resolved);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTipoEnvidracamento?.imagemUrl, item.idTipoEnvidracamento]);
+
+  useEffect(() => {
+    const prev = prevTipoEnvidracamentoRef.current;
+    const next = item.idTipoEnvidracamento;
+    if (prev === next) return;
+    prevTipoEnvidracamentoRef.current = next;
+    if (next && resolvedTemplateUrl) {
+      setTemplateKey((key) => key + 1);
+    }
+  }, [item.idTipoEnvidracamento, resolvedTemplateUrl]);
+
+  const shouldLoadTemplate =
+    Boolean(item.idTipoEnvidracamento && resolvedTemplateUrl) &&
+    (templateKey > 0 || !item.drawingUrl);
 
   function updateField<K extends keyof MeasurementLineItem>(
     field: K,
@@ -178,6 +223,10 @@ export function MeasurementItemCard({
           <DrawingBoard
             key={resolvedDrawingUrl ?? item.id}
             initialImageUrl={resolvedDrawingUrl}
+            templateImageUrl={
+              shouldLoadTemplate ? resolvedTemplateUrl : null
+            }
+            templateKey={shouldLoadTemplate ? Math.max(templateKey, 1) : 0}
             initialFullscreen={initialDrawingFullscreen}
             onInitialFullscreenApplied={onDrawingFullscreenApplied}
             onFullscreenChange={onDrawingFullscreenChange}
@@ -186,7 +235,10 @@ export function MeasurementItemCard({
             onSave={(base64Image) => updateField("drawingUrl", base64Image)}
           />
           <p className="text-xs text-muted-foreground">
-            Desenhe no quadro e toque em{" "}
+            {selectedTipoEnvidracamento?.imagemUrl
+              ? "Ao escolher o tipo de envidraçamento, a imagem de referência é carregada no quadro. "
+              : null}
+            Desenhe os detalhes e toque em{" "}
             <span className="font-medium">Salvar</span> na barra lateral antes de
             registrar a medição.
           </p>

@@ -5,19 +5,18 @@ import {
   saveCor,
 } from "@/actions/lookup-admin-actions";
 import { LookupAdminPanel } from "@/components/admin/lookup-admin-panel";
+import { PageHeading } from "@/components/dashboard/page-heading";
 
 export default async function AdminCoresPage() {
   const items = await getLookupItemsForAdmin("cores");
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Palette className="h-5 w-5 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">Cores de perfil</h2>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Opções de cor do perfil disponíveis nas medições.
-      </p>
+      <PageHeading
+        title="Cores de perfil"
+        description="Opções de cor do perfil disponíveis nas medições."
+        icon={Palette}
+      />
       <LookupAdminPanel
         title="Cores cadastradas"
         description="Informe a descrição da cor do perfil."

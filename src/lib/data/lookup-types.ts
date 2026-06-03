@@ -1,6 +1,8 @@
 export type LookupOption = {
   id: string;
   descricao: string;
+  /** URL persistida no storage (tipos de envidraçamento com foto de referência). */
+  imagemUrl?: string | null;
 };
 
 export type MeasurementLookups = {
