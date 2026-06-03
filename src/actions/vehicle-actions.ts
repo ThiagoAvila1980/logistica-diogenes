@@ -82,6 +82,7 @@ export async function saveVehicle(
     }
 
     revalidatePath("/admin/vehicles");
+    revalidatePath("/logistics");
     return {
       success: true,
       message: id ? "Veículo atualizado" : "Veículo cadastrado",
@@ -114,6 +115,7 @@ export async function deleteVehicle(vehicleId: string): Promise<AdminActionResul
       await deleteVehicleDb(vehicleId);
     }
     revalidatePath("/admin/vehicles");
+    revalidatePath("/logistics");
     return { success: true, message: "Veículo removido" };
   } catch (err) {
     return {

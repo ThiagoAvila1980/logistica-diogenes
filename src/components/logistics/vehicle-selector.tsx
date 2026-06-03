@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Car, CheckCircle2, Loader2 } from "lucide-react";
 import {
@@ -34,12 +34,25 @@ export function VehicleSelector({
   canChange,
 }: Props) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState(vehicleId ?? "");
+  const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const vehicleIds = useMemo(
+    () => new Set(vehicles.map((v) => v.id)),
+    [vehicles],
+  );
+
+  useEffect(() => {
+    if (vehicleId && vehicleIds.has(vehicleId)) {
+      setSelectedId(vehicleId);
+    } else {
+      setSelectedId("");
+    }
+  }, [vehicleId, vehicleIds]);
+
   const assignedLabel =
-    vehiclePlate != null
+    vehicleId != null && vehiclePlate != null
       ? vehicleDescription
         ? `${vehicleDescription} (${vehiclePlate})`
         : vehiclePlate

@@ -113,14 +113,39 @@ export type VehicleOptionForSelection = {
 export async function listVehiclesForTransportSelectionDb(
   osId: string,
 ): Promise<VehicleOptionForSelection[]> {
+  const db = getDb();
   const active = await listActiveVehiclesDb();
+  const byId = new Map(active.map((v) => [v.id, v]));
+
+  const [assigned] = await db
+    .select({
+      id: vehicles.id,
+      description: vehicles.description,
+      plate: vehicles.plate,
+    })
+    .from(transportLogs)
+    .innerJoin(vehicles, eq(transportLogs.vehicleId, vehicles.id))
+    .where(eq(transportLogs.idMedicao, osId))
+    .limit(1);
+
+  if (assigned && !byId.has(assigned.id)) {
+    byId.set(assigned.id, {
+      id: assigned.id,
+      description: assigned.description,
+      plate: assigned.plate,
+    });
+  }
+
   const rows = await Promise.all(
-    active.map(async (vehicle) => ({
+    [...byId.values()].map(async (vehicle) => ({
       ...vehicle,
       unavailable: await isVehicleInUseByOtherOsDb(vehicle.id, osId),
     })),
   );
-  return rows;
+
+  return rows.sort((a, b) =>
+    a.description.localeCompare(b.description, "pt-BR"),
+  );
 }
 
 export async function upsertVehicleDb(data: {

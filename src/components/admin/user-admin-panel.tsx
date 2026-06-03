@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useCallback, useState } from "react";
+import { useRunOnceOnActionSuccess } from "@/hooks/use-run-once-on-action-success";
 import { Loader2, Pencil, Plus } from "lucide-react";
 import {
   createUser,
@@ -80,7 +80,6 @@ export function UserAdminPanel({
   users: AdminUserRow[];
   currentUserId: string;
 }) {
-  const router = useRouter();
   const [createState, createAction, createPending] = useActionState<
     AdminActionResult | null,
     FormData
@@ -93,19 +92,16 @@ export function UserAdminPanel({
     FormData
   >(updateUser, null);
 
-  useEffect(() => {
-    if (createState?.success) {
-      setCreateOpen(false);
-      router.refresh();
-    }
-  }, [createState, router]);
+  const onCreateSuccess = useCallback(() => {
+    setCreateOpen(false);
+  }, []);
 
-  useEffect(() => {
-    if (editState?.success) {
-      setEditOpen(false);
-      router.refresh();
-    }
-  }, [editState, router]);
+  const onEditSuccess = useCallback(() => {
+    setEditOpen(false);
+  }, []);
+
+  useRunOnceOnActionSuccess(createState, onCreateSuccess);
+  useRunOnceOnActionSuccess(editState, onEditSuccess);
 
   return (
     <div className="space-y-6">

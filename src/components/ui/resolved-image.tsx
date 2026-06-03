@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { resolveUploadDisplayUrlAction } from "@/actions/upload-actions";
+import {
+  shouldResolveUploadUrlClientSide,
+  toBrowserDisplayUrl,
+} from "@/lib/upload/display-url-client";
 import { cn } from "@/lib/utils";
 
 type ResolvedImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
@@ -10,8 +14,8 @@ type ResolvedImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
   fallbackClassName?: string;
 };
 
-function needsRemoteResolve(url: string): boolean {
-  return url.startsWith("http://") || url.startsWith("https://");
+function isMockImageUrl(url: string): boolean {
+  return url.trim().startsWith("mock://");
 }
 
 export function ResolvedImage({
@@ -21,25 +25,53 @@ export function ResolvedImage({
   fallbackClassName,
   ...props
 }: ResolvedImageProps) {
+  const trimmedSrc = src.trim();
+  const mockUrl = isMockImageUrl(trimmedSrc);
+  const useDirect =
+    Boolean(trimmedSrc) &&
+    !mockUrl &&
+    !shouldResolveUploadUrlClientSide(trimmedSrc);
+
   const [displaySrc, setDisplaySrc] = useState<string | null>(() =>
-    src && !needsRemoteResolve(src) ? src : null,
+    useDirect ? toBrowserDisplayUrl(trimmedSrc) : null,
   );
   const [loading, setLoading] = useState(
-    () => Boolean(src && needsRemoteResolve(src)),
+    () => Boolean(trimmedSrc) && !mockUrl && !useDirect,
   );
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState(mockUrl);
+  const [signedFallbackAttempted, setSignedFallbackAttempted] = useState(false);
+
+  const fetchResolvedUrl = useCallback(async (url: string) => {
+    try {
+      const resolved = await resolveUploadDisplayUrlAction(url);
+      const next = resolved?.trim() ? toBrowserDisplayUrl(resolved) : null;
+      setDisplaySrc(next);
+      if (!next) setFailed(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    setFailed(false);
+    setSignedFallbackAttempted(false);
+    setFailed(mockUrl);
 
-    if (!src) {
+    if (!trimmedSrc) {
       setDisplaySrc(null);
       setLoading(false);
       return;
     }
 
-    if (!needsRemoteResolve(src)) {
-      setDisplaySrc(src);
+    if (mockUrl) {
+      setDisplaySrc(null);
+      setLoading(false);
+      return;
+    }
+
+    if (useDirect) {
+      setDisplaySrc(toBrowserDisplayUrl(trimmedSrc));
       setLoading(false);
       return;
     }
@@ -48,24 +80,37 @@ export function ResolvedImage({
     setLoading(true);
     setDisplaySrc(null);
 
-    void resolveUploadDisplayUrlAction(src)
-      .then((resolved) => {
+    void (async () => {
+      try {
+        const resolved = await resolveUploadDisplayUrlAction(trimmedSrc);
         if (cancelled) return;
-        setDisplaySrc(resolved);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setFailed(true);
-        setLoading(false);
-      });
+        const next = resolved?.trim() ? toBrowserDisplayUrl(resolved) : null;
+        setDisplaySrc(next);
+        if (!next) setFailed(true);
+      } catch {
+        if (!cancelled) setFailed(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [trimmedSrc, mockUrl, useDirect]);
 
-  if (!src) {
+  function handleImageError() {
+    if (useDirect && !signedFallbackAttempted) {
+      setSignedFallbackAttempted(true);
+      setFailed(false);
+      setLoading(true);
+      void fetchResolvedUrl(trimmedSrc);
+      return;
+    }
+    setFailed(true);
+  }
+
+  if (!trimmedSrc) {
     return null;
   }
 
@@ -104,7 +149,7 @@ export function ResolvedImage({
       alt={alt}
       className={className}
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={handleImageError}
     />
   );
 }

@@ -16,7 +16,8 @@ export async function getLogisticsSummariesDb(
   const rows = await db
     .select({
       idMedicao: transportLogs.idMedicao,
-      vehiclePlate: transportLogs.vehiclePlate,
+      vehicleId: transportLogs.vehicleId,
+      vehiclePlate: vehicles.plate,
       vehicleDescription: vehicles.description,
     })
     .from(transportLogs)
@@ -27,8 +28,8 @@ export async function getLogisticsSummariesDb(
     rows.map((r) => [
       r.idMedicao,
       {
-        vehiclePlate: r.vehiclePlate,
-        vehicleDescription: r.vehicleDescription,
+        vehiclePlate: r.vehicleId ? r.vehiclePlate : null,
+        vehicleDescription: r.vehicleId ? r.vehicleDescription : null,
       },
     ]),
   );

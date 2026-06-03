@@ -47,7 +47,7 @@ export async function getTransportDetailForOs(
     db
       .select({
         vehicleId: transportLogs.vehicleId,
-        vehiclePlate: transportLogs.vehiclePlate,
+        vehiclePlate: vehicles.plate,
         vehicleDescription: vehicles.description,
         routeNotes: transportLogs.routeNotes,
         levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
@@ -99,8 +99,10 @@ export async function getTransportDetailForOs(
       transporteConcluido: trans?.transporteConcluido ?? false,
     },
     vehicleId: trans?.vehicleId ?? null,
-    vehiclePlate: trans?.vehiclePlate ?? null,
-    vehicleDescription: trans?.vehicleDescription ?? null,
+    vehiclePlate: trans?.vehicleId ? (trans?.vehiclePlate ?? null) : null,
+    vehicleDescription: trans?.vehicleId
+      ? (trans?.vehicleDescription ?? null)
+      : null,
     routeNotes: trans?.routeNotes ?? null,
   };
 }

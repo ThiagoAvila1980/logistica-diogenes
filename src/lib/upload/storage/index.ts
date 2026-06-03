@@ -5,6 +5,7 @@ import { createR2StorageProvider } from "./r2";
 import { isStorageQuotaError } from "./quota";
 import { createSupabaseStorageProvider } from "./supabase";
 import type { StorageProvider } from "./types";
+import { isPersistedUploadUrl } from "./url-utils";
 
 function buildProvider(name: "local" | "supabase" | "r2"): StorageProvider {
   const config = getStorageConfig();
@@ -81,18 +82,5 @@ export async function deleteObject(url: string): Promise<void> {
   }
 }
 
-/** URLs salvas no banco: local, Supabase ou R2. */
-export function isPersistedUploadUrl(url: string): boolean {
-  if (url.startsWith("/uploads/")) return true;
-  if (!url.startsWith("https://")) return false;
-
-  const config = getStorageConfig();
-  if (config.hasSupabase && url.includes(".supabase.co/storage/")) return true;
-  if (config.hasR2 && config.r2 && url.startsWith(config.r2.publicUrl)) {
-    return true;
-  }
-
-  return url.includes("/storage/v1/object/public/") || url.includes(".r2.dev/");
-}
-
+export { isPersistedUploadUrl } from "./url-utils";
 export { getStorageConfig };

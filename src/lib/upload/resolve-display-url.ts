@@ -12,8 +12,6 @@ type SupabaseObjectRef = {
 function parseSupabaseStorageUrl(url: string): SupabaseObjectRef | null {
   try {
     const parsed = new URL(url);
-    if (!parsed.hostname.includes(".supabase.co")) return null;
-
     const match = parsed.pathname.match(
       /\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/,
     );
@@ -44,6 +42,11 @@ function buildSupabasePublicUrl(
 function toLocalUploadPath(key: string): string {
   return `/uploads/${key.replace(/\\/g, "/")}`;
 }
+
+export {
+  shouldResolveUploadUrlClientSide,
+  toBrowserDisplayUrl,
+} from "./display-url-client";
 
 /** Extrai a chave relativa (ex.: measurements/osId/drawings/file.webp) de URL persistida. */
 export function storageKeyFromPersistedUrl(url: string): string | null {

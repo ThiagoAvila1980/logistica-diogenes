@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRunOnceOnActionSuccess } from "@/hooks/use-run-once-on-action-success";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
 import type { LookupAdminRow } from "@/lib/data/lookup-admin-db";
@@ -61,19 +62,16 @@ export function LookupAdminPanel({
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [createFormKey, setCreateFormKey] = useState(0);
 
-  useEffect(() => {
-    if (createState?.success) {
-      setCreateFormKey((key) => key + 1);
-      router.refresh();
-    }
-  }, [createState, router]);
+  const onCreateSuccess = useCallback(() => {
+    setCreateFormKey((key) => key + 1);
+  }, []);
 
-  useEffect(() => {
-    if (editState?.success) {
-      setEditOpen(false);
-      router.refresh();
-    }
-  }, [editState, router]);
+  const onEditSuccess = useCallback(() => {
+    setEditOpen(false);
+  }, []);
+
+  useRunOnceOnActionSuccess(createState, onCreateSuccess);
+  useRunOnceOnActionSuccess(editState, onEditSuccess);
 
   function openEdit(item: LookupAdminRow) {
     setEditing(item);
