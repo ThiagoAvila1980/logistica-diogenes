@@ -4,24 +4,43 @@ import { ArrowLeft, Truck } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getTransportDetailForOs } from "@/lib/data/transport-detail";
 import { listVehiclesForTransportSelection } from "@/lib/data/vehicles";
+import {
+  listActiveInstallers,
+  getInstallerAssignment,
+} from "@/lib/data/installers";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { getSession } from "@/lib/auth/session";
+import { canViewAllOrders } from "@/lib/auth/permissions";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { Button } from "@/components/ui/button";
 import { TransportChecklist } from "@/components/logistics/transport-checklist";
 import { VehicleSelector } from "@/components/logistics/vehicle-selector";
+import { InstallerSelector } from "@/components/logistics/installer-selector";
 
 type Props = { params: Promise<{ osId: string }> };
 
 export default async function LogisticsOsPage({ params }: Props) {
   const { osId } = await params;
-  const order = await getServiceOrderById(osId);
+  const [order, session] = await Promise.all([
+    getServiceOrderById(osId),
+    getSession(),
+  ]);
   if (!order) notFound();
+
+  const isManager = canViewAllOrders(session?.roles ?? []);
 
   const detail = await getTransportDetailForOs(osId, order.status);
   const vehicles = await listVehiclesForTransportSelection(osId);
   const canChangeVehicle = !detail.transportSteps.levarPerfilEstrutural;
+
+  const [installers, installerAssignment] = isManager
+    ? await Promise.all([
+        listActiveInstallers(),
+        getInstallerAssignment(osId),
+      ])
+    : [[], { installerId: null, installerName: null, scheduledInstallationDate: null }];
 
   if (!canOperateTransportModule(order.status, detail.cuttingSteps)) {
     return (
@@ -88,6 +107,19 @@ export default async function LogisticsOsPage({ params }: Props) {
         vehicles={vehicles}
         canChange={canChangeVehicle}
       />
+
+      {isManager && (
+        <InstallerSelector
+          osId={osId}
+          installerId={installerAssignment.installerId}
+          installerName={installerAssignment.installerName}
+          scheduledInstallationDate={
+            installerAssignment.scheduledInstallationDate
+          }
+          installers={installers}
+          canChange
+        />
+      )}
 
       <TransportChecklist
         osId={osId}

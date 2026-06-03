@@ -8,6 +8,8 @@ const ALL_OS_STATUSES = osStatus.enumValues;
 
 export type OrderAccessFields = {
   assignedUserId: string | null;
+  /** Instalador atribuído explicitamente à OS (via installation_logs). */
+  installerId: string | null;
   status: OsStatus;
 };
 
@@ -58,12 +60,19 @@ export function getVisibleStatusesForRoles(
 /**
  * Operador vê OS atribuída a si ou sem responsável (pool).
  * Admin/gerente veem todas.
+ * Instalador vê apenas OS com installerId igual ao seu (atribuição explícita).
  */
 export function canAccessOrder(
   session: SessionUser,
   order: OrderAccessFields,
 ): boolean {
   if (canViewAllOrders(session.roles)) return true;
+
+  if (hasAnyRole(session.roles, ["instalador"])) {
+    const installerVisible = isStatusVisibleToRoles(session.roles, order.status);
+    if (!installerVisible) return false;
+    return order.installerId === session.userId;
+  }
 
   const assigned =
     order.assignedUserId === null || order.assignedUserId === session.userId;

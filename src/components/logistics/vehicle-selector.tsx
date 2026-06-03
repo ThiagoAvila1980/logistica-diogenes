@@ -16,6 +16,21 @@ import { Select } from "@/components/ui/select";
 import { assignVehicleToTransportAction } from "@/actions/transport-actions";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
 
+function formatVehicleOptionTitle(vehicle: VehicleOptionForSelection): string {
+  const base = `${vehicle.plate} · ${vehicle.description}`;
+  return vehicle.unavailable ? `${base} (em uso)` : base;
+}
+
+/** Texto curto nas <option> — o select nativo usa a opção mais longa como largura mínima. */
+function formatVehicleOptionLabel(vehicle: VehicleOptionForSelection): string {
+  const desc =
+    vehicle.description.length > 28
+      ? `${vehicle.description.slice(0, 27)}…`
+      : vehicle.description;
+  const base = `${vehicle.plate} · ${desc}`;
+  return vehicle.unavailable ? `${base} (em uso)` : base;
+}
+
 type Props = {
   osId: string;
   vehicleId: string | null;
@@ -78,7 +93,7 @@ export function VehicleSelector({
 
   if (vehicleId && !canChange) {
     return (
-      <Card className="mb-4 border-success-border bg-success-muted/50">
+      <Card className="mb-4 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Car className="h-4 w-4 text-primary" />
@@ -86,9 +101,9 @@ export function VehicleSelector({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex min-w-0 items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-            <span className="font-medium">{assignedLabel}</span>
+            <span className="min-w-0 truncate font-medium">{assignedLabel}</span>
           </div>
         </CardContent>
       </Card>
@@ -96,7 +111,7 @@ export function VehicleSelector({
   }
 
   return (
-    <Card className="mb-4 border-warning-border bg-warning-muted/60">
+    <Card className="mb-4 min-w-0 overflow-hidden border-warning-border bg-warning-muted/60">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Car className="h-4 w-4 text-warning" />
@@ -111,9 +126,9 @@ export function VehicleSelector({
         </p>
 
         {vehicleId && assignedLabel && (
-          <div className="flex items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
+          <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-            <span>
+            <span className="min-w-0 truncate">
               Atual: <span className="font-medium">{assignedLabel}</span>
             </span>
           </div>
@@ -125,31 +140,33 @@ export function VehicleSelector({
           </Alert>
         )}
 
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="vehicle-select">Veículo</Label>
-          <Select
-            id="vehicle-select"
-            value={selectedId}
-            disabled={loading || vehicles.length === 0}
-            className="h-11"
-            onChange={(e) => setSelectedId(e.target.value)}
-          >
-            <option value="">
-              {vehicles.length === 0
-                ? "Nenhum veículo disponível"
-                : "Selecione um veículo..."}
-            </option>
-            {vehicles.map((vehicle) => (
-              <option
-                key={vehicle.id}
-                value={vehicle.id}
-                disabled={vehicle.unavailable}
-              >
-                {vehicle.description} ({vehicle.plate})
-                {vehicle.unavailable ? " — em uso" : ""}
+          <div className="min-w-0 w-full max-w-full overflow-hidden">
+            <Select
+              id="vehicle-select"
+              value={selectedId}
+              disabled={loading || vehicles.length === 0}
+              className="h-11 w-full min-w-0 max-w-full truncate"
+              onChange={(e) => setSelectedId(e.target.value)}
+            >
+              <option value="">
+                {vehicles.length === 0
+                  ? "Nenhum veículo disponível"
+                  : "Selecione um veículo..."}
               </option>
-            ))}
-          </Select>
+              {vehicles.map((vehicle) => (
+                <option
+                  key={vehicle.id}
+                  value={vehicle.id}
+                  disabled={vehicle.unavailable}
+                  title={formatVehicleOptionTitle(vehicle)}
+                >
+                  {formatVehicleOptionLabel(vehicle)}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
 
         <Button

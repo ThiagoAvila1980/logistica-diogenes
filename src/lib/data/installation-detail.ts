@@ -13,6 +13,8 @@ export type InstallationDetail = {
   installationSteps: InstallationSteps;
   notes: string | null;
   servicePhotos: string[];
+  installerId: string | null;
+  scheduledInstallationDate: Date | null;
 };
 
 export async function getInstallationDetailForOs(
@@ -54,6 +56,8 @@ export async function getInstallationDetailForOs(
         instalacaoVidrosFeita: installationLogs.instalacaoVidrosFeita,
         notes: installationLogs.notes,
         photos: installationLogs.photos,
+        installerId: installationLogs.installerId,
+        scheduledInstallationDate: installationLogs.scheduledInstallationDate,
       })
       .from(installationLogs)
       .where(eq(installationLogs.idMedicao, osId))
@@ -87,5 +91,7 @@ export async function getInstallationDetailForOs(
     },
     notes: inst?.notes ?? null,
     servicePhotos: inst?.photos?.service ?? [],
+    installerId: inst?.installerId ?? null,
+    scheduledInstallationDate: inst?.scheduledInstallationDate ?? null,
   };
 }

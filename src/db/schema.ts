@@ -296,6 +296,9 @@ export const installationLogs = pgTable(
     installerId: uuid("installer_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    scheduledInstallationDate: timestamp("scheduled_installation_date", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

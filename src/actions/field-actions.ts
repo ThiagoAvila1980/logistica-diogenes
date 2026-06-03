@@ -351,6 +351,12 @@ export async function deleteMeasurement(
 export async function saveFieldMeasurement(
   formData: FormData,
 ): Promise<SaveFieldMeasurementResult> {
+  try {
+    await requireRole(["admin", "gerente", "medidor"]);
+  } catch (err) {
+    return { success: false, message: authErrorMessage(err) ?? "Sem permissão para registrar medição." };
+  }
+
   const rawItems = formData.get("items");
   let itemsJson: unknown;
   try {

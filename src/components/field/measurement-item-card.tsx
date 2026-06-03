@@ -220,29 +220,6 @@ export function MeasurementItemCard({
           id={`measurement-item-body-${item.id}`}
           className="mt-3 space-y-3"
         >
-          <DrawingBoard
-            key={resolvedDrawingUrl ?? item.id}
-            initialImageUrl={resolvedDrawingUrl}
-            templateImageUrl={
-              shouldLoadTemplate ? resolvedTemplateUrl : null
-            }
-            templateKey={shouldLoadTemplate ? Math.max(templateKey, 1) : 0}
-            initialFullscreen={initialDrawingFullscreen}
-            onInitialFullscreenApplied={onDrawingFullscreenApplied}
-            onFullscreenChange={onDrawingFullscreenChange}
-            disabled={disabled}
-            onDirtyChange={onDrawingDirtyChange}
-            onSave={(base64Image) => updateField("drawingUrl", base64Image)}
-          />
-          <p className="text-xs text-muted-foreground">
-            {selectedTipoEnvidracamento?.imagemUrl
-              ? "Ao escolher o tipo de envidraçamento, a imagem de referência é carregada no quadro. "
-              : null}
-            Desenhe os detalhes e toque em{" "}
-            <span className="font-medium">Salvar</span> na barra lateral antes de
-            registrar a medição.
-          </p>
-
           <div className="rounded-lg border bg-muted/20 p-4">
             <div className="space-y-2">
               <Label htmlFor={`ambiente-${item.id}`}>Ambiente</Label>
@@ -299,6 +276,29 @@ export function MeasurementItemCard({
               />
             </div>
           </div>
+
+          <DrawingBoard
+            key={resolvedDrawingUrl ?? item.id}
+            initialImageUrl={resolvedDrawingUrl}
+            templateImageUrl={
+              shouldLoadTemplate ? resolvedTemplateUrl : null
+            }
+            templateKey={shouldLoadTemplate ? Math.max(templateKey, 1) : 0}
+            initialFullscreen={initialDrawingFullscreen}
+            onInitialFullscreenApplied={onDrawingFullscreenApplied}
+            onFullscreenChange={onDrawingFullscreenChange}
+            disabled={disabled}
+            onDirtyChange={onDrawingDirtyChange}
+            onSave={(base64Image) => updateField("drawingUrl", base64Image)}
+          />
+          <p className="text-xs text-muted-foreground">
+            {selectedTipoEnvidracamento?.imagemUrl
+              ? "Ao escolher o tipo de envidraçamento, a imagem de referência é carregada no quadro. "
+              : null}
+            Desenhe os detalhes e toque em{" "}
+            <span className="font-medium">Salvar</span> na barra lateral antes de
+            registrar a medição.
+          </p>
 
           <MeasurementPhotosSection
             expanded={photosExpanded}

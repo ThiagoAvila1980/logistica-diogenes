@@ -57,6 +57,8 @@ type MockInstallation = {
   notes?: string | null;
   instalacaoEstruturalFeita?: boolean;
   instalacaoVidrosFeita?: boolean;
+  installerId?: string | null;
+  scheduledInstallationDate?: Date | null;
 };
 
 const DEMO_MEDIDOR = "a1000000-0000-4000-8000-000000000002";
@@ -73,6 +75,7 @@ function resolvedBudgetReference(m: MockMeasurement): string | null {
 }
 
 function toListItem(m: MockMeasurement): OrderListItem {
+  const instLog = installationLogs.find((i) => i.idMedicao === m.id);
   return {
     id: m.id,
     number: m.number,
@@ -82,6 +85,8 @@ function toListItem(m: MockMeasurement): OrderListItem {
     priority: m.priority,
     clientName: m.cliente?.trim() || "Cliente não informado",
     assignedUserId: m.assignedUserId,
+    installerId: instLog?.installerId ?? null,
+    scheduledInstallationDate: instLog?.scheduledInstallationDate ?? null,
     scheduledDate: m.scheduledDate,
     updatedAt: m.updatedAt,
     budgetReference: resolvedBudgetReference(m),
@@ -262,6 +267,8 @@ let installationLogs: MockInstallation[] = [
     idMedicao: "a1111111-1111-4111-8111-111111111107",
     photos: null,
     notes: null,
+    installerId: DEMO_INSTALADOR,
+    scheduledInstallationDate: new Date("2026-05-27"),
   },
 ];
 

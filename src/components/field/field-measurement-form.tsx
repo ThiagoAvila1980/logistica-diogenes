@@ -255,9 +255,14 @@ export function FieldMeasurementForm({
       if (nextType === measurementType || isPending) return;
       setMeasurementType(nextType);
       if (!viewMode) {
-        applyCurrentDraftSnapshot(draftsByType[nextType], {
-          expandFirstItem: true,
-        });
+        const targetDraft = draftsByType[nextType];
+        // Só há um registro por OS; ao promover orçamento → final o draft do outro
+        // tipo costuma não existir — manter itens em edição evita formulário vazio.
+        if (hasSavedMeasurementForView(targetDraft)) {
+          applyCurrentDraftSnapshot(targetDraft, {
+            expandFirstItem: true,
+          });
+        }
       }
     },
     [measurementType, isPending, viewMode, draftsByType, applyCurrentDraftSnapshot],

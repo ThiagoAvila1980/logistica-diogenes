@@ -7,6 +7,8 @@ import {
 } from "@/lib/upload/save-files";
 import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
 import type { UploadScope } from "@/lib/upload/config";
+import { requireRole } from "@/lib/auth/require-role";
+import { authErrorMessage } from "@/lib/auth/auth-error";
 
 const uploadSchema = z.object({
   osId: z.string().uuid(),
@@ -20,6 +22,12 @@ export type UploadPhotosResult =
 export async function uploadPhotos(
   formData: FormData,
 ): Promise<UploadPhotosResult> {
+  try {
+    await requireRole(["admin", "gerente", "medidor", "instalador"]);
+  } catch (err) {
+    return { success: false, message: authErrorMessage(err) ?? "Sem permissão para enviar fotos." };
+  }
+
   const parsed = uploadSchema.safeParse({
     osId: formData.get("osId"),
     scope: formData.get("scope"),

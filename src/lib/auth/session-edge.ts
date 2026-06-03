@@ -2,11 +2,15 @@ import { parseSessionPayload } from "./session-parse";
 import type { SessionUser } from "./session-types";
 
 function getSecret(): string {
-  return (
-    process.env.SESSION_SECRET ??
-    process.env.BIOMETRIC_SECRET ??
-    "fluxo-diogenes-dev-session-secret"
-  );
+  const secret =
+    process.env.SESSION_SECRET ?? process.env.BIOMETRIC_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET não definido. Configure a variável de ambiente antes de iniciar em produção.",
+    );
+  }
+  return "fluxo-diogenes-dev-session-secret";
 }
 
 function base64UrlToBytes(base64url: string): Uint8Array {
