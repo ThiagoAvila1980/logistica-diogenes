@@ -117,7 +117,23 @@ const ENTITY_CONFIG: Record<
       );
       return countTipoEnvidracamentoByDescricaoDb(descricao, excludeId);
     },
-    mockStore: tipoEnvidracamentoAdminMockStore,
+    mockStore: {
+      list: () =>
+        tipoEnvidracamentoAdminMockStore.list().map(({ id, descricao, imagemUrl }) => ({
+          id,
+          descricao,
+          imagemUrl,
+        })),
+      create: (descricao: string) =>
+        tipoEnvidracamentoAdminMockStore.create(descricao, null),
+      update: (id: string, descricao: string) =>
+        tipoEnvidracamentoAdminMockStore.update(
+          id,
+          descricao,
+          tipoEnvidracamentoAdminMockStore.getImagemUrl(id),
+        ),
+      delete: (id: string) => tipoEnvidracamentoAdminMockStore.delete(id),
+    },
   },
   ambientes: {
     adminPath: "/admin/ambientes",
