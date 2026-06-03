@@ -342,7 +342,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
               Painel Administrativo
             </h1>
           </div>
-          <p className="text-[11px] tabular-nums text-muted-foreground">
+          <p className="text-[12px] tabular-nums text-muted-foreground">
             {orders.length} OS
           </p>
         </div>
@@ -376,10 +376,10 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         visibleColumns={KANBAN_VISIBLE_COLUMNS}
       />
 
-      <p className="hidden text-[10px] text-muted-foreground lg:block">
+      <p className="hidden text-[11px] text-muted-foreground lg:block">
         Arraste pelo ⋮⋮ ·{" "}
-        <kbd className="rounded border px-0.5 text-[9px]">Alt</kbd>+
-        <kbd className="rounded border px-0.5 text-[9px]">→</kbd> avança etapa
+        <kbd className="rounded border px-0.5 text-[10px]">Alt</kbd>+
+        <kbd className="rounded border px-0.5 text-[10px]">→</kbd> avança etapa
       </p>
 
       {isMoveSlowPending && (

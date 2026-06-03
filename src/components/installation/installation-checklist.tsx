@@ -215,7 +215,7 @@ export function InstallationChecklist({
                   {done && (
                     <Badge
                       variant="outline"
-                      className={cn("h-4 px-1.5 text-[10px]", color.badgeDone)}
+                      className={cn("h-4 px-1.5 text-[11px]", color.badgeDone)}
                     >
                       Concluída
                     </Badge>
@@ -223,13 +223,13 @@ export function InstallationChecklist({
                   {!done && !isLocked && (
                     <Badge
                       variant="outline"
-                      className={cn("h-4 px-1.5 text-[10px]", color.badge)}
+                      className={cn("h-4 px-1.5 text-[11px]", color.badge)}
                     >
                       Disponível
                     </Badge>
                   )}
                 </div>
-                <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+                <p className="mt-0.5 text-[12px] leading-tight text-muted-foreground">
                   {isLocked ? gate.lockedReason : description}
                 </p>
               </div>
@@ -278,7 +278,7 @@ export function InstallationChecklist({
             >
               Instalação Total Concluída
             </span>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
               {allDone
                 ? "Todas as etapas concluídas — OS finalizada"
                 : "Automático: marcado quando as duas etapas acima forem concluídas"}
@@ -287,7 +287,7 @@ export function InstallationChecklist({
           {allDone && (
             <Badge
               variant="outline"
-              className="h-4 px-1.5 text-[10px] bg-success-subtle text-success-foreground"
+              className="h-4 px-1.5 text-[11px] bg-success-subtle text-success-foreground"
             >
               Concluída
             </Badge>

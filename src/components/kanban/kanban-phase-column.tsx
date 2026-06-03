@@ -28,13 +28,13 @@ export function KanbanPhaseColumn({
       <div className="mb-1 rounded-sm bg-primary/20 text-primary px-1 py-1.5 sm:mb-1.5 sm:px-2 sm:py-2">
         <div className="flex items-center justify-between gap-0.5 sm:gap-1">
           <span
-            className="truncate text-[9px] font-bold leading-tight tracking-wide sm:text-xs"
+            className="truncate text-[10px] font-bold leading-tight tracking-wide sm:text-xs"
             title={phase.title}
           >
             <span className="sm:hidden">{phase.shortTitle}</span>
             <span className="hidden sm:inline">{phase.title}</span>
           </span>
-          <span className="shrink-0 rounded-full bg-primary/50 px-1 py-px text-[9px] font-semibold tabular-nums text-primary-foreground sm:px-2 sm:py-0.5 sm:text-[10px]">
+          <span className="shrink-0 rounded-full bg-primary/50 px-1 py-px text-[10px] font-semibold tabular-nums text-primary-foreground sm:px-2 sm:py-0.5 sm:text-[11px]">
             {items.length}
           </span>
         </div>
@@ -73,7 +73,7 @@ export function KanbanPhaseColumn({
               })}
               {provided.placeholder}
               {items.length === 0 && (
-                <div className="flex h-16 items-center justify-center rounded-md border border-dashed text-[9px] text-muted-foreground sm:h-24 sm:text-[10px]">
+                <div className="flex h-16 items-center justify-center rounded-md border border-dashed text-[10px] text-muted-foreground sm:h-24 sm:text-[11px]">
                   <span className="hidden sm:inline">Nenhuma OS</span>
                   <span className="sm:hidden">—</span>
                 </div>

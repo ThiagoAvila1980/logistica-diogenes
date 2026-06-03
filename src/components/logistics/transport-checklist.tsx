@@ -260,7 +260,7 @@ export function TransportChecklist({
                   {done && (
                     <Badge
                       variant="outline"
-                      className={cn("h-4 px-1.5 text-[10px]", color.badgeDone)}
+                      className={cn("h-4 px-1.5 text-[11px]", color.badgeDone)}
                     >
                       Entregue
                     </Badge>
@@ -268,13 +268,13 @@ export function TransportChecklist({
                   {!done && !isLocked && (
                     <Badge
                       variant="outline"
-                      className={cn("h-4 px-1.5 text-[10px]", color.badge)}
+                      className={cn("h-4 px-1.5 text-[11px]", color.badge)}
                     >
                       Disponível
                     </Badge>
                   )}
                 </div>
-                <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+                <p className="mt-0.5 text-[12px] leading-tight text-muted-foreground">
                   {isLocked
                     ? gate.lockedReason
                     : description}

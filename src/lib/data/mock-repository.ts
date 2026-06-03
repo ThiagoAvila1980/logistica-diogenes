@@ -44,6 +44,7 @@ type MockCutting = {
   embalagemFeita: boolean;
   acessoriosFeitos: boolean;
   vidrosFeitos: boolean;
+  cutterNotes?: string | null;
 };
 
 type MockTransport = {
@@ -384,7 +385,54 @@ export const mockRepository = {
         acessorios: cut?.acessoriosFeitos ?? false,
         vidros: cut?.vidrosFeitos ?? false,
       },
+      cutterNotes: cut?.cutterNotes ?? null,
     };
+  },
+
+  updateCuttingNotes(
+    osId: string,
+    notes: string | null,
+  ): { success: true } | { success: false; message: string } {
+    const m = findMeasurement(osId);
+    if (!m) return { success: false, message: "OS não encontrada" };
+
+    const CUTTING_STATUSES = ["cortes", "embalagem", "acessorios_plano"];
+
+    let cut = cuttingPlans.find((c) => c.idMedicao === osId);
+    const cuttingSteps = {
+      corteFeito: cut?.corteFeito ?? false,
+      embalagemFeita: cut?.embalagemFeita ?? false,
+      acessoriosFeitos: cut?.acessoriosFeitos ?? false,
+      vidrosFeitos: cut?.vidrosFeitos ?? false,
+    };
+    const canEditCutting =
+      CUTTING_STATUSES.includes(m.etapa) ||
+      (m.etapa.startsWith("transporte_") &&
+        (!cuttingSteps.corteFeito ||
+          !cuttingSteps.embalagemFeita ||
+          !cuttingSteps.acessoriosFeitos ||
+          !cuttingSteps.vidrosFeitos));
+
+    if (!canEditCutting) {
+      return { success: false, message: "OS não está em etapa de corte" };
+    }
+
+    if (!cut) {
+      cut = {
+        idMedicao: osId,
+        corteFeito: false,
+        embalagemFeita: false,
+        acessoriosFeitos: false,
+        vidrosFeitos: false,
+        cutterNotes: notes,
+      };
+      cuttingPlans.push(cut);
+    } else {
+      cut.cutterNotes = notes;
+    }
+
+    m.updatedAt = new Date();
+    return { success: true };
   },
 
   updateCuttingStep(

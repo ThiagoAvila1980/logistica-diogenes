@@ -114,7 +114,7 @@ export function StatusWizard({
                 </div>
                 <span
                   className={cn(
-                    "max-w-[3.25rem] text-center text-[10px] font-medium leading-tight sm:max-w-[3.75rem] md:ml-2 md:max-w-none md:whitespace-nowrap md:text-sm lg:text-base",
+                    "max-w-[3.25rem] text-center text-[11px] font-medium leading-tight sm:max-w-[3.75rem] md:ml-2 md:max-w-none md:whitespace-nowrap md:text-sm lg:text-base",
                     isCurrent && "font-semibold text-primary",
                     isPast && !isCurrent && "text-foreground",
                     !isPast && !isCurrent && "text-muted-foreground",

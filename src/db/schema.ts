@@ -209,6 +209,7 @@ export const cuttingPlans = pgTable(
     embalagemFeita: boolean("embalagem_feita").default(false).notNull(),
     acessoriosFeitos: boolean("acessorios_feitos").default(false).notNull(),
     vidrosFeitos: boolean("vidros_feitos").default(false).notNull(),
+    cutterNotes: text("cutter_notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

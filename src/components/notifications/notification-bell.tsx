@@ -9,9 +9,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   dismissNotificationAction,
   markAllNotificationsReadAction,
@@ -84,12 +91,13 @@ export function NotificationBell({
   enabled = true,
   panelAlign = "header",
 }: NotificationBellProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [detailNotification, setDetailNotification] =
+    useState<AppNotification | null>(null);
   const [panelPosition, setPanelPosition] = useState<PanelPosition | null>(
     null,
   );
@@ -211,9 +219,7 @@ export function NotificationBell({
       setUnreadCount((count) => Math.max(0, count - 1));
     }
     setOpen(false);
-    if (notification.href) {
-      router.push(notification.href);
-    }
+    setDetailNotification(notification);
   }
 
   async function handleMarkAllRead() {
@@ -299,7 +305,7 @@ export function NotificationBell({
                           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                             {notification.body}
                           </p>
-                          <p className="mt-2 text-[11px] text-muted-foreground">
+                          <p className="mt-2 text-[12px] text-muted-foreground">
                             {formatWhen(notification.createdAt)}
                           </p>
                         </button>
@@ -351,13 +357,51 @@ export function NotificationBell({
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
         </Button>
       </div>
       {panel}
+
+      <Dialog
+        open={detailNotification !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setDetailNotification(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="pr-8 leading-snug">
+              {detailNotification?.title}
+            </DialogTitle>
+            {detailNotification && (
+              <DialogDescription>
+                {formatWhen(detailNotification.createdAt)}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {detailNotification && (
+            <div className="max-h-[min(60vh,24rem)] overflow-y-auto rounded-md border bg-muted/40 p-3">
+              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+                {detailNotification.body}
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={() => setDetailNotification(null)}
+            >
+              Ok
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

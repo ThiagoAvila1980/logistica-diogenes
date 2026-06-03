@@ -125,17 +125,17 @@ export function MeasurementItemSpecSummary({
     return (
       <div className="mt-2 flex flex-wrap gap-1.5">
         {cor && (
-          <Badge variant="outline" className="text-[11px]">
+          <Badge variant="outline" className="text-[12px]">
             Cor: {cor}
           </Badge>
         )}
         {vidro && (
-          <Badge variant="outline" className="text-[11px]">
+          <Badge variant="outline" className="text-[12px]">
             Vidro: {vidro}
           </Badge>
         )}
         {envidracamento && (
-          <Badge variant="outline" className="text-[11px]">
+          <Badge variant="outline" className="text-[12px]">
             Envidraçamento: {envidracamento}
           </Badge>
         )}

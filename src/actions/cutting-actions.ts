@@ -224,3 +224,82 @@ export async function advanceCuttingToTransportAction(
     return { success: false, message: "Erro ao avançar para transporte" };
   }
 }
+
+const updateCuttingNotesSchema = z.object({
+  osId: z.string().uuid(),
+  notes: z.string().max(2000).nullable(),
+});
+
+export type UpdateCuttingNotesResult =
+  | { success: true }
+  | { success: false; message: string };
+
+export async function updateCuttingNotesAction(
+  raw: z.infer<typeof updateCuttingNotesSchema>,
+): Promise<UpdateCuttingNotesResult> {
+  const parsed = updateCuttingNotesSchema.safeParse(raw);
+  if (!parsed.success) {
+    console.error("[updateCuttingNotesAction] validação falhou", parsed.error.flatten());
+    return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
+  }
+
+  try {
+    await requireRole(["admin", "gerente", "cortador"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const { osId, notes } = parsed.data;
+  const trimmedNotes = notes?.trim() || null;
+
+  if (useMockData()) {
+    const result = mockRepository.updateCuttingNotes(osId, trimmedNotes);
+    if (result.success) revalidateOSRoutes(osId);
+    return result;
+  }
+
+  try {
+    const order = await getServiceOrderById(osId);
+    if (!order) return { success: false, message: "OS não encontrada" };
+
+    const db = getDb();
+    const [existingPlan] = await db
+      .select({
+        id: cuttingPlans.id,
+        corteFeito: cuttingPlans.corteFeito,
+        embalagemFeita: cuttingPlans.embalagemFeita,
+        acessoriosFeitos: cuttingPlans.acessoriosFeitos,
+        vidrosFeitos: cuttingPlans.vidrosFeitos,
+      })
+      .from(cuttingPlans)
+      .where(eq(cuttingPlans.idMedicao, osId))
+      .limit(1);
+
+    if (
+      !canOperateCuttingModule(
+        order.status as OsStatus,
+        getCuttingStepsFromPlan(existingPlan),
+      )
+    ) {
+      return { success: false, message: "OS não está em etapa de corte" };
+    }
+
+    if (existingPlan) {
+      await db
+        .update(cuttingPlans)
+        .set({ cutterNotes: trimmedNotes })
+        .where(eq(cuttingPlans.id, existingPlan.id));
+    } else {
+      await db.insert(cuttingPlans).values({
+        idMedicao: osId,
+        cutterNotes: trimmedNotes,
+      });
+    }
+
+    revalidateOSRoutes(osId);
+    return { success: true };
+  } catch (err) {
+    console.error("[updateCuttingNotes]", err);
+    return { success: false, message: "Erro ao salvar observações" };
+  }
+}

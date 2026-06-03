@@ -56,11 +56,11 @@ export function KanbanFiltersBar({
         <div className="flex min-w-0 items-center gap-1.5">
           <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
           <span className="text-xs font-medium">Filtros</span>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground">
             {filteredCount}/{totalCount}
           </span>
           {hasActive && (
-            <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+            <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[11px] font-medium text-primary">
               {activeCount}
             </span>
           )}
@@ -82,7 +82,7 @@ export function KanbanFiltersBar({
           <div className="min-w-[12rem] flex-1 basis-full sm:basis-[14rem]">
             <label
               htmlFor="kanban-search"
-              className="mb-0.5 block text-[10px] text-muted-foreground"
+              className="mb-0.5 block text-[11px] text-muted-foreground"
             >
               Busca
             </label>
@@ -107,7 +107,7 @@ export function KanbanFiltersBar({
           <div className="min-w-[7rem] flex-1 basis-[7rem]">
             <label
               htmlFor="kanban-priority"
-              className="mb-0.5 block text-[10px] text-muted-foreground"
+              className="mb-0.5 block text-[11px] text-muted-foreground"
             >
               Prioridade
             </label>
@@ -133,7 +133,7 @@ export function KanbanFiltersBar({
           <div className="min-w-[7rem] flex-1 basis-[7rem]">
             <label
               htmlFor="kanban-date-from"
-              className="mb-0.5 block text-[10px] text-muted-foreground"
+              className="mb-0.5 block text-[11px] text-muted-foreground"
             >
               De
             </label>
@@ -148,7 +148,7 @@ export function KanbanFiltersBar({
           <div className="min-w-[7rem] flex-1 basis-[7rem]">
             <label
               htmlFor="kanban-date-to"
-              className="mb-0.5 block text-[10px] text-muted-foreground"
+              className="mb-0.5 block text-[11px] text-muted-foreground"
             >
               Até
             </label>
@@ -165,7 +165,7 @@ export function KanbanFiltersBar({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 shrink-0 px-2 text-[10px]"
+              className="h-7 shrink-0 px-2 text-[11px]"
               onClick={() => onChange(DEFAULT_KANBAN_FILTERS)}
             >
               <X className="mr-1 h-3 w-3" />

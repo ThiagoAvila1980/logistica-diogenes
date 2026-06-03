@@ -108,7 +108,7 @@ export function KanbanCard({
               <div className="flex items-start justify-between gap-1">
                 <Link
                   href={detailHref}
-                  className="truncate font-mono text-[10px] font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring sm:text-[11px]"
+                  className="truncate font-mono text-[11px] font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring sm:text-[12px]"
                   tabIndex={snapshot.isDragging ? -1 : 0}
                 >
                   {displayNumber}
@@ -116,7 +116,7 @@ export function KanbanCard({
               </div>
               <Link
                 href={detailHref}
-                className="hidden truncate text-[11px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring sm:block"
+                className="hidden truncate text-[12px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring sm:block"
                 tabIndex={snapshot.isDragging ? -1 : 0}
               >
                 {os.clientName}
@@ -125,7 +125,7 @@ export function KanbanCard({
                 <div className="flex flex-wrap gap-1">
                   <span
                     className={cn(
-                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
                       os.hasMeasurement
                         ? "bg-success-subtle text-success-foreground"
                         : "bg-muted text-muted-foreground",
@@ -135,7 +135,7 @@ export function KanbanCard({
                   </span>
                   <span
                     className={cn(
-                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
                       isFinal
                         ? "bg-accent text-primary"
                         : "bg-warning-subtle text-warning-foreground",
@@ -159,7 +159,7 @@ export function KanbanCard({
                       <span
                         key={key}
                         className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
                           done
                             ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
@@ -185,7 +185,7 @@ export function KanbanCard({
                       <span
                         key={key}
                         className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
                           done
                             ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
@@ -209,7 +209,7 @@ export function KanbanCard({
                       <span
                         key={key}
                         className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
                           done
                             ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",

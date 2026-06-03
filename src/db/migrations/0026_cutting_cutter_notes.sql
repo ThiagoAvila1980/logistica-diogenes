@@ -1,0 +1,1 @@
+ALTER TABLE "cutting_plans" ADD COLUMN IF NOT EXISTS "cutter_notes" text;

@@ -36,7 +36,7 @@ export function KanbanColumnStats({
       className="hidden rounded-md border bg-card px-2 py-1.5 sm:block"
       aria-label="Tempo médio por coluna"
     >
-      <div className="mb-1 text-[10px] font-medium text-muted-foreground">
+      <div className="mb-1 text-[11px] font-medium text-muted-foreground">
         Tempo médio na coluna
       </div>
       <KanbanHorizontalTrack
@@ -88,7 +88,7 @@ function ColumnStatBar({
           aria-hidden
         />
       </div>
-      <span className="w-full truncate text-center text-[9px] tabular-nums text-muted-foreground">
+      <span className="w-full truncate text-center text-[10px] tabular-nums text-muted-foreground">
         {formatAvgDuration(metric.avgHours)}
       </span>
     </div>

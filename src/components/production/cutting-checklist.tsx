@@ -156,7 +156,7 @@ export function CuttingChecklist({ osId, osStatus, initialSteps }: Props) {
                     {label}
                   </span>
                   <p
-                    className="mt-0.5 line-clamp-1 text-[11px] leading-tight text-muted-foreground"
+                    className="mt-0.5 line-clamp-1 text-[12px] leading-tight text-muted-foreground"
                     title={description}
                   >
                     {description}

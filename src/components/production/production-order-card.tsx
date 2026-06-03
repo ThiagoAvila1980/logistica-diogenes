@@ -57,7 +57,7 @@ export function ProductionOrderCard({
           <span
             key={key}
             className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+              "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
               steps[key]
                 ? "bg-success-subtle text-success-foreground"
                 : "bg-muted text-muted-foreground",

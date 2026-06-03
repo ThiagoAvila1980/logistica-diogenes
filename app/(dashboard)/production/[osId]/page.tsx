@@ -10,6 +10,7 @@ import { MeasurementNotesCard } from "@/components/measurement/measurement-notes
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CuttingChecklist } from "@/components/production/cutting-checklist";
+import { CuttingNotesField } from "@/components/production/cutting-notes-field";
 import { ProductionMeasurementMedia } from "@/components/production/production-measurement-media";
 
 type Props = { params: Promise<{ osId: string }> };
@@ -23,7 +24,7 @@ export default async function ProductionOsPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const { measurement, cuttingSteps } = detail;
+  const { measurement, cuttingSteps, cutterNotes } = detail;
 
   return (
     <>
@@ -59,11 +60,14 @@ export default async function ProductionOsPage({ params }: Props) {
         <CuttingChecklist osId={osId} osStatus={order.status} initialSteps={cuttingSteps} />
 
         {measurement ? (
-          <ProductionMeasurementMedia
-            items={measurement.items}
-            photos={measurement.photos}
-            lookups={lookups}
-          />
+          <>
+            <ProductionMeasurementMedia
+              items={measurement.items}
+              photos={measurement.photos}
+              lookups={lookups}
+            />
+            <CuttingNotesField osId={osId} initialNotes={cutterNotes} />
+          </>
         ) : (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">

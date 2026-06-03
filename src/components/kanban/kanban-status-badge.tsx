@@ -38,7 +38,7 @@ export function KanbanStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none",
+        "inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium leading-none",
         visual.badgeClass,
         className,
       )}
