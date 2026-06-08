@@ -3,24 +3,18 @@ import { ChevronRight } from "lucide-react";
 import type { OrderListItem } from "@/lib/data/types";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { cn } from "@/lib/utils";
+import type { CuttingSteps } from "@/lib/transport-gates";
 
-const STEP_LABELS = [
-  { key: "corte" as const, label: "Corte" },
-  { key: "embalagem" as const, label: "Embal." },
-  { key: "acessorios" as const, label: "Acess." },
-  { key: "vidros" as const, label: "Vidr." },
+const STEP_LABELS: { key: keyof CuttingSteps; label: string }[] = [
+  { key: "corteFeito", label: "Corte" },
+  { key: "embalagemFeita", label: "Embal." },
+  { key: "acessoriosFeitos", label: "Acess." },
+  { key: "vidrosFeitos", label: "Vidr." },
 ];
-
-export type ProductionCuttingSteps = {
-  corte: boolean;
-  embalagem: boolean;
-  acessorios: boolean;
-  vidros: boolean;
-};
 
 type ProductionOrderCardProps = {
   order: OrderListItem;
-  steps: ProductionCuttingSteps;
+  steps: CuttingSteps;
 };
 
 export function ProductionOrderCard({

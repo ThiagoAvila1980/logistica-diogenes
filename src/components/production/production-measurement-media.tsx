@@ -18,7 +18,13 @@ type ProductionMeasurementMediaProps = {
 };
 
 type MediaSlide =
-  | { kind: "drawing"; item: MeasurementLineItem; index: number }
+  | {
+      kind: "drawing";
+      item: MeasurementLineItem;
+      index: number;
+      drawingUrl: string | null;
+      drawingIndex: number;
+    }
   | { kind: "photo"; url: string; itemIndex: number; photoIndex: number };
 
 export function ProductionMeasurementMedia({
@@ -31,9 +37,24 @@ export function ProductionMeasurementMedia({
 
   const slides: MediaSlide[] = [
     ...items.flatMap((item, index) => {
-      const itemSlides: MediaSlide[] = [
-        { kind: "drawing" as const, item, index },
-      ];
+      // Suporte a drawings[] com fallback para drawingUrl legado
+      const allDrawings =
+        item.drawings && item.drawings.length > 0
+          ? item.drawings
+          : item.drawingUrl
+            ? [{ id: "__legacy__", url: item.drawingUrl }]
+            : [];
+
+      const itemSlides: MediaSlide[] = allDrawings.length > 0
+        ? allDrawings.map((d, dIdx) => ({
+            kind: "drawing" as const,
+            item,
+            index,
+            drawingUrl: d.url,
+            drawingIndex: dIdx,
+          }))
+        : [{ kind: "drawing" as const, item, index, drawingUrl: null, drawingIndex: 0 }];
+
       for (const [photoIndex, url] of (item.photos ?? []).entries()) {
         itemSlides.push({
           kind: "photo",
@@ -76,14 +97,14 @@ export function ProductionMeasurementMedia({
             {slides.map((slide) =>
               slide.kind === "drawing" ? (
                 <Card
-                  key={`drawing-${slide.item.id ?? slide.index}`}
+                  key={`drawing-${slide.item.id ?? slide.index}-${slide.drawingIndex}`}
                   className="overflow-hidden"
                 >
-                  {slide.item.drawingUrl ? (
+                  {slide.drawingUrl ? (
                     <div className="border-b bg-card">
                       <DrawingPreview
-                        src={slide.item.drawingUrl}
-                        alt={`Desenho ${slide.index + 1}`}
+                        src={slide.drawingUrl}
+                        alt={`Desenho ${slide.drawingIndex + 1} — medição ${slide.index + 1}`}
                       />
                     </div>
                   ) : (
@@ -94,6 +115,15 @@ export function ProductionMeasurementMedia({
                   <CardContent className="p-4">
                     <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       Medição {slide.index + 1}
+                      {slide.drawingUrl && (() => {
+                        const totalDrawings =
+                          slide.item.drawings && slide.item.drawings.length > 1
+                            ? slide.item.drawings.length
+                            : 0;
+                        return totalDrawings > 1
+                          ? ` — desenho ${slide.drawingIndex + 1}/${totalDrawings}`
+                          : null;
+                      })()}
                     </p>
                     <MeasurementDimensionsSummary
                       item={slide.item}
