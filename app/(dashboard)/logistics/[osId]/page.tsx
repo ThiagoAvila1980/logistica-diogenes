@@ -33,7 +33,7 @@ export default async function LogisticsOsPage({ params }: Props) {
 
   const detail = await getTransportDetailForOs(osId, order.status);
   const vehicles = await listVehiclesForTransportSelection(osId);
-  const canChangeVehicle = !detail.transportSteps.levarPerfilEstrutural;
+  const canChangeVehicle = true;
 
   const [installers, installerAssignment] = isManager
     ? await Promise.all([
@@ -123,8 +123,8 @@ export default async function LogisticsOsPage({ params }: Props) {
 
       <TransportChecklist
         osId={osId}
-        initialTransportSteps={detail.transportSteps}
-        initialCuttingSteps={detail.cuttingSteps}
+        osStatus={order.status}
+        items={detail.items}
         vehicleId={detail.vehicleId}
       />
     </>

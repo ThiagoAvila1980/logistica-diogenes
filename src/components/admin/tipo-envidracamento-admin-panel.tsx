@@ -145,7 +145,7 @@ export function TipoEnvidracamentoAdminPanel({
             items.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center gap-4 rounded-lg border p-4"
+                className="flex flex-wrap items-center gap-4 rounded-lg border bg-muted/60 p-4"
               >
                 {item.imagemUrl ? (
                   <ResolvedImage

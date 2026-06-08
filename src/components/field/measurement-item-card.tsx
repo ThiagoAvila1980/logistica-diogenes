@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { resolveUploadDisplayUrlAction } from "@/actions/upload-actions";
-import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { DrawingBoard } from "@/components/field/drawing-board";
+import type { DrawingItem, MeasurementLineItem } from "@/lib/workflow/schemas";
+import { MultiDrawingSection } from "@/components/field/multi-drawing-section";
 import { MeasurementPhotosSection } from "@/components/field/measurement-photos-section";
 import { MeasurementItemSpecFields } from "@/components/field/measurement-item-spec-fields";
 import { PhotoUpload } from "@/components/ui/photo-upload";
@@ -29,8 +29,11 @@ type MeasurementItemCardProps = {
   expanded: boolean;
   canRemove: boolean;
   disabled?: boolean;
+  /** @deprecated não usado — mantido para compatibilidade com o formulário */
   initialDrawingFullscreen?: boolean;
+  /** @deprecated não usado — mantido para compatibilidade com o formulário */
   onDrawingFullscreenApplied?: () => void;
+  /** @deprecated não usado — mantido para compatibilidade com o formulário */
   onDrawingFullscreenChange?: (fullscreen: boolean) => void;
   onChange: (item: MeasurementLineItem) => void;
   onRemove: () => void;
@@ -48,9 +51,6 @@ export function MeasurementItemCard({
   expanded,
   canRemove,
   disabled,
-  initialDrawingFullscreen = false,
-  onDrawingFullscreenApplied,
-  onDrawingFullscreenChange,
   onChange,
   onRemove,
   onExpandedChange,
@@ -60,42 +60,24 @@ export function MeasurementItemCard({
   onPendingFilesChange,
 }: MeasurementItemCardProps) {
   const [photosExpanded, setPhotosExpanded] = useState(false);
-  const [resolvedDrawingUrl, setResolvedDrawingUrl] = useState<string | null>(
-    item.drawingUrl ?? null,
-  );
   const [resolvedTemplateUrl, setResolvedTemplateUrl] = useState<string | null>(
     null,
   );
   const [templateKey, setTemplateKey] = useState(0);
   const prevTipoEnvidracamentoRef = useRef(item.idTipoEnvidracamento);
 
-  useEffect(() => {
-    if (!item.drawingUrl) {
-      setResolvedDrawingUrl(null);
-      return;
-    }
-
-    if (
-      item.drawingUrl.startsWith("data:") ||
-      item.drawingUrl.startsWith("/uploads/")
-    ) {
-      setResolvedDrawingUrl(item.drawingUrl);
-      return;
-    }
-
-    let cancelled = false;
-    void resolveUploadDisplayUrlAction(item.drawingUrl).then((resolved) => {
-      if (!cancelled) setResolvedDrawingUrl(resolved);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [item.drawingUrl]);
-
   const selectedTipoEnvidracamento = lookups.tipoEnvidracamento.find(
     (tipo) => tipo.id === item.idTipoEnvidracamento,
   );
+
+  function handleDrawingsChange(newDrawings: DrawingItem[]) {
+    onChange({
+      ...item,
+      drawings: newDrawings,
+      // Mantém drawingUrl para compatibilidade com código legado (produção/corte)
+      drawingUrl: newDrawings[0]?.url ?? null,
+    });
+  }
 
   useEffect(() => {
     const imagemUrl = selectedTipoEnvidracamento?.imagemUrl;
@@ -129,9 +111,9 @@ export function MeasurementItemCard({
     }
   }, [item.idTipoEnvidracamento, resolvedTemplateUrl]);
 
-  const shouldLoadTemplate =
-    Boolean(item.idTipoEnvidracamento && resolvedTemplateUrl) &&
-    (templateKey > 0 || !item.drawingUrl);
+  // templateImageUrl é repassado sempre que disponível; a decisão de carregar
+  // no canvas fica a cargo do MultiDrawingSection (novo vs. existente).
+  const hasTemplate = Boolean(item.idTipoEnvidracamento && resolvedTemplateUrl);
 
   function updateField<K extends keyof MeasurementLineItem>(
     field: K,
@@ -277,28 +259,21 @@ export function MeasurementItemCard({
             </div>
           </div>
 
-          <DrawingBoard
-            key={resolvedDrawingUrl ?? item.id}
-            initialImageUrl={resolvedDrawingUrl}
-            templateImageUrl={
-              shouldLoadTemplate ? resolvedTemplateUrl : null
-            }
-            templateKey={shouldLoadTemplate ? Math.max(templateKey, 1) : 0}
-            initialFullscreen={initialDrawingFullscreen}
-            onInitialFullscreenApplied={onDrawingFullscreenApplied}
-            onFullscreenChange={onDrawingFullscreenChange}
+          <MultiDrawingSection
+            drawings={item.drawings ?? []}
+            legacyDrawingUrl={item.drawingUrl}
+            templateImageUrl={hasTemplate ? resolvedTemplateUrl : null}
+            templateKey={templateKey}
             disabled={disabled}
             onDirtyChange={onDrawingDirtyChange}
-            onSave={(base64Image) => updateField("drawingUrl", base64Image)}
+            onDrawingsChange={handleDrawingsChange}
           />
-          <p className="text-xs text-muted-foreground">
-            {selectedTipoEnvidracamento?.imagemUrl
-              ? "Ao escolher o tipo de envidraçamento, a imagem de referência é carregada no quadro. "
-              : null}
-            Desenhe os detalhes e toque em{" "}
-            <span className="font-medium">Salvar</span> na barra lateral antes de
-            registrar a medição.
-          </p>
+          {selectedTipoEnvidracamento?.imagemUrl && (
+            <p className="text-xs text-muted-foreground">
+              Ao escolher o tipo de envidraçamento, a imagem de referência é
+              carregada no primeiro desenho.
+            </p>
+          )}
 
           <MeasurementPhotosSection
             expanded={photosExpanded}
@@ -334,6 +309,7 @@ export function createEmptyMeasurementItem(id: string): MeasurementLineItem {
     idTipoVidro: null,
     idTipoEnvidracamento: null,
     drawingUrl: null,
+    drawings: [],
     observacao: undefined,
     photos: undefined,
   };

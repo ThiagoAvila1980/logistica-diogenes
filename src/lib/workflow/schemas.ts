@@ -12,6 +12,42 @@ export const installationPhotosStorageSchema = z.object({
 const positiveDimension = z.coerce.number().positive();
 const extraDimensions = z.array(positiveDimension).optional();
 
+/** Desenho individual de uma medição */
+export const drawingItemSchema = z.object({
+  id: z.string().min(1),
+  url: z.string(),
+});
+
+export type DrawingItem = z.infer<typeof drawingItemSchema>;
+
+/** Progresso de corte por vão (item de medição) */
+export const itemCuttingProgressSchema = z.object({
+  corte: z.boolean().default(false),
+  embalagem: z.boolean().default(false),
+  acessorios: z.boolean().default(false),
+  vidros: z.boolean().default(false),
+});
+
+export type ItemCuttingProgress = z.infer<typeof itemCuttingProgressSchema>;
+
+/** Progresso de instalação por vão (item de medição) */
+export const itemInstallationProgressSchema = z.object({
+  estrutural: z.boolean().default(false),
+  vidros: z.boolean().default(false),
+});
+
+export type ItemInstallationProgress = z.infer<typeof itemInstallationProgressSchema>;
+
+/** Progresso de transporte por vão (item de medição) */
+export const itemTransportProgressSchema = z.object({
+  perfilEstrutural: z.boolean().default(false),
+  perfilTotal: z.boolean().default(false),
+  acessorios: z.boolean().default(false),
+  vidros: z.boolean().default(false),
+});
+
+export type ItemTransportProgress = z.infer<typeof itemTransportProgressSchema>;
+
 /** Item de medição em campo (desenho + ambiente + dimensões por peça) */
 export const measurementLineItemSchema = z.object({
   id: z.string().min(1),
@@ -28,9 +64,20 @@ export const measurementLineItemSchema = z.object({
   idCor: z.string().uuid().nullish(),
   idTipoVidro: z.string().uuid().nullish(),
   idTipoEnvidracamento: z.string().uuid().nullish(),
+  /** @deprecated Use drawings[] — mantido para compatibilidade com dados antigos */
   drawingUrl: z.string().nullable().optional(),
+  /** Desenhos da medição (substitui drawingUrl) */
+  drawings: z.array(drawingItemSchema).optional(),
   observacao: z.string().max(500).optional(),
   photos: photosSchema.optional(),
+  /** Marcado true quando o vão foi selecionado para envio ao plano de corte */
+  sentToCutting: z.boolean().optional(),
+  /** Progresso de corte por vão — preenchido na tela de produção */
+  cuttingProgress: itemCuttingProgressSchema.optional(),
+  /** Progresso de transporte por vão — preenchido na tela de logística */
+  transportProgress: itemTransportProgressSchema.optional(),
+  /** Progresso de instalação por vão — preenchido na tela de instalação */
+  installationProgress: itemInstallationProgressSchema.optional(),
 });
 
 export const measurementItemsSchema = z

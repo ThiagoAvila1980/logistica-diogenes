@@ -9,9 +9,10 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/require-role";
 import { getDb } from "@/lib/db";
-import { cuttingPlans, installationLogs } from "@/db/schema";
-import type { InstallationPhotos } from "@/lib/workflow/schemas";
+import { installationLogs, measurements } from "@/db/schema";
+import type { InstallationPhotos, MeasurementLineItem } from "@/lib/workflow/schemas";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
+import { aggregateCuttingStepsFromItems } from "@/lib/data/cutting-detail";
 
 export type SaveInstallationServicePhotosResult =
   | { success: true; message: string }
@@ -74,26 +75,23 @@ export async function saveInstallationServicePhotos(
   }
 
   const db = getDb();
-  const [cutting] = await db
-    .select({
-      corteFeito: cuttingPlans.corteFeito,
-      embalagemFeita: cuttingPlans.embalagemFeita,
-      acessoriosFeitos: cuttingPlans.acessoriosFeitos,
-      vidrosFeitos: cuttingPlans.vidrosFeitos,
-    })
-    .from(cuttingPlans)
-    .where(eq(cuttingPlans.idMedicao, osId))
+
+  const [measRow] = await db
+    .select({ items: measurements.items })
+    .from(measurements)
+    .where(eq(measurements.id, osId))
     .limit(1);
 
-  const cuttingSteps = cutting ?? {
-    corteFeito:
-      order.status.startsWith("instalacao") || order.status === "concluido",
-    embalagemFeita:
-      order.status.startsWith("instalacao") || order.status === "concluido",
-    acessoriosFeitos:
-      order.status.startsWith("instalacao") || order.status === "concluido",
-    vidrosFeitos:
-      order.status.startsWith("instalacao") || order.status === "concluido",
+  const items = (measRow?.items as MeasurementLineItem[]) ?? [];
+  const cuttingAggregate = aggregateCuttingStepsFromItems(items);
+  const isLatePhase =
+    order.status.startsWith("instalacao") || order.status === "concluido";
+
+  const cuttingSteps = {
+    corteFeito: cuttingAggregate.corteFeito || isLatePhase,
+    embalagemFeita: cuttingAggregate.embalagemFeita || isLatePhase,
+    acessoriosFeitos: cuttingAggregate.acessoriosFeitos || isLatePhase,
+    vidrosFeitos: cuttingAggregate.vidrosFeitos || isLatePhase,
   };
 
   if (!canOperateInstallationModule(order.status, cuttingSteps)) {

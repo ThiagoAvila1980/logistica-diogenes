@@ -4,7 +4,6 @@ import { useActionState, useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   Loader2,
@@ -52,7 +51,7 @@ import {
   type MeasurementDbType,
 } from "@/lib/workflow/measurement-actions";
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
-import { SendToCuttingButton } from "@/components/field/send-to-cutting-button";
+import { SendToCuttingDialog } from "@/components/field/send-to-cutting-dialog";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { useScreenOrientationLock } from "@/hooks/use-screen-orientation-lock";
@@ -156,7 +155,6 @@ export function FieldMeasurementForm({
   const [saveResult, setSaveResult] = useState<SaveFieldMeasurementResult | null>(
     null,
   );
-  const [unsavedDrawingsOpen, setUnsavedDrawingsOpen] = useState(false);
   const [drawingDirtyById, setDrawingDirtyById] = useState<
     Record<string, boolean>
   >({});
@@ -286,7 +284,6 @@ export function FieldMeasurementForm({
     if (isPending) return;
 
     setConfirmOpen(false);
-    setUnsavedDrawingsOpen(false);
 
     if (isCurrentTypeMeasured) {
       applyCurrentDraftSnapshot(draftsByType[measurementType]);
@@ -355,10 +352,6 @@ export function FieldMeasurementForm({
     });
   }
 
-  const unsavedDrawingItems = items
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => drawingDirtyById[item.id]);
-
   function handleSaveResultDismiss() {
     const succeeded = saveResult?.success === true;
     setSaveResultOpen(false);
@@ -369,14 +362,6 @@ export function FieldMeasurementForm({
   }
 
   function handleRequestSaveMeasurement() {
-    if (unsavedDrawingItems.length > 0) {
-      setUnsavedDrawingsOpen(true);
-      const first = unsavedDrawingItems[0]!;
-      document
-        .getElementById(`measurement-item-${first.item.id}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
     setConfirmOpen(true);
   }
 
@@ -592,14 +577,16 @@ export function FieldMeasurementForm({
         {canSendToCutting && order.status === "medicao_final" ? (
           <section className="rounded-xl border bg-card p-4 shadow-sm">
             <p className="mb-3 text-sm text-muted-foreground">
-              Medição final registrada. Envie para o plano de corte quando estiver
-              pronta — mesma regra do arraste no kanban (Final → Cortes).
+              Medição final registrada. Escolha quais vãos enviar para o plano
+              de corte.
             </p>
-            <SendToCuttingButton
+            <SendToCuttingDialog
               osId={order.id}
               osNumber={displayNumeroOrcamento}
               clientName={displayCliente}
               orderStatus={order.status}
+              items={validItems}
+              lookups={lookups}
             />
           </section>
         ) : null}
@@ -623,7 +610,7 @@ export function FieldMeasurementForm({
                 disabled={isPending || !hasValidItem}
               >
                 <Ruler className="mr-2 h-4 w-4" />
-                Salvar {getMeasurementBadgeLabel(measurementType).toLowerCase()}
+                Salvar Medição
               </Button>
             </div>
           </div>
@@ -636,43 +623,6 @@ export function FieldMeasurementForm({
           </Alert>
         ) : null}
       </form>
-
-      <Dialog
-        open={unsavedDrawingsOpen}
-        onOpenChange={(open) => {
-          if (!open) setUnsavedDrawingsOpen(false);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-              Desenho não salvo
-            </DialogTitle>
-            <DialogDescription>
-              Antes de registrar a medição, salve cada desenho no quadro usando o
-              botão <span className="font-medium">Salvar</span> na barra lateral
-              do desenho.
-            </DialogDescription>
-          </DialogHeader>
-
-          <ul className="list-inside list-disc space-y-1 rounded-md border border-warning/30 bg-warning-muted px-3 py-2 text-sm">
-            {unsavedDrawingItems.map(({ index }) => (
-              <li key={index}>Medição {index + 1}</li>
-            ))}
-          </ul>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              className="w-full sm:w-auto"
-              onClick={() => setUnsavedDrawingsOpen(false)}
-            >
-              Voltar e salvar desenhos
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog
         open={confirmOpen}

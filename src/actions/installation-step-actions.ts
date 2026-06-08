@@ -4,30 +4,33 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getDb } from "@/lib/db";
-import { installationLogs, transportLogs, cuttingPlans } from "@/db/schema";
+import { installationLogs, measurements } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
 import { getServiceOrderById } from "@/lib/data/orders";
-import {
-  canOperateInstallationModule,
-  getInstallationGates,
-} from "@/lib/transport-gates";
-
-const updateStepSchema = z.object({
-  osId: z.string().uuid(),
-  step: z.enum(["instalacaoEstruturalFeita", "instalacaoVidrosFeita"]),
-  done: z.boolean(),
-});
+import { canOperateInstallationModule } from "@/lib/transport-gates";
+import { aggregateCuttingStepsFromItems } from "@/lib/data/cutting-detail";
+import { aggregateInstallationStepsFromItems } from "@/lib/data/installation-detail";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 
 export type UpdateInstallationStepResult =
   | { success: true }
   | { success: false; message: string; reason?: "gate_locked" };
 
-export async function updateInstallationStepAction(
-  raw: z.infer<typeof updateStepSchema>,
+// ─── Action: atualizar etapa de instalação por vão ───────────────────────────
+
+const updateItemInstallationStepSchema = z.object({
+  osId: z.string().uuid(),
+  itemId: z.string().min(1),
+  step: z.enum(["estrutural", "vidros"]),
+  done: z.boolean(),
+});
+
+export async function updateItemInstallationStepAction(
+  raw: z.infer<typeof updateItemInstallationStepSchema>,
 ): Promise<UpdateInstallationStepResult> {
-  const parsed = updateStepSchema.safeParse(raw);
+  const parsed = updateItemInstallationStepSchema.safeParse(raw);
   if (!parsed.success) {
-    console.error("[updateInstallationStepAction] validação falhou", parsed.error.flatten());
+    console.error("[updateItemInstallationStepAction] validação falhou", parsed.error.flatten());
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
@@ -37,7 +40,7 @@ export async function updateInstallationStepAction(
     return { success: false, message: "Sem permissão para esta ação" };
   }
 
-  const { osId, step, done } = parsed.data;
+  const { osId, itemId, step, done } = parsed.data;
 
   try {
     const order = await getServiceOrderById(osId);
@@ -45,96 +48,99 @@ export async function updateInstallationStepAction(
 
     const db = getDb();
 
-    const [cutting] = await db
-      .select({
-        corteFeito: cuttingPlans.corteFeito,
-        embalagemFeita: cuttingPlans.embalagemFeita,
-        acessoriosFeitos: cuttingPlans.acessoriosFeitos,
-        vidrosFeitos: cuttingPlans.vidrosFeitos,
-      })
-      .from(cuttingPlans)
-      .where(eq(cuttingPlans.idMedicao, osId))
+    const [meas] = await db
+      .select({ items: measurements.items })
+      .from(measurements)
+      .where(eq(measurements.id, osId))
       .limit(1);
 
-    const cuttingSteps = cutting ?? {
-      corteFeito: order.status.startsWith("instalacao") || order.status === "concluido",
-      embalagemFeita: order.status.startsWith("instalacao") || order.status === "concluido",
-      acessoriosFeitos: order.status.startsWith("instalacao") || order.status === "concluido",
-      vidrosFeitos: order.status.startsWith("instalacao") || order.status === "concluido",
+    if (!meas) return { success: false, message: "OS não encontrada" };
+
+    const items = (meas.items as MeasurementLineItem[]) ?? [];
+    const cuttingAggregate = aggregateCuttingStepsFromItems(items);
+
+    const isLatePhase =
+      order.status.startsWith("instalacao") || order.status === "concluido";
+
+    const cuttingSteps = {
+      corteFeito: cuttingAggregate.corteFeito || isLatePhase,
+      embalagemFeita: cuttingAggregate.embalagemFeita || isLatePhase,
+      acessoriosFeitos: cuttingAggregate.acessoriosFeitos || isLatePhase,
+      vidrosFeitos: cuttingAggregate.vidrosFeitos || isLatePhase,
     };
 
     if (!canOperateInstallationModule(order.status, cuttingSteps)) {
-      return {
-        success: false,
-        message: "Aguardando conclusão do corte para liberar instalação",
-      };
+      return { success: false, message: "Aguardando conclusão do corte para liberar instalação" };
     }
 
-    // Busca transport steps para calcular os gates
-    const [transport] = await db
-      .select({
-        levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
-        levarPerfilTotal: transportLogs.levarPerfilTotal,
-        levarAcessorios: transportLogs.levarAcessorios,
-        levarVidros: transportLogs.levarVidros,
-        transporteConcluido: transportLogs.transporteConcluido,
-      })
-      .from(transportLogs)
-      .where(eq(transportLogs.idMedicao, osId))
-      .limit(1);
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return { success: false, message: "Vão não encontrado" };
 
-    const transportSteps = transport ?? {
-      levarPerfilEstrutural: false,
-      levarPerfilTotal: false,
-      levarAcessorios: false,
-      levarVidros: false,
-      transporteConcluido: false,
-    };
-
-    // Verifica gate apenas ao marcar como feito
+    // Verifica gate por vão ao marcar como feito
     if (done) {
-      const gates = getInstallationGates(transportSteps, cuttingSteps);
-      const gateKey =
-        step === "instalacaoEstruturalFeita"
-          ? "instalacaoEstrutural"
-          : "instalacaoVidros";
-      const gate = gates[gateKey];
-      if (!gate.unlocked) {
-        return {
-          success: false,
-          message: gate.lockedReason ?? "Etapa ainda bloqueada",
-          reason: "gate_locked",
-        };
+      const cut = item.cuttingProgress ?? { corte: false, embalagem: false, acessorios: false, vidros: false };
+      const trans = item.transportProgress ?? { perfilEstrutural: false, perfilTotal: false, acessorios: false, vidros: false };
+
+      if (step === "estrutural") {
+        const estruturalOk = cut.corte || isLatePhase;
+        if (!estruturalOk) {
+          return {
+            success: false,
+            message: "Aguardando corte deste vão ser concluído",
+            reason: "gate_locked",
+          };
+        }
+      }
+
+      if (step === "vidros") {
+        const vidrosOk =
+          cut.vidros || trans.vidros || cut.acessorios || trans.acessorios || isLatePhase;
+        if (!vidrosOk) {
+          return {
+            success: false,
+            message: "Aguardando vidros ou acessórios deste vão serem entregues",
+            reason: "gate_locked",
+          };
+        }
       }
     }
 
-    const fieldMap = {
-      instalacaoEstruturalFeita: { instalacaoEstruturalFeita: done },
-      instalacaoVidrosFeita: { instalacaoVidrosFeita: done },
-    } as const;
+    // Atualiza o item no JSONB
+    const updatedItems = items.map((i) => {
+      if (i.id !== itemId) return i;
+      const prev = i.installationProgress ?? { estrutural: false, vidros: false };
+      return { ...i, installationProgress: { ...prev, [step]: done } };
+    });
 
-    const [existing] = await db
+    await db
+      .update(measurements)
+      .set({ items: updatedItems, updatedAt: new Date() })
+      .where(eq(measurements.id, osId));
+
+    // Sincroniza o aggregate no installation_logs
+    const newAggregate = aggregateInstallationStepsFromItems(updatedItems);
+
+    const [existingLog] = await db
       .select({ id: installationLogs.id })
       .from(installationLogs)
       .where(eq(installationLogs.idMedicao, osId))
       .limit(1);
 
-    if (existing) {
-      await db
-        .update(installationLogs)
-        .set(fieldMap[step])
-        .where(eq(installationLogs.id, existing.id));
+    const logFields = {
+      instalacaoEstruturalFeita: newAggregate.instalacaoEstruturalFeita,
+      instalacaoVidrosFeita: newAggregate.instalacaoVidrosFeita,
+    };
+
+    if (existingLog) {
+      await db.update(installationLogs).set(logFields).where(eq(installationLogs.id, existingLog.id));
     } else {
-      await db.insert(installationLogs).values({
-        idMedicao: osId,
-        ...fieldMap[step],
-      });
+      await db.insert(installationLogs).values({ idMedicao: osId, ...logFields });
     }
 
     revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
-    console.error("[updateInstallationStep]", err);
-    return { success: false, message: "Erro ao atualizar etapa" };
+    console.error("[updateItemInstallationStep]", err);
+    return { success: false, message: "Erro ao atualizar etapa de instalação" };
   }
 }

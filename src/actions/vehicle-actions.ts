@@ -34,11 +34,16 @@ export async function saveVehicle(
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
   }
 
+  const rawActive = formData.get("active");
   const parsed = vehicleSchema.safeParse({
     id: formData.get("id") || undefined,
     description: formData.get("description"),
     plate: formData.get("plate"),
-    active: formData.get("active") === "on" || formData.get("active") === "true",
+    // undefined quando o campo não existe no form (criação) → DB usa default true
+    active:
+      rawActive === null
+        ? undefined
+        : rawActive === "on" || rawActive === "true",
   });
 
   if (!parsed.success) {

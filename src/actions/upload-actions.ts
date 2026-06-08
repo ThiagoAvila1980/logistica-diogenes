@@ -65,6 +65,7 @@ export async function uploadPhotos(
 export async function resolveUploadDisplayUrlAction(
   url: string,
 ): Promise<string> {
+  await requireRole(["admin", "gerente", "cortador", "motorista", "instalador", "medidor"]);
   if (!url.trim()) return url;
   return resolveUploadDisplayUrl(url);
 }

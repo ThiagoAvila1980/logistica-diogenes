@@ -4,32 +4,17 @@ import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getDb } from "@/lib/db";
-import { transportLogs, cuttingPlans, vehicles } from "@/db/schema";
+import { transportLogs, vehicles, measurements } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { useMockData } from "@/lib/data/config";
 import { vehicleMockStore } from "@/lib/data/admin-mock-store";
-import {
-  canOperateTransportModule,
-  getTransportGates,
-} from "@/lib/transport-gates";
+import { canOperateTransportModule } from "@/lib/transport-gates";
+import { aggregateCuttingStepsFromItems } from "@/lib/data/cutting-detail";
+import { aggregateTransportStepsFromItems } from "@/lib/data/transport-detail";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 
-const updateStepSchema = z.object({
-  osId: z.string().uuid(),
-  step: z.enum([
-    "levarPerfilEstrutural",
-    "levarPerfilTotal",
-    "levarAcessorios",
-    "levarVidros",
-    "transporteConcluido",
-  ]),
-  done: z.boolean(),
-});
-
-const assignVehicleSchema = z.object({
-  osId: z.string().uuid(),
-  vehicleId: z.string().uuid(),
-});
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type UpdateTransportStepResult =
   | { success: true }
@@ -42,6 +27,25 @@ export type UpdateTransportStepResult =
 export type AssignVehicleToTransportResult =
   | { success: true }
   | { success: false; message: string };
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+async function loadMeasurementItems(osId: string): Promise<MeasurementLineItem[]> {
+  const db = getDb();
+  const [row] = await db
+    .select({ items: measurements.items })
+    .from(measurements)
+    .where(eq(measurements.id, osId))
+    .limit(1);
+  return (row?.items as MeasurementLineItem[]) ?? [];
+}
+
+// ─── Action: atribuir veículo ────────────────────────────────────────────────
+
+const assignVehicleSchema = z.object({
+  osId: z.string().uuid(),
+  vehicleId: z.string().uuid(),
+});
 
 export async function assignVehicleToTransportAction(
   raw: z.infer<typeof assignVehicleSchema>,
@@ -67,57 +71,25 @@ export async function assignVehicleToTransportAction(
     const order = await getServiceOrderById(osId);
     if (!order) return { success: false, message: "OS não encontrada" };
 
-    const db = getDb();
+    const items = await loadMeasurementItems(osId);
+    const cuttingAggregate = aggregateCuttingStepsFromItems(items);
 
-    const [cutting] = await db
-      .select({
-        corteFeito: cuttingPlans.corteFeito,
-        embalagemFeita: cuttingPlans.embalagemFeita,
-        acessoriosFeitos: cuttingPlans.acessoriosFeitos,
-        vidrosFeitos: cuttingPlans.vidrosFeitos,
-      })
-      .from(cuttingPlans)
-      .where(eq(cuttingPlans.idMedicao, osId))
-      .limit(1);
+    const isLatePhase =
+      order.status.startsWith("transporte_") ||
+      order.status.startsWith("instalacao") ||
+      order.status === "concluido";
 
-    const cuttingSteps = cutting ?? {
-      corteFeito:
-        order.status.startsWith("transporte_") ||
-        order.status.startsWith("instalacao") ||
-        order.status === "concluido",
-      embalagemFeita:
-        order.status.startsWith("transporte_") ||
-        order.status.startsWith("instalacao") ||
-        order.status === "concluido",
-      acessoriosFeitos:
-        order.status.startsWith("transporte_") ||
-        order.status.startsWith("instalacao") ||
-        order.status === "concluido",
-      vidrosFeitos:
-        order.status.startsWith("transporte_") ||
-        order.status.startsWith("instalacao") ||
-        order.status === "concluido",
+    const cuttingSteps = {
+      corteFeito: cuttingAggregate.corteFeito || isLatePhase,
+      embalagemFeita: cuttingAggregate.embalagemFeita || isLatePhase,
+      acessoriosFeitos: cuttingAggregate.acessoriosFeitos || isLatePhase,
+      vidrosFeitos: cuttingAggregate.vidrosFeitos || isLatePhase,
     };
 
     if (!canOperateTransportModule(order.status, cuttingSteps)) {
       return {
         success: false,
         message: "Aguardando conclusão do corte para liberar transporte",
-      };
-    }
-
-    const [transport] = await db
-      .select({
-        levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
-      })
-      .from(transportLogs)
-      .where(eq(transportLogs.idMedicao, osId))
-      .limit(1);
-
-    if (transport?.levarPerfilEstrutural) {
-      return {
-        success: false,
-        message: "Não é possível alterar o veículo após iniciar a entrega",
       };
     }
 
@@ -131,14 +103,14 @@ export async function assignVehicleToTransportAction(
       } catch (err) {
         return {
           success: false,
-          message:
-            err instanceof Error ? err.message : "Veículo indisponível",
+          message: err instanceof Error ? err.message : "Veículo indisponível",
         };
       }
       revalidateOSRoutes(osId);
       return { success: true };
     }
 
+    const db = getDb();
     const [vehicle] = await db
       .select({ id: vehicles.id, active: vehicles.active })
       .from(vehicles)
@@ -149,16 +121,7 @@ export async function assignVehicleToTransportAction(
       return { success: false, message: "Veículo não encontrado ou inativo" };
     }
 
-    const { isVehicleInUseByOtherOsDb, assignVehicleToTransportDb } =
-      await import("@/lib/data/vehicles-db");
-
-    if (await isVehicleInUseByOtherOsDb(vehicleId, osId)) {
-      return {
-        success: false,
-        message: "Este veículo já está em uso em outra OS",
-      };
-    }
-
+    const { assignVehicleToTransportDb } = await import("@/lib/data/vehicles-db");
     await assignVehicleToTransportDb(osId, vehicleId, session.userId);
     revalidateOSRoutes(osId);
     return { success: true };
@@ -168,12 +131,21 @@ export async function assignVehicleToTransportAction(
   }
 }
 
-export async function updateTransportStepAction(
-  raw: z.infer<typeof updateStepSchema>,
+// ─── Action: atualizar etapa de transporte por vão ───────────────────────────
+
+const updateItemTransportStepSchema = z.object({
+  osId: z.string().uuid(),
+  itemId: z.string().min(1),
+  step: z.enum(["perfilEstrutural", "perfilTotal", "acessorios", "vidros"]),
+  done: z.boolean(),
+});
+
+export async function updateItemTransportStepAction(
+  raw: z.infer<typeof updateItemTransportStepSchema>,
 ): Promise<UpdateTransportStepResult> {
-  const parsed = updateStepSchema.safeParse(raw);
+  const parsed = updateItemTransportStepSchema.safeParse(raw);
   if (!parsed.success) {
-    console.error("[updateTransportStepAction] validação falhou", parsed.error.flatten());
+    console.error("[updateItemTransportStepAction] validação falhou", parsed.error.flatten());
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
@@ -183,7 +155,13 @@ export async function updateTransportStepAction(
     return { success: false, message: "Sem permissão para esta ação" };
   }
 
-  const { osId, step, done } = parsed.data;
+  const { osId, itemId, step, done } = parsed.data;
+
+  if (useMockData()) {
+    // mock simplificado
+    revalidateOSRoutes(osId);
+    return { success: true };
+  }
 
   try {
     const order = await getServiceOrderById(osId);
@@ -191,112 +169,103 @@ export async function updateTransportStepAction(
 
     const db = getDb();
 
-    const [cutting] = await db
-      .select({
-        corteFeito: cuttingPlans.corteFeito,
-        embalagemFeita: cuttingPlans.embalagemFeita,
-        acessoriosFeitos: cuttingPlans.acessoriosFeitos,
-        vidrosFeitos: cuttingPlans.vidrosFeitos,
-      })
-      .from(cuttingPlans)
-      .where(eq(cuttingPlans.idMedicao, osId))
-      .limit(1);
+    const items = await loadMeasurementItems(osId);
+    const cuttingAggregate = aggregateCuttingStepsFromItems(items);
 
-    const cuttingSteps = cutting ?? {
-      corteFeito: order.status.startsWith("transporte_") ||
-        order.status.startsWith("instalacao") ||
-        order.status === "concluido",
-      embalagemFeita: order.status.startsWith("transporte_") ||
-        order.status.startsWith("instalacao") ||
-        order.status === "concluido",
-      acessoriosFeitos: order.status.startsWith("transporte_") ||
-        order.status.startsWith("instalacao") ||
-        order.status === "concluido",
-      vidrosFeitos: order.status.startsWith("transporte_") ||
-        order.status.startsWith("instalacao") ||
-        order.status === "concluido",
+    const isLatePhase =
+      order.status.startsWith("transporte_") ||
+      order.status.startsWith("instalacao") ||
+      order.status === "concluido";
+
+    const cuttingSteps = {
+      corteFeito: cuttingAggregate.corteFeito || isLatePhase,
+      embalagemFeita: cuttingAggregate.embalagemFeita || isLatePhase,
+      acessoriosFeitos: cuttingAggregate.acessoriosFeitos || isLatePhase,
+      vidrosFeitos: cuttingAggregate.vidrosFeitos || isLatePhase,
     };
 
     if (!canOperateTransportModule(order.status, cuttingSteps)) {
-      return {
-        success: false,
-        message: "Aguardando conclusão do corte para liberar transporte",
-      };
+      return { success: false, message: "Aguardando conclusão do corte para liberar transporte" };
     }
 
-    const [transport] = await db
-      .select({
-        vehicleId: transportLogs.vehicleId,
-        levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
-        levarPerfilTotal: transportLogs.levarPerfilTotal,
-        levarAcessorios: transportLogs.levarAcessorios,
-        levarVidros: transportLogs.levarVidros,
-        transporteConcluido: transportLogs.transporteConcluido,
-      })
+    // Busca o veículo atribuído
+    const [trans] = await db
+      .select({ vehicleId: transportLogs.vehicleId })
       .from(transportLogs)
       .where(eq(transportLogs.idMedicao, osId))
       .limit(1);
 
-    const transportSteps = transport ?? {
-      levarPerfilEstrutural: false,
-      levarPerfilTotal: false,
-      levarAcessorios: false,
-      levarVidros: false,
-      transporteConcluido: false,
-    };
+    const hasVehicle = Boolean(trans?.vehicleId);
 
-    if (done && step === "levarPerfilEstrutural" && !transport?.vehicleId) {
-      return {
-        success: false,
-        message: "Selecione o veículo antes de iniciar a entrega",
-        reason: "vehicle_required",
-      };
-    }
+    // Verifica gate por vão
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return { success: false, message: "Vão não encontrado" };
 
     if (done) {
-      const gates = getTransportGates(cuttingSteps, transportSteps, {
-        hasVehicle: Boolean(transport?.vehicleId),
-      });
-      const gate = gates[step];
-      if (!gate.unlocked) {
-        return {
-          success: false,
-          message: gate.lockedReason ?? "Etapa ainda bloqueada",
-          reason: "gate_locked",
-        };
+      const cutProg = item.cuttingProgress ?? {
+        corte: false, embalagem: false, acessorios: false, vidros: false,
+      };
+
+      if (step === "perfilEstrutural") {
+        if (!cutProg.corte && !isLatePhase) {
+          return { success: false, message: "Aguardando corte deste vão ser concluído", reason: "gate_locked" };
+        }
+        if (!hasVehicle) {
+          return { success: false, message: "Selecione o veículo antes de iniciar a entrega", reason: "vehicle_required" };
+        }
+      }
+      if (step === "perfilTotal" && !cutProg.embalagem && !isLatePhase) {
+        return { success: false, message: "Aguardando embalagem deste vão ser concluída", reason: "gate_locked" };
+      }
+      if (step === "acessorios" && !cutProg.acessorios && !isLatePhase) {
+        return { success: false, message: "Aguardando acessórios deste vão serem separados", reason: "gate_locked" };
+      }
+      if (step === "vidros" && !cutProg.vidros && !isLatePhase) {
+        return { success: false, message: "Aguardando vidros deste vão serem separados", reason: "gate_locked" };
       }
     }
 
-    const fieldMap = {
-      levarPerfilEstrutural: { levarPerfilEstrutural: done },
-      levarPerfilTotal: { levarPerfilTotal: done },
-      levarAcessorios: { levarAcessorios: done },
-      levarVidros: { levarVidros: done },
-      transporteConcluido: { transporteConcluido: done },
-    } as const;
+    // Atualiza o item no JSONB
+    const updatedItems = items.map((i) => {
+      if (i.id !== itemId) return i;
+      const prev = i.transportProgress ?? {
+        perfilEstrutural: false, perfilTotal: false, acessorios: false, vidros: false,
+      };
+      return { ...i, transportProgress: { ...prev, [step]: done } };
+    });
 
-    const [existing] = await db
+    await db
+      .update(measurements)
+      .set({ items: updatedItems, updatedAt: new Date() })
+      .where(eq(measurements.id, osId));
+
+    // Atualiza o aggregate no transport_logs para manter compatibilidade com installation gates
+    const newAggregate = aggregateTransportStepsFromItems(updatedItems);
+    const [existingLog] = await db
       .select({ id: transportLogs.id })
       .from(transportLogs)
       .where(eq(transportLogs.idMedicao, osId))
       .limit(1);
 
-    if (existing) {
-      await db
-        .update(transportLogs)
-        .set(fieldMap[step])
-        .where(eq(transportLogs.id, existing.id));
+    const logFields = {
+      levarPerfilEstrutural: newAggregate.levarPerfilEstrutural,
+      levarPerfilTotal: newAggregate.levarPerfilTotal,
+      levarAcessorios: newAggregate.levarAcessorios,
+      levarVidros: newAggregate.levarVidros,
+      transporteConcluido: newAggregate.transporteConcluido,
+      updatedAt: new Date(),
+    };
+
+    if (existingLog) {
+      await db.update(transportLogs).set(logFields).where(eq(transportLogs.id, existingLog.id));
     } else {
-      await db.insert(transportLogs).values({
-        idMedicao: osId,
-        ...fieldMap[step],
-      });
+      await db.insert(transportLogs).values({ idMedicao: osId, ...logFields });
     }
 
     revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
-    console.error("[updateTransportStep]", err);
-    return { success: false, message: "Erro ao atualizar etapa" };
+    console.error("[updateItemTransportStep]", err);
+    return { success: false, message: "Erro ao atualizar etapa de transporte" };
   }
 }

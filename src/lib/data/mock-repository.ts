@@ -369,21 +369,22 @@ export const mockRepository = {
   getCuttingDetail(osId: string) {
     const m = findMeasurement(osId);
     const cut = cuttingPlans.find((c) => c.idMedicao === osId);
+    const items = (m?.items ?? []) as import("@/lib/workflow/schemas").MeasurementLineItem[];
     return {
       measurement: m
         ? {
             cliente: m.cliente,
-            items: m.items ?? [],
+            items,
             photos: m.photos ?? [],
             notes: m.notes ?? null,
             dimensions: m.dimensions ?? null,
           }
         : null,
       cuttingSteps: {
-        corte: cut?.corteFeito ?? false,
-        embalagem: cut?.embalagemFeita ?? false,
-        acessorios: cut?.acessoriosFeitos ?? false,
-        vidros: cut?.vidrosFeitos ?? false,
+        corteFeito: cut?.corteFeito ?? false,
+        embalagemFeita: cut?.embalagemFeita ?? false,
+        acessoriosFeitos: cut?.acessoriosFeitos ?? false,
+        vidrosFeitos: cut?.vidrosFeitos ?? false,
       },
       cutterNotes: cut?.cutterNotes ?? null,
     };

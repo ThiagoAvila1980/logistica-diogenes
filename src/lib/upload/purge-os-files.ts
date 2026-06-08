@@ -23,8 +23,14 @@ export function collectMeasurementFileUrls(input: {
   }
 
   for (const item of input.items ?? []) {
-    const drawing = item.drawingUrl;
-    if (drawing && isPersistedUploadUrl(drawing)) urls.add(drawing);
+    if (item.drawingUrl && isPersistedUploadUrl(item.drawingUrl)) {
+      urls.add(item.drawingUrl);
+    }
+    for (const drawing of item.drawings ?? []) {
+      if (drawing.url && isPersistedUploadUrl(drawing.url)) {
+        urls.add(drawing.url);
+      }
+    }
     for (const photo of item.photos ?? []) {
       if (isPersistedUploadUrl(photo)) urls.add(photo);
     }

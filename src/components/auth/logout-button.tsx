@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { LogOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,20 +17,19 @@ import { cn } from "@/lib/utils";
 const LOGOUT_URL = "/api/auth/logout";
 
 export function LogoutButton({ className }: { className?: string }) {
-  const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   function handleConfirmLogout() {
     setPending(true);
     clearStoredRoute();
-    formRef.current?.submit();
+    // window.location garante navegação completa — evita que o fetch
+    // do Next.js intercepte e deixe o modal preso com pending=true.
+    window.location.href = LOGOUT_URL;
   }
 
   return (
     <>
-      <form ref={formRef} method="POST" action={LOGOUT_URL} className="hidden" />
-
       <Button
         type="button"
         variant="ghost"

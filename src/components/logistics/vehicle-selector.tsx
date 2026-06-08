@@ -17,8 +17,7 @@ import { assignVehicleToTransportAction } from "@/actions/transport-actions";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
 
 function formatVehicleOptionTitle(vehicle: VehicleOptionForSelection): string {
-  const base = `${vehicle.plate} · ${vehicle.description}`;
-  return vehicle.unavailable ? `${base} (em uso)` : base;
+  return `${vehicle.plate} · ${vehicle.description}`;
 }
 
 /** Texto curto nas <option> — o select nativo usa a opção mais longa como largura mínima. */
@@ -27,8 +26,7 @@ function formatVehicleOptionLabel(vehicle: VehicleOptionForSelection): string {
     vehicle.description.length > 28
       ? `${vehicle.description.slice(0, 27)}…`
       : vehicle.description;
-  const base = `${vehicle.plate} · ${desc}`;
-  return vehicle.unavailable ? `${base} (em uso)` : base;
+  return `${vehicle.plate} · ${desc}`;
 }
 
 type Props = {
@@ -121,7 +119,7 @@ export function VehicleSelector({
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
           {vehicleId
-            ? "Você pode alterar o veículo antes de iniciar a primeira entrega."
+            ? "Você pode alterar o veículo a qualquer momento."
             : "Escolha o veículo que será usado neste transporte. É obrigatório para iniciar a entrega do perfil estrutural."}
         </p>
 
@@ -159,7 +157,6 @@ export function VehicleSelector({
                 <option
                   key={vehicle.id}
                   value={vehicle.id}
-                  disabled={vehicle.unavailable}
                   title={formatVehicleOptionTitle(vehicle)}
                 >
                   {formatVehicleOptionLabel(vehicle)}

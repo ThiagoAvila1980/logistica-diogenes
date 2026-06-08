@@ -5,6 +5,7 @@ import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
 import { useMockData } from "./config";
 import { mockRepository } from "./mock-repository";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import type { CuttingSteps } from "@/lib/transport-gates";
 
 async function resolveMeasurementItems(
   items: MeasurementLineItem[],
@@ -15,6 +16,14 @@ async function resolveMeasurementItems(
       drawingUrl: item.drawingUrl
         ? await resolveUploadDisplayUrl(item.drawingUrl)
         : item.drawingUrl,
+      drawings: item.drawings?.length
+        ? await Promise.all(
+            item.drawings.map(async (d) => ({
+              ...d,
+              url: await resolveUploadDisplayUrl(d.url),
+            })),
+          )
+        : item.drawings,
       photos: item.photos?.length
         ? await Promise.all(
             item.photos.map((url) => resolveUploadDisplayUrl(url)),
@@ -22,6 +31,26 @@ async function resolveMeasurementItems(
         : item.photos,
     })),
   );
+}
+
+/**
+ * Computa o aggregate de progresso de corte a partir dos itens (vãos).
+ *
+ * - corteFeito      → qualquer vão tem corte concluído (libera transporte)
+ * - embalagemFeita  → todos os vãos têm embalagem concluída
+ * - acessoriosFeitos → todos os vãos têm acessórios concluídos
+ * - vidrosFeitos    → todos os vãos têm vidros concluídos
+ */
+export function aggregateCuttingStepsFromItems(items: MeasurementLineItem[]): CuttingSteps {
+  if (!items.length) {
+    return { corteFeito: false, embalagemFeita: false, acessoriosFeitos: false, vidrosFeitos: false };
+  }
+  return {
+    corteFeito: items.some((i) => i.cuttingProgress?.corte === true),
+    embalagemFeita: items.every((i) => i.cuttingProgress?.embalagem === true),
+    acessoriosFeitos: items.every((i) => i.cuttingProgress?.acessorios === true),
+    vidrosFeitos: items.every((i) => i.cuttingProgress?.vidros === true),
+  };
 }
 
 export type CuttingDetail = {
@@ -32,12 +61,8 @@ export type CuttingDetail = {
     notes: string | null;
     dimensions: Record<string, number> | null;
   } | null;
-  cuttingSteps: {
-    corte: boolean;
-    embalagem: boolean;
-    acessorios: boolean;
-    vidros: boolean;
-  };
+  /** Progresso agregado de todos os vãos (usado pelos transport gates) */
+  cuttingSteps: CuttingSteps;
   cutterNotes: string | null;
 };
 
@@ -61,36 +86,35 @@ export async function getCuttingDetailForOs(osId: string): Promise<CuttingDetail
     .limit(1);
 
   const [cut] = await db
-    .select({
-      corteFeito: cuttingPlans.corteFeito,
-      embalagemFeita: cuttingPlans.embalagemFeita,
-      acessoriosFeitos: cuttingPlans.acessoriosFeitos,
-      vidrosFeitos: cuttingPlans.vidrosFeitos,
-      cutterNotes: cuttingPlans.cutterNotes,
-    })
+    .select({ cutterNotes: cuttingPlans.cutterNotes })
     .from(cuttingPlans)
     .where(eq(cuttingPlans.idMedicao, osId))
     .limit(1);
 
-  const items = (meas?.items as MeasurementLineItem[]) ?? [];
+  const allItems = (meas?.items as MeasurementLineItem[]) ?? [];
   const photos = (meas?.photos as string[]) ?? [];
+
+  // Mostra somente os vãos enviados para o corte.
+  // Retrocompatibilidade: se nenhum item tiver a flag, exibe todos.
+  const hasSentFlag = allItems.some((i) => i.sentToCutting === true);
+  const cuttingItems = hasSentFlag
+    ? allItems.filter((i) => i.sentToCutting === true)
+    : allItems;
+
+  const resolvedItems = await resolveMeasurementItems(cuttingItems);
 
   return {
     measurement: meas
       ? {
           cliente: meas.cliente ?? null,
-          items: await resolveMeasurementItems(items),
+          items: resolvedItems,
           photos: await Promise.all(photos.map((url) => resolveUploadDisplayUrl(url))),
           notes: meas.notes ?? null,
           dimensions: meas.dimensions as Record<string, number> | null,
         }
       : null,
-    cuttingSteps: {
-      corte: cut?.corteFeito ?? false,
-      embalagem: cut?.embalagemFeita ?? false,
-      acessorios: cut?.acessoriosFeitos ?? false,
-      vidros: cut?.vidrosFeitos ?? false,
-    },
+    // O progresso agrega somente os vãos enviados para o corte
+    cuttingSteps: aggregateCuttingStepsFromItems(cuttingItems),
     cutterNotes: cut?.cutterNotes ?? null,
   };
 }

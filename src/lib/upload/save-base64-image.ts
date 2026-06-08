@@ -7,6 +7,7 @@ import {
 } from "./image-to-webp";
 import { normalizePersistedUploadUrl } from "./resolve-display-url";
 import { putObject } from "./storage";
+import type { DrawingItem } from "@/lib/workflow/schemas";
 
 const DATA_URL_PATTERN =
   /^data:image\/(webp|png);base64,(.+)$/;
@@ -58,22 +59,54 @@ export function isDataUrl(value: string): boolean {
   return value.startsWith("data:image/");
 }
 
-/** Persiste drawingUrl de cada item (data URL → storage) */
+type PersistedItemDrawings = {
+  id: string;
+  drawingUrl: string | null;
+  drawings: DrawingItem[] | undefined;
+};
+
+async function persistSingleDrawingUrl(
+  url: string | null | undefined,
+  osId: string,
+): Promise<string | null> {
+  const v = url ?? null;
+  if (v && isDataUrl(v) && isDrawingDataUrl(v)) {
+    return saveBase64Drawing(v, osId);
+  }
+  return v ? normalizePersistedUploadUrl(v) : v;
+}
+
+/** Persiste drawings[] e drawingUrl de cada item (data URL → storage) */
 export async function persistMeasurementDrawings(
   osId: string,
-  items: Array<{ id: string; drawingUrl?: string | null }>,
-): Promise<Array<{ id: string; drawingUrl: string | null }>> {
-  const result: Array<{ id: string; drawingUrl: string | null }> = [];
+  items: Array<{
+    id: string;
+    drawingUrl?: string | null;
+    drawings?: DrawingItem[];
+  }>,
+): Promise<PersistedItemDrawings[]> {
+  const result: PersistedItemDrawings[] = [];
 
   for (const item of items) {
-    const url = item.drawingUrl ?? null;
-    if (url && isDataUrl(url) && isDrawingDataUrl(url)) {
-      const saved = await saveBase64Drawing(url, osId);
-      result.push({ id: item.id, drawingUrl: saved });
-    } else {
+    if (item.drawings && item.drawings.length > 0) {
+      // Novo modelo: persiste cada desenho do array
+      const persistedDrawings: DrawingItem[] = [];
+      for (const drawing of item.drawings) {
+        const savedUrl = await persistSingleDrawingUrl(drawing.url, osId);
+        persistedDrawings.push({ ...drawing, url: savedUrl ?? drawing.url });
+      }
       result.push({
         id: item.id,
-        drawingUrl: url ? normalizePersistedUploadUrl(url) : url,
+        drawingUrl: persistedDrawings[0]?.url ?? null,
+        drawings: persistedDrawings,
+      });
+    } else {
+      // Modelo legado: apenas drawingUrl
+      const savedUrl = await persistSingleDrawingUrl(item.drawingUrl, osId);
+      result.push({
+        id: item.id,
+        drawingUrl: savedUrl,
+        drawings: undefined,
       });
     }
   }

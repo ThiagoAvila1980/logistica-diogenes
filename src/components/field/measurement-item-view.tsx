@@ -37,7 +37,14 @@ export function MeasurementItemView({
   const [photosExpanded, setPhotosExpanded] = useState(false);
   const photoUrls = filterDisplayableUploadUrls(item.photos ?? []);
   const photoCount = countItemPhotos(item);
-  const hasDrawing = Boolean(item.drawingUrl);
+
+  // Suporte a múltiplos desenhos (drawings[]) com fallback para drawingUrl legado
+  const allDrawings =
+    item.drawings && item.drawings.length > 0
+      ? item.drawings
+      : item.drawingUrl
+        ? [{ id: "__legacy__", url: item.drawingUrl }]
+        : [];
   const ambienteLabel = resolveLookupLabel(
     lookups?.ambientes ?? [],
     item.idAmbiente ?? null,
@@ -100,14 +107,26 @@ export function MeasurementItemView({
           id={`measurement-item-body-${item.id}`}
           className="mt-3 space-y-3"
         >
-          {hasDrawing ? (
-            <div className="overflow-hidden rounded-lg border bg-card">
-              <ResolvedImage
-                src={item.drawingUrl!}
-                alt={`Desenho da medição ${index + 1}`}
-                className="mx-auto max-h-[min(70vh,480px)] w-full object-contain"
-                fallbackClassName="min-h-[120px]"
-              />
+          {allDrawings.length > 0 ? (
+            <div className="space-y-2">
+              {allDrawings.map((drawing, dIdx) => (
+                <div
+                  key={drawing.id}
+                  className="overflow-hidden rounded-lg border bg-card"
+                >
+                  {allDrawings.length > 1 && (
+                    <p className="border-b bg-muted/30 px-3 py-1 text-xs text-muted-foreground">
+                      Desenho {dIdx + 1}
+                    </p>
+                  )}
+                  <ResolvedImage
+                    src={drawing.url}
+                    alt={`Desenho ${dIdx + 1} da medição ${index + 1}`}
+                    className="mx-auto max-h-[min(70vh,480px)] w-full object-contain"
+                    fallbackClassName="min-h-[120px]"
+                  />
+                </div>
+              ))}
             </div>
           ) : (
             <p className="rounded-lg border border-dashed bg-muted/30 px-3 py-6 text-center text-sm text-muted-foreground">
@@ -213,6 +232,7 @@ export function hasSavedMeasurementForView(
   return draft.items.some(
     (item) =>
       Boolean(item.drawingUrl) ||
+      Boolean(item.drawings?.length) ||
       Boolean(item.idAmbiente) ||
       Boolean(item.observacao?.trim()) ||
       Boolean(item.photos?.length) ||

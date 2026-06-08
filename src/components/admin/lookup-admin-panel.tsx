@@ -148,7 +148,7 @@ export function LookupAdminPanel({
             items.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/60 p-4"
               >
                 <div>
                   <p className="font-medium">{item.descricao}</p>

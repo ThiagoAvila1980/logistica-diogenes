@@ -420,13 +420,15 @@ export async function saveFieldMeasurement(
   let itemsToSave = items;
   try {
     const persisted = await persistMeasurementDrawings(osId, items);
-    itemsToSave = items.map((item) => ({
-      ...item,
-      drawingUrl:
-        persisted.find((p) => p.id === item.id)?.drawingUrl ??
-        item.drawingUrl ??
-        null,
-    }));
+    itemsToSave = items.map((item) => {
+      const p = persisted.find((p) => p.id === item.id);
+      return {
+        ...item,
+        drawingUrl: p?.drawingUrl ?? item.drawingUrl ?? null,
+        drawings:
+          p?.drawings !== undefined ? p.drawings : (item.drawings ?? undefined),
+      };
+    });
   } catch (err) {
     return {
       success: false,

@@ -2,11 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Hammer } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
-import {
-  getCuttingDetailForOs,
-  type CuttingDetail,
-} from "@/lib/data/cutting-detail";
-import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { getInstallationDetailForOs } from "@/lib/data/installation-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
@@ -14,56 +9,20 @@ import { getOrderDisplayNumber } from "@/lib/order-display";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { InstallationChecklist } from "@/components/installation/installation-checklist";
 import { InstallationServicePhotos } from "@/components/installation/installation-service-photos";
-import { ProductionMeasurementMedia } from "@/components/production/production-measurement-media";
 
 type Props = { params: Promise<{ osId: string }> };
-
-function MeasurementMediaSection({
-  measurement,
-  lookups,
-}: {
-  measurement: CuttingDetail["measurement"];
-  lookups: MeasurementLookups;
-}) {
-  if (!measurement) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Nenhuma medição registrada para este item.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <ProductionMeasurementMedia
-      items={measurement.items}
-      photos={measurement.photos}
-      lookups={lookups}
-    />
-  );
-}
 
 export default async function InstallationOsPage({ params }: Props) {
   const { osId } = await params;
   const order = await getServiceOrderById(osId);
   if (!order) notFound();
 
-  const [detail, cuttingDetail, lookups] = await Promise.all([
+  const [detail, lookups] = await Promise.all([
     getInstallationDetailForOs(osId, order.status),
-    getCuttingDetailForOs(osId),
     listMeasurementLookups(),
   ]);
-
-  const measurementMedia = (
-    <MeasurementMediaSection
-      measurement={cuttingDetail.measurement}
-      lookups={lookups}
-    />
-  );
 
   if (!canOperateInstallationModule(order.status, detail.cuttingSteps)) {
     return (
@@ -80,13 +39,10 @@ export default async function InstallationOsPage({ params }: Props) {
           </p>
           <MeasurementNotesCard notes={order.notes} className="mt-4" />
         </div>
-        <div className="space-y-4 sm:space-y-6">
-          {measurementMedia}
-          <div className="rounded-xl border bg-card p-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Aguardando conclusão do corte para liberar a instalação desta OS.
-            </p>
-          </div>
+        <div className="rounded-xl border bg-card p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Aguardando liberação.
+          </p>
         </div>
       </>
     );
@@ -128,12 +84,10 @@ export default async function InstallationOsPage({ params }: Props) {
       <div className="space-y-4 sm:space-y-6">
         <InstallationChecklist
           osId={osId}
-          initialInstallationSteps={detail.installationSteps}
-          initialTransportSteps={detail.transportSteps}
-          initialCuttingSteps={detail.cuttingSteps}
+          osStatus={order.status}
+          items={detail.items}
+          lookups={lookups}
         />
-
-        {measurementMedia}
 
         <InstallationServicePhotos
           osId={osId}

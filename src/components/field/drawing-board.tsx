@@ -30,6 +30,11 @@ export type DrawingBoardProps = {
   initialFullscreen?: boolean;
   onInitialFullscreenApplied?: () => void;
   onFullscreenChange?: (fullscreen: boolean) => void;
+  /**
+   * Faz o board preencher o container pai (flex-col com altura definida).
+   * Use dentro de modais — não ativa o portal/fixed nativo.
+   */
+  fill?: boolean;
   disabled?: boolean;
   className?: string;
 };
@@ -43,6 +48,7 @@ export function DrawingBoard({
   initialFullscreen = false,
   onInitialFullscreenApplied,
   onFullscreenChange,
+  fill = false,
   disabled,
   className,
 }: DrawingBoardProps) {
@@ -549,13 +555,16 @@ export function DrawingBoard({
     </div>
   );
 
+  // fill e fullscreen usam o mesmo layout interno (flex-1 + h-full no canvas)
+  const fillLike = fill || fullscreen;
+
   const boardInner = (
     <>
       <div
         ref={containerRef}
         className={cn(
           "relative flex-1",
-          fullscreen ? "min-h-0 h-full" : "min-h-[200px]",
+          fillLike ? "min-h-0 h-full" : "min-h-[200px]",
         )}
       >
         <canvas
@@ -577,6 +586,7 @@ export function DrawingBoard({
       className={cn(
         "overflow-hidden rounded-lg border bg-muted/20",
         dirty && !disabled && "border-warning ring-1 ring-warning/40",
+        fill && "flex flex-col h-full rounded-none border-0",
         fullscreen && "fixed inset-0 z-[100] flex flex-col rounded-none border-0",
         disabled && "pointer-events-none opacity-60",
         className,
@@ -586,7 +596,7 @@ export function DrawingBoard({
       <div
         className={cn(
           "flex",
-          fullscreen ? "min-h-0 flex-1" : "min-h-[200px]",
+          fillLike ? "min-h-0 flex-1" : "min-h-[200px]",
         )}
       >
         {boardInner}

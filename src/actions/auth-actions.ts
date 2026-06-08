@@ -32,7 +32,7 @@ export type LoginUserOption = {
   roles: string[];
 };
 
-/** Lista usuários demo (apenas modo mock — útil para dev/admin). */
+/** Lista usuários. Em produção exige sessão de admin/gerente. */
 export async function listLoginUsers(): Promise<LoginUserOption[]> {
   if (useMockData()) {
     return DEMO_USERS.map(({ id, name, email, roles }) => ({
@@ -41,6 +41,14 @@ export async function listLoginUsers(): Promise<LoginUserOption[]> {
       email,
       roles,
     }));
+  }
+
+  // Em produção apenas admins e gerentes podem enumerar usuários
+  const { requireRole } = await import("@/lib/auth/require-role");
+  try {
+    await requireRole(["admin", "gerente"]);
+  } catch {
+    return [];
   }
 
   const { getDb } = await import("@/db");
