@@ -26,12 +26,7 @@ export default async function ProductionIndexPage() {
   const orders = candidateOrders.filter((o) => {
     const steps = stepsMap[o.id];
     if (!steps) return CUTTING_STATUSES.has(o.status);
-    return hasPendingCuttingSteps({
-      corteFeito: steps.corte,
-      embalagemFeita: steps.embalagem,
-      acessoriosFeitos: steps.acessorios,
-      vidrosFeitos: steps.vidros,
-    });
+    return hasPendingCuttingSteps(steps);
   });
 
   return (
@@ -57,10 +52,10 @@ export default async function ProductionIndexPage() {
                 order={order}
                 steps={
                   stepsMap[order.id] ?? {
-                    corte: false,
-                    embalagem: false,
-                    acessorios: false,
-                    vidros: false,
+                    corteFeito: false,
+                    embalagemFeita: false,
+                    acessoriosFeitos: false,
+                    vidrosFeitos: false,
                   }
                 }
               />

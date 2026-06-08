@@ -9,9 +9,7 @@ import { MeasurementSpecFields } from "@/components/field/measurement-spec-field
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CuttingChecklist } from "@/components/production/cutting-checklist";
-import { CuttingNotesField } from "@/components/production/cutting-notes-field";
-import { ProductionMeasurementMedia } from "@/components/production/production-measurement-media";
+import { CuttingDetailView } from "@/components/production/cutting-detail-view";
 
 type Props = { params: Promise<{ osId: string }> };
 
@@ -24,7 +22,7 @@ export default async function ProductionOsPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const { measurement, cuttingSteps, cutterNotes } = detail;
+  const { measurement, cutterNotes } = detail;
 
   return (
     <>
@@ -57,17 +55,15 @@ export default async function ProductionOsPage({ params }: Props) {
       </div>
 
       <div className="space-y-6">
-        <CuttingChecklist osId={osId} osStatus={order.status} initialSteps={cuttingSteps} />
-
         {measurement ? (
-          <>
-            <ProductionMeasurementMedia
-              items={measurement.items}
-              photos={measurement.photos}
-              lookups={lookups}
-            />
-            <CuttingNotesField osId={osId} initialNotes={cutterNotes} />
-          </>
+          <CuttingDetailView
+            osId={osId}
+            osStatus={order.status}
+            items={measurement.items}
+            photos={measurement.photos}
+            lookups={lookups}
+            cutterNotes={cutterNotes}
+          />
         ) : (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
