@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import Link from "next/link";
 import { Draggable } from "@hello-pangea/dnd";
 import { GripVertical } from "lucide-react";
@@ -76,6 +77,7 @@ export function KanbanCard({
         <article
           ref={provided.innerRef}
           {...provided.draggableProps}
+          style={provided.draggableProps.style as React.CSSProperties}
           onKeyDown={handleKeyDown}
           className={cn(
             "mb-1.5 last:mb-0 rounded-md border border-l-[3px] bg-card text-xs transition-shadow sm:mb-2",
