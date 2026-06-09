@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme {
+  --color-blue-dark: #0d2060;
+  --color-blue-mid: #1a4db5;
+  --color-blue-light: #4a8fe8;
+  --color-bg-deep: #060d1a;
+  --color-gold: #c8a96e;
+  --color-gold-light: #e8c98e;
+  --color-text-light: #f0f4ff;
+
+  --font-heading: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --radius-card: 0.75rem;
+}
+
+:root {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg-deep);
+  color: var(--color-text-light);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0f1e;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a4db5;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4a8fe8;
+}
+
+/* Glass morphism utility */
+.glass {
+  background: rgba(13, 32, 96, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(74, 143, 232, 0.15);
+}
+
+/* Section title underline */
+.section-title::after {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 3px;
+  background: linear-gradient(90deg, #c8a96e, #4a8fe8);
+  margin: 12px auto 0;
+  border-radius: 2px;
+}
+
+/* WhatsApp floating button pulse */
+@keyframes wa-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); }
+  50% { box-shadow: 0 0 0 12px rgba(37, 211, 102, 0); }
+}
+.wa-pulse {
+  animation: wa-pulse 2.5s ease-in-out infinite;
+}

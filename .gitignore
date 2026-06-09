@@ -37,6 +37,10 @@ next-env.d.ts
 .vscode
 *.swp
 
-# site (projeto separado)
-/site/
-package-lock.json
+# site (landing — versionado para deploy; ignorar só artefatos locais)
+/site/node_modules/
+/site/.next/
+/site/next-env.d.ts
+
+# lockfile só na raiz (app principal usa npm install no CI)
+/package-lock.json
