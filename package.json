@@ -19,6 +19,7 @@
     "db:migrate-drop-clients": "node --env-file=.env.local scripts/db-apply-drop-clients.mjs",
     "db:migrate-remove-revision": "node --env-file=.env.local scripts/db-apply-remove-revision.mjs",
     "db:migrate-remove-legacy": "node --env-file=.env.local scripts/db-apply-remove-legacy-statuses.mjs",
+    "db:migrate-remove-legacy:prod": "node scripts/db-apply-remove-legacy-statuses.mjs",
     "db:migration-status": "node --env-file=.env.local scripts/db-migration-status.mjs",
     "db:migration-status:prod": "node scripts/db-migration-status.mjs",
     "db:sync-drizzle-journal": "node --env-file=.env.local scripts/db-sync-drizzle-journal.mjs",
