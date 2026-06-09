@@ -3,7 +3,9 @@ import {
   aggregateCuttingStepsFromItems,
   aggregateTransportStepsFromItems,
   aggregateInstallationStepsFromItems,
+  canOperateCuttingForItems,
   effectiveCuttingSteps,
+  hasPendingCuttingWorkOnItems,
   isTransportOrLater,
   isInstallationOrLater,
 } from "./aggregates";
@@ -51,6 +53,79 @@ describe("aggregateCuttingStepsFromItems", () => {
     expect(agg.embalagemFeita).toBe(true);
     expect(agg.acessoriosFeitos).toBe(true);
     expect(agg.vidrosFeitos).toBe(false);
+  });
+});
+
+describe("hasPendingCuttingWorkOnItems", () => {
+  it("detecta vão sem corte mesmo quando o agregado parece concluído", () => {
+    const items = [
+      item("a", {
+        cuttingProgress: {
+          corte: false,
+          embalagem: true,
+          acessorios: true,
+          vidros: true,
+        },
+      }),
+      item("b", {
+        cuttingProgress: {
+          corte: true,
+          embalagem: true,
+          acessorios: true,
+          vidros: true,
+        },
+      }),
+    ];
+
+    expect(aggregateCuttingStepsFromItems(items).corteFeito).toBe(true);
+    expect(hasPendingCuttingWorkOnItems(items)).toBe(true);
+  });
+
+  it("retorna false quando todos os vãos concluíram as 4 etapas", () => {
+    const done = {
+      corte: true,
+      embalagem: true,
+      acessorios: true,
+      vidros: true,
+    } as const;
+    const items = [item("a", { cuttingProgress: done }), item("b", { cuttingProgress: done })];
+    expect(hasPendingCuttingWorkOnItems(items)).toBe(false);
+  });
+});
+
+describe("canOperateCuttingForItems", () => {
+  it("permite operação em transporte quando ainda há vão sem corte", () => {
+    const items = [
+      item("a", {
+        cuttingProgress: {
+          corte: false,
+          embalagem: true,
+          acessorios: true,
+          vidros: true,
+        },
+      }),
+      item("b", {
+        cuttingProgress: {
+          corte: true,
+          embalagem: true,
+          acessorios: true,
+          vidros: true,
+        },
+      }),
+    ];
+
+    expect(canOperateCuttingForItems("transporte_perfil", items)).toBe(true);
+  });
+
+  it("bloqueia operação em transporte quando todos os vãos estão completos", () => {
+    const done = {
+      corte: true,
+      embalagem: true,
+      acessorios: true,
+      vidros: true,
+    } as const;
+    const items = [item("a", { cuttingProgress: done }), item("b", { cuttingProgress: done })];
+    expect(canOperateCuttingForItems("transporte_perfil", items)).toBe(false);
   });
 });
 

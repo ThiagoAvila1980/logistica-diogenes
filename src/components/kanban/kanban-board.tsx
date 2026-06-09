@@ -11,8 +11,8 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { KanbanPhaseColumn } from "./kanban-phase-column";
+import { KanbanMobileCarousel } from "./kanban-mobile-carousel";
 import { KanbanFiltersBar } from "./kanban-filters";
-import { KanbanColumnStats } from "./kanban-column-stats";
 import { moveOSCard, refreshKanbanOrders } from "@/actions/kanban-actions";
 import { getAllowedTransitions } from "@/lib/workflow/status-machine";
 import {
@@ -39,7 +39,6 @@ import {
   KanbanMoveConfirmDialog,
   type KanbanPendingMove,
 } from "./kanban-move-confirm-dialog";
-import { KANBAN_VISIBLE_COLUMNS } from "@/lib/kanban/constants";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { getOrderDisplayNumber } from "@/lib/order-display";
@@ -330,7 +329,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
@@ -369,19 +368,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         filteredCount={filteredData.length}
       />
 
-      <KanbanColumnStats
-        orders={filteredData}
-        phaseIds={KANBAN_PHASES.map((p) => p.id)}
-        page={0}
-        visibleColumns={KANBAN_VISIBLE_COLUMNS}
-      />
-
-      <p className="hidden text-[11px] text-muted-foreground lg:block">
-        Arraste pelo ⋮⋮ ·{" "}
-        <kbd className="rounded border px-0.5 text-[10px]">Alt</kbd>+
-        <kbd className="rounded border px-0.5 text-[10px]">→</kbd> avança etapa
-      </p>
-
+      
       {isMoveSlowPending && (
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -431,7 +418,23 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
       />
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid min-h-0 flex-1 grid-cols-4 gap-1 pb-2 sm:gap-2">
+        <KanbanMobileCarousel
+          phases={KANBAN_PHASES}
+          className="md:hidden"
+        >
+          {KANBAN_PHASES.map((phase) => (
+            <KanbanPhaseColumn
+              key={phase.id}
+              phase={phase}
+              items={columns[phase.id] ?? []}
+              isDropDisabled={isPending}
+              onKeyboardAdvance={handleKeyboardAdvance}
+              variant="carousel"
+            />
+          ))}
+        </KanbanMobileCarousel>
+
+        <div className="hidden min-h-0 min-w-0 flex-1 gap-2 md:grid md:grid-cols-4">
           {KANBAN_PHASES.map((phase) => (
             <KanbanPhaseColumn
               key={phase.id}

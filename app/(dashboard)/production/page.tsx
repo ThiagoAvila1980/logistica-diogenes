@@ -3,7 +3,7 @@ import { Scissors } from "lucide-react";
 import { ProductionOrderCard } from "@/components/production/production-order-card";
 import { listServiceOrders } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
-import { hasPendingCuttingSteps } from "@/lib/transport-gates";
+import { hasPendingCuttingWorkOnItems } from "@/lib/workflow/aggregates";
 import { ORDER_INDEX_GRID_CLASS } from "@/lib/ui/order-index-grid";
 
 const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
@@ -18,15 +18,17 @@ export default async function ProductionIndexPage() {
   const detailsEntries = await Promise.all(
     candidateOrders.map(async (o) => {
       const detail = await getCuttingDetailForOs(o.id);
-      return [o.id, detail.cuttingSteps] as const;
+      return [o.id, detail] as const;
     }),
   );
-  const stepsMap = Object.fromEntries(detailsEntries);
+  const detailMap = Object.fromEntries(detailsEntries);
 
   const orders = candidateOrders.filter((o) => {
-    const steps = stepsMap[o.id];
-    if (!steps) return CUTTING_STATUSES.has(o.status);
-    return hasPendingCuttingSteps(steps);
+    const detail = detailMap[o.id];
+    if (!detail) return CUTTING_STATUSES.has(o.status);
+    const items = detail.measurement?.items ?? [];
+    if (items.length === 0) return CUTTING_STATUSES.has(o.status);
+    return hasPendingCuttingWorkOnItems(items);
   });
 
   return (
@@ -51,7 +53,7 @@ export default async function ProductionIndexPage() {
               <ProductionOrderCard
                 order={order}
                 steps={
-                  stepsMap[order.id] ?? {
+                  detailMap[order.id]?.cuttingSteps ?? {
                     corteFeito: false,
                     embalagemFeita: false,
                     acessoriosFeitos: false,

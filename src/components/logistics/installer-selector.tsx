@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CheckCircle2, Loader2, UserCheck } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronDown, Loader2, UserCheck } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { assignInstallerToOsAction } from "@/actions/installer-actions";
 import type { InstallerOption } from "@/lib/data/installers-db";
+import { cn } from "@/lib/utils";
 
 type Props = {
   osId: string;
@@ -44,6 +45,7 @@ export function InstallerSelector({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(!installerId);
 
   useEffect(() => {
     setSelectedInstallerId(installerId ?? "");
@@ -78,7 +80,7 @@ export function InstallerSelector({
 
   if (!canChange && installerId) {
     return (
-      <Card className="mb-4 border-success-border bg-success-muted/50">
+      <Card className="mb-4 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <UserCheck className="h-4 w-4 text-primary" />
@@ -107,14 +109,34 @@ export function InstallerSelector({
   }
 
   return (
-    <Card className="mb-4 border-warning-border bg-warning-muted/60">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <UserCheck className="h-4 w-4 text-warning" />
-          {installerId ? "Alterar instalador" : "Designar instalador"}
-        </CardTitle>
+    <Card className="mb-4 min-w-0 overflow-hidden border-warning-border bg-warning-muted/60">
+      <CardHeader className="p-0">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 px-6 pt-3 pb-3 text-left"
+          onClick={() => setOpen((current) => !current)}
+          aria-expanded={open}
+          aria-controls="installer-selector-panel"
+        >
+          <CardTitle className="flex min-w-0 items-center gap-2 text-base">
+            <UserCheck className="h-4 w-4 shrink-0 text-warning" />
+            <span className="truncate">
+              {installerId && installerName
+                ? installerName
+                : "Selecionar Instalador"}
+            </span>
+          </CardTitle>
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </button>
       </CardHeader>
-      <CardContent className="space-y-3">
+      {open && (
+        <CardContent id="installer-selector-panel" className="space-y-3">
         <p className="text-sm text-muted-foreground">
           {installerId
             ? "Altere o instalador responsável e/ou a data agendada."
@@ -193,7 +215,8 @@ export function InstallerSelector({
             "Confirmar instalador"
           )}
         </Button>
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   );
 }

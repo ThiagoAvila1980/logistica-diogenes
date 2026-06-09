@@ -7,14 +7,13 @@ import {
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
 import {
-  hasPendingCuttingSteps,
-  isTransportFullyDone,
-} from "@/lib/transport-gates";
-import {
   aggregateCuttingStepsFromItems,
   aggregateTransportStepsFromItems,
   aggregateInstallationStepsFromItems,
+  hasPendingCuttingWorkOnItems,
+  selectCuttingLineItems,
 } from "@/lib/workflow/aggregates";
+import { isTransportFullyDone } from "@/lib/transport-gates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { KanbanOrderItem } from "./kanban";
 
@@ -69,10 +68,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
 
     // Espelha a regra da tela de produção: se há vãos marcados para corte,
     // o agregado considera apenas esses; senão, todos os vãos.
-    const hasSentFlag = items.some((i) => i.sentToCutting === true);
-    const cuttingItems = hasSentFlag
-      ? items.filter((i) => i.sentToCutting === true)
-      : items;
+    const cuttingItems = selectCuttingLineItems(items);
     const cuttingAggregate = aggregateCuttingStepsFromItems(cuttingItems);
 
     const cuttingStepsData = {
@@ -83,7 +79,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
     };
 
     const hasPendingCutting =
-      isTransportPhase && hasPendingCuttingSteps(cuttingAggregate);
+      isTransportPhase && hasPendingCuttingWorkOnItems(cuttingItems);
 
     const transportStepsData = aggregateTransportStepsFromItems(items);
 

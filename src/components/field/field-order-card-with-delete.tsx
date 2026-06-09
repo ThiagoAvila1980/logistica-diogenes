@@ -17,7 +17,7 @@ export function FieldOrderCardWithDelete({
   const displayNumber = getOrderDisplayNumber(order);
 
   return (
-    <div className="flex items-stretch gap-1">
+    <div className="flex min-w-0 items-stretch gap-1">
       <div className="min-w-0 flex-1">
         <FieldOrderCard order={order} />
       </div>

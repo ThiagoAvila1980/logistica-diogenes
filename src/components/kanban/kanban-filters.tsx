@@ -43,7 +43,7 @@ export function KanbanFiltersBar({
 
   return (
     <section
-      className="rounded-md border bg-card"
+      className="rounded-md border bg-muted/60"
       aria-label="Filtros do kanban"
     >
       <button

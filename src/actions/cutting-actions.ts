@@ -6,13 +6,17 @@ import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getDb } from "@/lib/db";
 import { cuttingPlans, measurements, statusHistory } from "@/db/schema";
 import type { OsStatus } from "@/db/schema";
-import { isCuttingPhaseStatus, canOperateCuttingModule } from "@/lib/transport-gates";
+import { isCuttingPhaseStatus } from "@/lib/transport-gates";
 import { requireRole } from "@/lib/auth/require-role";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { getServiceOrderById } from "@/lib/data/orders";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { aggregateCuttingStepsFromItems } from "@/lib/workflow/aggregates";
+import {
+  aggregateCuttingStepsFromItems,
+  canOperateCuttingForItems,
+  selectCuttingLineItems,
+} from "@/lib/workflow/aggregates";
 import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
@@ -76,13 +80,8 @@ export async function updateItemCuttingStepAction(
 
       const status = meas.etapa as OsStatus;
       const allItems = (meas.items as MeasurementLineItem[]) ?? [];
-      const hasSentFlag = allItems.some((i) => i.sentToCutting === true);
-      const cuttingItems = hasSentFlag
-        ? allItems.filter((i) => i.sentToCutting === true)
-        : allItems;
-      const aggregate = aggregateCuttingStepsFromItems(cuttingItems);
 
-      if (!canOperateCuttingModule(status, aggregate)) {
+      if (!canOperateCuttingForItems(status, allItems)) {
         throw new WorkflowActionError("OS não está em etapa de corte");
       }
 
@@ -100,10 +99,11 @@ export async function updateItemCuttingStepAction(
         .set({ items: updatedItems, updatedAt: new Date() })
         .where(eq(measurements.id, osId));
 
-      const updatedCuttingItems = hasSentFlag
-        ? updatedItems.filter((i) => i.sentToCutting === true)
-        : updatedItems;
+      const updatedCuttingItems = selectCuttingLineItems(updatedItems);
       const newAggregate = aggregateCuttingStepsFromItems(updatedCuttingItems);
+      const aggregate = aggregateCuttingStepsFromItems(
+        selectCuttingLineItems(allItems),
+      );
 
       // Quando o primeiro vão tem corte feito, libera transporte em paralelo
       if (
@@ -268,15 +268,16 @@ export async function updateCuttingNotesAction(
     const db = getDb();
 
     const [meas] = await db
-      .select({ items: measurements.items })
+      .select({ items: measurements.items, etapa: measurements.etapa })
       .from(measurements)
       .where(eq(measurements.id, osId))
       .limit(1);
 
-    const items = (meas?.items as MeasurementLineItem[]) ?? [];
-    const aggregate = aggregateCuttingStepsFromItems(items);
+    if (!meas) return { success: false, message: "OS não encontrada" };
 
-    if (!canOperateCuttingModule(order.status as OsStatus, aggregate)) {
+    const allItems = (meas.items as MeasurementLineItem[]) ?? [];
+
+    if (!canOperateCuttingForItems(meas.etapa as OsStatus, allItems)) {
       return { success: false, message: "OS não está em etapa de corte" };
     }
 

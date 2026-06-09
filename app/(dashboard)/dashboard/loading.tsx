@@ -9,9 +9,12 @@ export default function DashboardLoading() {
           ))}
         </div>
       </div>
-      <div className="grid flex-1 grid-cols-4 gap-1 sm:gap-2">
+      <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-2 sm:gap-2 md:grid md:grid-cols-4 md:overflow-x-visible">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-md bg-muted/50 p-1.5 sm:p-2">
+          <div
+            key={i}
+            className="w-[11.5rem] min-w-[11.5rem] shrink-0 rounded-md bg-muted/50 p-1.5 sm:w-[12.5rem] sm:min-w-[12.5rem] md:w-auto md:min-w-0 md:shrink"
+          >
             <div className="mb-2 h-4 animate-pulse rounded bg-muted" />
             <div className="space-y-1.5">
               {Array.from({ length: 3 }).map((_, j) => (

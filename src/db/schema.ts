@@ -10,7 +10,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { isNull, relations } from "drizzle-orm";
 import type {
   Dimensions,
   MeasurementLineItem,
@@ -112,7 +112,7 @@ export const users = pgTable(
       .notNull(),
   },
   (t) => [
-    index("idx_users_roles").on(t.roles),
+    index("idx_users_roles_gin").using("gin", t.roles),
     index("idx_users_active").on(t.active),
   ],
 );
@@ -153,7 +153,9 @@ export const measurements = pgTable(
     index("idx_meas_etapa").on(t.etapa),
     index("idx_meas_priority").on(t.priority),
     index("idx_meas_assigned").on(t.assignedUserId),
+    index("idx_meas_updated_at").on(t.updatedAt),
     index("idx_meas_etapa_updated").on(t.etapa, t.updatedAt),
+    index("idx_meas_etapa_assigned_updated").on(t.etapa, t.assignedUserId, t.updatedAt),
   ],
 );
 
@@ -206,7 +208,6 @@ export const cuttingPlans = pgTable(
       .notNull(),
   },
   (t) => [
-    index("idx_cut_medicao").on(t.idMedicao),
     uniqueIndex("idx_cut_medicao_unique").on(t.idMedicao),
   ],
 );
@@ -264,10 +265,9 @@ export const transportLogs = pgTable(
       .notNull(),
   },
   (t) => [
-    index("idx_trans_medicao").on(t.idMedicao),
+    uniqueIndex("idx_trans_medicao_unique").on(t.idMedicao),
     index("idx_trans_driver").on(t.driverId),
     index("idx_trans_vehicle").on(t.vehicleId),
-    uniqueIndex("idx_trans_medicao_unique").on(t.idMedicao),
   ],
 );
 
@@ -296,9 +296,8 @@ export const installationLogs = pgTable(
       .notNull(),
   },
   (t) => [
-    index("idx_inst_medicao").on(t.idMedicao),
-    index("idx_inst_installer").on(t.installerId),
     uniqueIndex("idx_inst_medicao_unique").on(t.idMedicao),
+    index("idx_inst_installer").on(t.installerId),
   ],
 );
 
@@ -334,6 +333,8 @@ export const notifications = pgTable(
   },
   (t) => [
     index("idx_notifications_user_created").on(t.userId, t.createdAt),
+    index("idx_notifications_user_read").on(t.userId, t.readAt),
+    index("idx_notifications_user_unread").on(t.userId).where(isNull(t.readAt)),
   ],
 );
 

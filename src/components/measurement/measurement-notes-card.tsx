@@ -18,7 +18,7 @@ export function MeasurementNotesCard({ notes, className }: Props) {
   return (
     <Card
       className={cn(
-        "border-warning-border bg-warning-muted/50",
+        "min-w-0 overflow-hidden border-warning-border bg-warning-muted/50",
         className,
       )}
     >

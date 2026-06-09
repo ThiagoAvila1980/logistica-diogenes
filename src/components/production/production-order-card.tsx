@@ -28,7 +28,7 @@ export function ProductionOrderCard({
     <Link
       href={`/production/${order.id}`}
       className={cn(
-        "group flex h-full flex-col gap-3 rounded-xl border px-4 py-3 transition-all",
+        "group flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border px-4 py-3 transition-all",
         "hover:border-primary/25 hover:shadow-[var(--shadow-card)] active:scale-[0.98]",
         allDone
           ? "border-success-border bg-success-muted premium-card"
@@ -40,7 +40,10 @@ export function ProductionOrderCard({
           <p className="font-mono text-sm font-semibold text-primary">
             {getOrderDisplayNumber(order)}
           </p>
-          <p className="truncate text-xs text-muted-foreground">
+          <p
+            className="truncate text-xs text-muted-foreground"
+            title={order.clientName}
+          >
             {order.clientName}
           </p>
         </div>

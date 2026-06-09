@@ -153,7 +153,7 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
   }
 
   return (
-    <Card>
+    <Card className="min-w-0 overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between gap-3 text-base">
           <span>Etapas do corte por vão</span>

@@ -44,7 +44,7 @@ export function CuttingNotesField({ osId, initialNotes }: Props) {
   }
 
   return (
-    <Card>
+    <Card className="min-w-0 overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <StickyNote className="h-4 w-4" />

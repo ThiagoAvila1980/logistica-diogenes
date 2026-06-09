@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { CalendarDays, ChevronRight } from "lucide-react";
 import type { OrderListItem } from "@/lib/data/types";
@@ -31,66 +33,93 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
   const priorityPill = PRIORITY_PILL[order.priority];
 
   return (
-    <Link
-      href={`/field/${order.id}`}
+    <div
       className={cn(
-        "group flex items-center gap-3 rounded-xl border border-primary/10 bg-card p-4 shadow-[var(--shadow-card)] transition-all",
-        "active:scale-[0.98] hover:border-primary/30 hover:shadow-[var(--shadow-brand)]",
+        "group flex w-full min-w-0 items-center gap-1 overflow-hidden rounded-xl border border-primary/10 bg-card p-4 shadow-[var(--shadow-card)] transition-all",
+        "hover:border-primary/30 hover:shadow-[var(--shadow-brand)]",
         PRIORITY_BORDER[order.priority],
       )}
     >
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-semibold text-primary">
-            {displayNumber}
-          </span>
-          {priorityPill && (
+      <Link
+        href={`/field/${order.id}`}
+        className="flex min-w-0 flex-1 items-center gap-3 active:scale-[0.98]"
+      >
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 font-mono text-sm font-semibold text-primary">
+              {displayNumber}
+            </span>
+            {priorityPill && (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                  priorityPill,
+                )}
+              >
+                {PRIORITY_LABEL[order.priority]}
+              </span>
+            )}
+          </div>
+
+          <p
+            className="truncate font-medium leading-tight"
+            title={order.clientName}
+          >
+            {order.clientName}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-1.5">
             <span
               className={cn(
-                "rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
-                priorityPill,
+                "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                order.hasMeasurement
+                  ? "bg-success-subtle text-success-foreground"
+                  : "bg-primary/8 text-primary",
               )}
             >
-              {PRIORITY_LABEL[order.priority]}
+              {order.hasMeasurement ? "Medida" : "Pendente"}
             </span>
-          )}
+
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                isFinal
+                  ? "bg-brass-subtle text-brass-foreground ring-1 ring-brass-border/60"
+                  : "bg-accent text-accent-foreground",
+              )}
+            >
+              {isFinal ? "Final" : "Orçamento"}
+            </span>
+
+            {order.scheduledDate && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <CalendarDays className="h-3 w-3" />
+                {formatBrDate(order.scheduledDate)}
+              </span>
+            )}
+          </div>
         </div>
 
-        <p className="truncate font-medium leading-tight">{order.clientName}</p>
+        <ChevronRight className="h-5 w-5 shrink-0 text-primary/30 transition-colors group-hover:text-primary" />
+      </Link>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-              order.hasMeasurement
-                ? "bg-success-subtle text-success-foreground"
-                : "bg-primary/8 text-primary",
-            )}
-          >
-            {order.hasMeasurement ? "Medida" : "Pendente"}
-          </span>
-
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-              isFinal
-                ? "bg-brass-subtle text-brass-foreground ring-1 ring-brass-border/60"
-                : "bg-accent text-accent-foreground",
-            )}
-          >
-            {isFinal ? "Final" : "Orçamento"}
-          </span>
-
-          {order.scheduledDate && (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <CalendarDays className="h-3 w-3" />
-              {formatBrDate(order.scheduledDate)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <ChevronRight className="h-5 w-5 shrink-0 text-primary/30 transition-colors group-hover:text-primary" />
-    </Link>
+      <button
+        type="button"
+        className="shrink-0 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+        aria-label="Abrir PDF da medição"
+        title="PDF (em breve)"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        <span
+          className="flex h-7 w-9 flex-col items-center justify-center rounded border border-current bg-background/80 leading-none"
+          aria-hidden
+        >
+          <span className="mt-0.5 text-[9px] font-bold tracking-tight">PDF</span>
+        </span>
+      </button>
+    </div>
   );
 }

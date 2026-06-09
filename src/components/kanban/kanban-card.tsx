@@ -30,7 +30,26 @@ type KanbanCardProps = {
   index: number;
   canAdvance?: boolean;
   onKeyboardAdvance?: (osId: string) => void;
+  variant?: "default" | "carousel";
 };
+
+function kanbanCardTextClasses(variant: "default" | "carousel") {
+  if (variant === "carousel") {
+    return {
+      card: "text-[13.2px]",
+      orderNumber: "text-[12.1px] sm:text-[13.2px]",
+      clientName: "text-[11px] sm:text-[13.2px]",
+      badge: "text-[9.9px] sm:text-[12.1px]",
+    };
+  }
+
+  return {
+    card: "text-xs",
+    orderNumber: "text-[11px] sm:text-[12px]",
+    clientName: "text-[10px] sm:text-[12px]",
+    badge: "text-[9px] sm:text-[11px]",
+  };
+}
 
 export function KanbanCard({
   os,
@@ -40,7 +59,9 @@ export function KanbanCard({
   index,
   canAdvance,
   onKeyboardAdvance,
+  variant = "default",
 }: KanbanCardProps) {
+  const text = kanbanCardTextClasses(variant);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (
       e.altKey &&
@@ -80,7 +101,8 @@ export function KanbanCard({
           style={provided.draggableProps.style as React.CSSProperties}
           onKeyDown={handleKeyDown}
           className={cn(
-            "mb-1.5 last:mb-0 rounded-md border border-l-[3px] bg-card text-xs transition-shadow sm:mb-2",
+            "mb-1.5 last:mb-0 min-w-0 max-w-full overflow-hidden rounded-md border border-l-[3px] bg-card transition-shadow sm:mb-2",
+            text.card,
             priorityClass,
             snapshot.isDragging
               ? "z-10 scale-[1.02] shadow-lg ring-1 ring-primary/40"
@@ -89,11 +111,11 @@ export function KanbanCard({
           data-testid={`kanban-card-${os.id}-${phaseId}`}
           title={`${displayNumber} · ${os.clientName}${os.scheduledDate ? ` · ${formatBrDate(os.scheduledDate)}` : ""}`}
         >
-          <div className="flex items-start gap-1 p-1.5 sm:gap-1.5 sm:p-2">
+          <div className="flex min-w-0 items-start gap-1 p-1.5 sm:gap-1.5 sm:p-2">
             <button
               type="button"
               className={cn(
-                "mt-0.5 shrink-0 rounded p-0.5 text-muted-foreground max-sm:-ml-0.5",
+                "mt-0.5 hidden shrink-0 rounded p-0.5 text-muted-foreground sm:inline-flex",
                 isParallelPlacement
                   ? "cursor-default opacity-40"
                   : "cursor-grab hover:bg-muted active:cursor-grabbing",
@@ -110,7 +132,10 @@ export function KanbanCard({
               <div className="flex items-start justify-between gap-1">
                 <Link
                   href={detailHref}
-                  className="truncate font-mono text-[11px] font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring sm:text-[12px]"
+                  className={cn(
+                    "block min-w-0 truncate font-mono font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring",
+                    text.orderNumber,
+                  )}
                   tabIndex={snapshot.isDragging ? -1 : 0}
                 >
                   {displayNumber}
@@ -118,16 +143,20 @@ export function KanbanCard({
               </div>
               <Link
                 href={detailHref}
-                className="hidden truncate text-[12px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring sm:block"
+                className={cn(
+                  "block min-w-0 truncate text-muted-foreground outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring",
+                  text.clientName,
+                )}
                 tabIndex={snapshot.isDragging ? -1 : 0}
               >
                 {os.clientName}
               </Link>
               {isMeasurementColumn ? (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   <span
                     className={cn(
-                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                      "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
+                      text.badge,
                       os.hasMeasurement
                         ? "bg-success-subtle text-success-foreground"
                         : "bg-muted text-muted-foreground",
@@ -137,7 +166,8 @@ export function KanbanCard({
                   </span>
                   <span
                     className={cn(
-                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                      "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
+                      text.badge,
                       isFinal
                         ? "bg-accent text-primary"
                         : "bg-warning-subtle text-warning-foreground",
@@ -147,7 +177,7 @@ export function KanbanCard({
                   </span>
                 </div>
               ) : isCuttingColumn ? (
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {(
                     [
                       { key: "corte", label: "Corte" },
@@ -161,7 +191,8 @@ export function KanbanCard({
                       <span
                         key={key}
                         className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                          "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
+                      text.badge,
                           done
                             ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
@@ -173,7 +204,7 @@ export function KanbanCard({
                   })}
                 </div>
               ) : isTransportColumn ? (
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {(
                     [
                       { key: "levarPerfilEstrutural", label: "Perf." },
@@ -187,7 +218,8 @@ export function KanbanCard({
                       <span
                         key={key}
                         className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                          "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
+                      text.badge,
                           done
                             ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
@@ -199,7 +231,7 @@ export function KanbanCard({
                   })}
                 </div>
               ) : isInstallationColumn ? (
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-0.5 sm:gap-1">
                   {(
                     [
                       { key: "instalacaoEstruturalFeita", label: "Estru." },
@@ -211,7 +243,8 @@ export function KanbanCard({
                       <span
                         key={key}
                         className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                          "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
+                      text.badge,
                           done
                             ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",

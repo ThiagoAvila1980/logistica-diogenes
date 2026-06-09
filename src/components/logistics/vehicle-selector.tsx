@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Car, CheckCircle2, Loader2 } from "lucide-react";
+import { Car, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { assignVehicleToTransportAction } from "@/actions/transport-actions";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
+import { cn } from "@/lib/utils";
 
 function formatVehicleOptionTitle(vehicle: VehicleOptionForSelection): string {
   return `${vehicle.plate} · ${vehicle.description}`;
@@ -50,6 +51,7 @@ export function VehicleSelector({
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(!vehicleId);
 
   const vehicleIds = useMemo(
     () => new Set(vehicles.map((v) => v.id)),
@@ -110,14 +112,32 @@ export function VehicleSelector({
 
   return (
     <Card className="mb-4 min-w-0 overflow-hidden border-warning-border bg-warning-muted/60">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Car className="h-4 w-4 text-warning" />
-          {vehicleId ? "Alterar veículo" : "Selecionar veículo"}
-        </CardTitle>
+      <CardHeader className="p-0">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 px-6 pt-3 pb-3 text-left"
+          onClick={() => setOpen((current) => !current)}
+          aria-expanded={open}
+          aria-controls="vehicle-selector-panel"
+        >
+          <CardTitle className="flex min-w-0 items-center gap-2 text-base">
+            <Car className="h-4 w-4 shrink-0 text-warning" />
+            <span className="truncate">
+              {vehicleId && assignedLabel ? assignedLabel : "Selecionar Veículo"}
+            </span>
+          </CardTitle>
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </button>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
+      {open && (
+        <CardContent id="vehicle-selector-panel" className="space-y-3">
+          <p className="text-sm text-muted-foreground">
           {vehicleId
             ? "Você pode alterar o veículo a qualquer momento."
             : "Escolha o veículo que será usado neste transporte. É obrigatório para iniciar a entrega do perfil estrutural."}
@@ -188,7 +208,8 @@ export function VehicleSelector({
             "Confirmar veículo"
           )}
         </Button>
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   );
 }

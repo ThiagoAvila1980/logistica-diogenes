@@ -6,6 +6,7 @@ import type {
   InstallationSteps,
 } from "@/lib/transport-gates";
 import {
+  isCuttingPhaseStatus,
   isInstallationPhaseStatus,
   isTransportPhaseStatus,
 } from "@/lib/transport-gates";
@@ -29,6 +30,40 @@ import {
  * - acessoriosFeitos → TODOS os vãos têm acessórios concluídos
  * - vidrosFeitos    → TODOS os vãos têm vidros concluídos
  */
+/** Vãos que entram no plano de corte (retrocompat: todos se nenhum tiver flag). */
+export function selectCuttingLineItems(
+  items: MeasurementLineItem[],
+): MeasurementLineItem[] {
+  const hasSentFlag = items.some((i) => i.sentToCutting === true);
+  return hasSentFlag ? items.filter((i) => i.sentToCutting === true) : items;
+}
+
+/** Há algum vão com etapa de corte incompleta (checagem por vão, não por agregado). */
+export function hasPendingCuttingWorkOnItems(
+  items: MeasurementLineItem[],
+): boolean {
+  if (!items.length) return false;
+  return items.some((item) => {
+    const p = item.cuttingProgress;
+    return (
+      p?.corte !== true ||
+      p?.embalagem !== true ||
+      p?.acessorios !== true ||
+      p?.vidros !== true
+    );
+  });
+}
+
+/** Cortador pode operar na fase de corte ou em transporte paralelo com vãos pendentes. */
+export function canOperateCuttingForItems(
+  status: OsStatus,
+  items: MeasurementLineItem[],
+): boolean {
+  if (isCuttingPhaseStatus(status)) return true;
+  if (!isTransportPhaseStatus(status)) return false;
+  return hasPendingCuttingWorkOnItems(selectCuttingLineItems(items));
+}
+
 export function aggregateCuttingStepsFromItems(
   items: MeasurementLineItem[],
 ): CuttingSteps {

@@ -6,7 +6,7 @@ import { useMockData } from "./config";
 import { mockRepository } from "./mock-repository";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { CuttingSteps } from "@/lib/transport-gates";
-import { aggregateCuttingStepsFromItems } from "@/lib/workflow/aggregates";
+import { aggregateCuttingStepsFromItems, selectCuttingLineItems } from "@/lib/workflow/aggregates";
 
 /**
  * @deprecated Importe de `@/lib/workflow/aggregates`.
@@ -83,10 +83,7 @@ export async function getCuttingDetailForOs(osId: string): Promise<CuttingDetail
 
   // Mostra somente os vãos enviados para o corte.
   // Retrocompatibilidade: se nenhum item tiver a flag, exibe todos.
-  const hasSentFlag = allItems.some((i) => i.sentToCutting === true);
-  const cuttingItems = hasSentFlag
-    ? allItems.filter((i) => i.sentToCutting === true)
-    : allItems;
+  const cuttingItems = selectCuttingLineItems(allItems);
 
   const resolvedItems = await resolveMeasurementItems(cuttingItems);
 
