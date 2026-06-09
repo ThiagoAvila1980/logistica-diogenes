@@ -11,6 +11,7 @@ import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { parseBrDate } from "@/lib/date-format";
 import { aggregateMeasurementPhotos } from "@/lib/measurement/item-photos";
+import { sortMeasurementItemsOldestFirst } from "@/lib/measurement/item-order";
 import { persistMeasurementDrawings } from "@/lib/upload/save-base64-image";
 import { parsePdfFileField } from "@/lib/upload/pdf-file-field";
 import { getOrderDisplayNumber } from "@/lib/order-display";
@@ -389,7 +390,7 @@ export async function saveFieldMeasurement(
       ? ORCAMENTO_MEASUREMENT_TYPE
       : FINAL_MEASUREMENT_TYPE;
   const { osId, notes } = parsed.data;
-  const items = itemsParsed.data;
+  const items = sortMeasurementItemsOldestFirst(itemsParsed.data);
   const priorityField = parsePriorityField(formData);
 
   const { getServiceOrderById } = await import("@/lib/data/orders");

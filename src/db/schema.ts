@@ -15,6 +15,7 @@ import type {
   Dimensions,
   MeasurementLineItem,
   InstallationPhotos,
+  InstallationDailyNote,
 } from "@/lib/workflow/schemas";
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -284,6 +285,7 @@ export const installationLogs = pgTable(
     instalacaoEstruturalFeita: boolean("instalacao_estrutural_feita").default(false).notNull(),
     instalacaoVidrosFeita: boolean("instalacao_vidros_feita").default(false).notNull(),
     photos: jsonb("photos").$type<InstallationPhotos>(),
+    dailyNotes: jsonb("daily_notes").$type<InstallationDailyNote[]>(),
     notes: text("notes"),
     installerId: uuid("installer_id").references(() => users.id, {
       onDelete: "set null",

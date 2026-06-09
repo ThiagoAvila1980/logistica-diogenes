@@ -14,7 +14,7 @@ import {
 } from "@/lib/workflow/measurement-actions";
 import { vehicleMockStore } from "@/lib/data/admin-mock-store";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
-import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import type { InstallationDailyNote, MeasurementLineItem } from "@/lib/workflow/schemas";
 
 type MockMeasurement = {
   id: string;
@@ -56,6 +56,7 @@ type MockInstallation = {
   idMedicao: string;
   photos: { service?: string[] } | null;
   notes?: string | null;
+  dailyNotes?: InstallationDailyNote[];
   instalacaoEstruturalFeita?: boolean;
   instalacaoVidrosFeita?: boolean;
   installerId?: string | null;
@@ -678,6 +679,62 @@ export const mockRepository = {
     }
     m.updatedAt = new Date();
     return { success: true };
+  },
+
+  saveInstallationDailyNote(
+    osId: string,
+    date: string,
+    text: string,
+  ):
+    | { success: true; note: InstallationDailyNote }
+    | { success: false; message: string } {
+    const m = findMeasurement(osId);
+    if (!m) {
+      return { success: false, message: "OS não encontrada" };
+    }
+
+    const cut = cuttingPlans.find((c) => c.idMedicao === osId);
+    const cuttingSteps = {
+      corteFeito: cut?.corteFeito ?? false,
+      embalagemFeita: cut?.embalagemFeita ?? false,
+      acessoriosFeitos: cut?.acessoriosFeitos ?? false,
+      vidrosFeitos: cut?.vidrosFeitos ?? false,
+    };
+
+    if (!canOperateInstallationModule(m.etapa, cuttingSteps)) {
+      return {
+        success: false,
+        message: "Aguardando conclusão do corte para liberar instalação.",
+      };
+    }
+
+    const now = new Date().toISOString();
+    const existing = installationLogs.find((i) => i.idMedicao === osId);
+    const currentNotes = existing?.dailyNotes ?? [];
+    const previous = currentNotes.find((entry) => entry.date === date);
+    const note: InstallationDailyNote = {
+      date,
+      text,
+      createdAt: previous?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    const nextNotes = previous
+      ? currentNotes.map((entry) => (entry.date === date ? note : entry))
+      : [...currentNotes, note].sort((a, b) => b.date.localeCompare(a.date));
+
+    if (existing) {
+      existing.dailyNotes = nextNotes;
+    } else {
+      installationLogs.push({
+        idMedicao: osId,
+        photos: null,
+        dailyNotes: nextNotes,
+      });
+    }
+
+    m.updatedAt = new Date();
+    return { success: true, note };
   },
 
   listByStatus(status: OsStatus): OrderListItem[] {

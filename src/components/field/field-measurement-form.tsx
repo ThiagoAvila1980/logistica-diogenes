@@ -67,6 +67,7 @@ import {
   hasValidItemDimensions,
   sanitizeMeasurementItem,
 } from "@/lib/measurement/dimensions";
+import { sortMeasurementItemsOldestFirst } from "@/lib/measurement/item-order";
 import { cn } from "@/lib/utils";
 
 type FieldMeasurementFormProps = {
@@ -101,7 +102,9 @@ function resolveInitialItems(
   } else {
     items = [createEmptyMeasurementItem(`${osId}-item-0`)];
   }
-  return mergeLegacyDraftPhotos(items, draft?.photos ?? []);
+  return sortMeasurementItemsOldestFirst(
+    mergeLegacyDraftPhotos(items, draft?.photos ?? []),
+  );
 }
 
 function applyDraftSnapshot(
@@ -298,7 +301,7 @@ export function FieldMeasurementForm({
     const newItem = createEmptyMeasurementItem(
       `${order.id}-item-${Date.now()}`,
     );
-    setItems((prev) => [newItem, ...prev]);
+    setItems((prev) => [...prev, newItem]);
     setExpandedItemId(newItem.id);
   }
 

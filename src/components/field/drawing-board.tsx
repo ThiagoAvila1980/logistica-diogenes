@@ -20,6 +20,39 @@ const MAX_HISTORY = 15;
 
 type Tool = "pen" | "eraser";
 
+/** Encaixa a imagem no retângulo sem distorcer (equivalente a object-fit: contain). */
+function fitImageInRect(
+  imgWidth: number,
+  imgHeight: number,
+  boxWidth: number,
+  boxHeight: number,
+): { x: number; y: number; width: number; height: number } {
+  if (imgWidth <= 0 || imgHeight <= 0 || boxWidth <= 0 || boxHeight <= 0) {
+    return { x: 0, y: 0, width: boxWidth, height: boxHeight };
+  }
+
+  const imgAspect = imgWidth / imgHeight;
+  const boxAspect = boxWidth / boxHeight;
+
+  let width: number;
+  let height: number;
+
+  if (imgAspect > boxAspect) {
+    width = boxWidth;
+    height = boxWidth / imgAspect;
+  } else {
+    height = boxHeight;
+    width = boxHeight * imgAspect;
+  }
+
+  return {
+    x: (boxWidth - width) / 2,
+    y: (boxHeight - height) / 2,
+    width,
+    height,
+  };
+}
+
 export type DrawingBoardProps = {
   onSave: (base64Image: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -193,16 +226,28 @@ export function DrawingBoard({
   const restoreFromHistory = useCallback(
     (index: number) => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      const parent = containerRef.current;
+      if (!canvas || !parent) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
       const img = new Image();
       img.onload = () => {
+        const dpr = window.devicePixelRatio || 1;
+        const width = parent.clientWidth;
+        const height = parent.clientHeight;
+        const fit = fitImageInRect(
+          img.naturalWidth,
+          img.naturalHeight,
+          width,
+          height,
+        );
+
         ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, fit.x, fit.y, fit.width, fit.height);
         ctx.restore();
         applyStrokeSettings(ctx);
       };
@@ -225,12 +270,13 @@ export function DrawingBoard({
         const dpr = window.devicePixelRatio || 1;
         const width = parent.clientWidth;
         const height = parent.clientHeight;
+        const fit = fitImageInRect(img.naturalWidth, img.naturalHeight, width, height);
 
         ctx.save();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
+        ctx.drawImage(img, fit.x, fit.y, fit.width, fit.height);
         ctx.restore();
         applyStrokeSettings(ctx);
         saveToHistory();

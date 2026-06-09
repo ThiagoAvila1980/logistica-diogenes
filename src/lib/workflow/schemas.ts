@@ -9,6 +9,18 @@ export const installationPhotosStorageSchema = z.object({
   service: z.array(z.string()).optional(),
 });
 
+/** Observação diária do instalador (uma por dia de serviço) */
+export const installationDailyNoteSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  text: z.string().min(1).max(2000),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export const installationDailyNotesSchema = z.array(installationDailyNoteSchema);
+
+export type InstallationDailyNote = z.infer<typeof installationDailyNoteSchema>;
+
 const positiveDimension = z.coerce.number().positive();
 const extraDimensions = z.array(positiveDimension).optional();
 

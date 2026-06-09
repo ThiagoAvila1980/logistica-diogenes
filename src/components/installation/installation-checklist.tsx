@@ -26,10 +26,11 @@ import { updateItemInstallationStepAction } from "@/actions/installation-step-ac
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { DrawingPreview } from "@/components/production/drawing-preview";
 import { MeasurementDimensionsSummary } from "@/components/field/measurement-item-view";
-import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import type { MeasurementLineItem, InstallationDailyNote } from "@/lib/workflow/schemas";
 import { formatDimensionsSummary } from "@/lib/measurement/dimensions";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
+import { InstallationDailyNotes } from "@/components/installation/installation-daily-notes";
 
 type InstStep = "estrutural" | "vidros";
 
@@ -183,10 +184,17 @@ type Props = {
   osId: string;
   osStatus: string;
   items: MeasurementLineItem[];
+  dailyNotes?: InstallationDailyNote[];
   lookups?: MeasurementLookups;
 };
 
-export function InstallationChecklist({ osId, osStatus, items, lookups }: Props) {
+export function InstallationChecklist({
+  osId,
+  osStatus,
+  items,
+  dailyNotes = [],
+  lookups,
+}: Props) {
   const isLatePhase =
     osStatus.startsWith("instalacao") || osStatus === "concluido";
 
@@ -312,15 +320,14 @@ export function InstallationChecklist({ osId, osStatus, items, lookups }: Props)
                     : "border-border bg-card",
                 )}
               >
-                {/* Cabeçalho do vão: clicável para expandir/recolher */}
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
-                  onClick={() => toggleExpand(item.id)}
-                  aria-expanded={isExpanded}
-                >
-                  {/* Label do vão */}
-                  <div className="min-w-0 flex-1">
+                {/* Cabeçalho do vão */}
+                <div className="flex w-full items-center gap-2 px-3 py-2.5">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => toggleExpand(item.id)}
+                    aria-expanded={isExpanded}
+                  >
                     <p
                       className={cn(
                         "text-xs font-semibold leading-tight",
@@ -332,9 +339,9 @@ export function InstallationChecklist({ osId, osStatus, items, lookups }: Props)
                     <p className="mt-0.5 truncate text-[11px] text-muted-foreground" title={label}>
                       {label}
                     </p>
-                  </div>
+                  </button>
 
-                  {/* Checkboxes inline (desktop: 2 colunas) */}
+                  {/* Checkboxes inline (desktop) */}
                   <div className="hidden items-center gap-3 sm:flex">
                     {INST_STEPS.map(({ key, shortLabel }) => {
                       const done = itemProgress[key];
@@ -344,11 +351,7 @@ export function InstallationChecklist({ osId, osStatus, items, lookups }: Props)
                       const isLocked = !gate.unlocked && !done;
 
                       return (
-                        <div
-                          key={key}
-                          className="flex items-center gap-1.5"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <div key={key} className="flex items-center gap-1.5">
                           <span className="text-[11px] text-muted-foreground">{shortLabel}</span>
                           {isLoading ? (
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -386,15 +389,20 @@ export function InstallationChecklist({ osId, osStatus, items, lookups }: Props)
                     )}
                   </div>
 
-                  {/* Chevron expand */}
-                  <div className="ml-1 shrink-0 text-muted-foreground">
+                  <button
+                    type="button"
+                    className="ml-1 shrink-0 text-muted-foreground"
+                    onClick={() => toggleExpand(item.id)}
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? "Recolher" : "Expandir"} vão ${index + 1}`}
+                  >
                     {isExpanded ? (
                       <ChevronUp className="h-4 w-4" />
                     ) : (
                       <ChevronDown className="h-4 w-4" />
                     )}
-                  </div>
-                </button>
+                  </button>
+                </div>
 
                 {/* Checkboxes mobile (fora do header, sempre visíveis) */}
                 <div className="grid grid-cols-2 gap-1.5 px-3 pb-2.5 sm:hidden">
@@ -475,6 +483,8 @@ export function InstallationChecklist({ osId, osStatus, items, lookups }: Props)
             );
           })}
         </div>
+
+        <InstallationDailyNotes osId={osId} initialNotes={dailyNotes} />
 
         {/* Banner: instalação concluída */}
         {allDone && (

@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { measurements } from "@/db/schema";
 import type { FieldMeasurementDraft } from "./field";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { sortMeasurementItemsOldestFirst } from "@/lib/measurement/item-order";
 import { eqMeasurementType } from "./order-measurement-join";
 
 export async function getFieldMeasurementDb(
@@ -33,7 +34,7 @@ export async function getFieldMeasurementDb(
     cliente: row.cliente,
     telefone: row.telefone,
     numeroOrcamento: row.numeroOrcamento,
-    items: items ?? undefined,
+    items: items ? sortMeasurementItemsOldestFirst(items) : undefined,
     largura: d.largura,
     altura: d.altura,
     notes: row.notes ?? undefined,

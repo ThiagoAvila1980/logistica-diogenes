@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { installationLogs, transportLogs, measurements } from "@/db/schema";
 import type { OsStatus } from "@/db/schema";
 import type { TransportSteps, InstallationSteps, CuttingSteps } from "@/lib/transport-gates";
-import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import type { MeasurementLineItem, InstallationDailyNote } from "@/lib/workflow/schemas";
 import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
 import {
   aggregateCuttingStepsFromItems,
@@ -51,6 +51,7 @@ export type InstallationDetail = {
   installationSteps: InstallationSteps;
   notes: string | null;
   servicePhotos: string[];
+  dailyNotes: InstallationDailyNote[];
   installerId: string | null;
   scheduledInstallationDate: Date | null;
 };
@@ -85,6 +86,7 @@ export async function getInstallationDetailForOs(
         instalacaoEstruturalFeita: installationLogs.instalacaoEstruturalFeita,
         instalacaoVidrosFeita: installationLogs.instalacaoVidrosFeita,
         notes: installationLogs.notes,
+        dailyNotes: installationLogs.dailyNotes,
         photos: installationLogs.photos,
         installerId: installationLogs.installerId,
         scheduledInstallationDate: installationLogs.scheduledInstallationDate,
@@ -137,6 +139,7 @@ export async function getInstallationDetailForOs(
     installationSteps,
     notes: inst?.notes ?? null,
     servicePhotos: inst?.photos?.service ?? [],
+    dailyNotes: inst?.dailyNotes ?? [],
     installerId: inst?.installerId ?? null,
     scheduledInstallationDate: inst?.scheduledInstallationDate ?? null,
   };

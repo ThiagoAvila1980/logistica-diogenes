@@ -107,10 +107,11 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
         type="button"
         className="shrink-0 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
         aria-label="Abrir PDF da medição"
-        title="PDF (em breve)"
+        title="Abrir PDF da medição"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          window.open(`/api/measurements/${order.id}/pdf`, "_blank", "noopener");
         }}
       >
         <span

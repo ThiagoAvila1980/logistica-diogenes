@@ -86,6 +86,7 @@ export default async function InstallationOsPage({ params }: Props) {
           osId={osId}
           osStatus={order.status}
           items={detail.items}
+          dailyNotes={detail.dailyNotes}
           lookups={lookups}
         />
 
