@@ -11,7 +11,16 @@ export const ALL_USER_ROLES: readonly UserRole[] = [
   "instalador",
 ] as const;
 
-/** Prefixos de rota permitidos por papel (além de exceções globais). */
+/**
+ * Prefixos de rota permitidos por papel (além de exceções globais).
+ *
+ * Nota: as entradas de `admin` e `gerente` nunca são consultadas por
+ * `canAccessRouteForRole` — esses dois papéis têm acesso a todas as
+ * rotas não-admin via atalho direto na função. As entradas abaixo
+ * servem apenas como documentação de intenção; apenas as entradas dos
+ * papéis operacionais (medidor, cortador, motorista, instalador) são
+ * efetivamente usadas no guard de rota.
+ */
 export const ROLE_ROUTE_ACCESS: Record<UserRole, readonly string[]> = {
   admin: [
     "/dashboard",

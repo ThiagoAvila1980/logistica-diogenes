@@ -21,6 +21,13 @@ export function parseSessionPayload(raw: unknown): SessionUser | null {
     return null;
   }
 
+  // Expiração obrigatória: tokens sem `exp` válido ou expirados são rejeitados.
+  // Sessões antigas (pré-expiração) caem aqui e forçam novo login.
+  const exp = typeof user.exp === "number" ? user.exp : null;
+  if (exp === null || exp * 1000 <= Date.now()) {
+    return null;
+  }
+
   let roles: UserRole[] = [];
 
   if (Array.isArray(user.roles)) {

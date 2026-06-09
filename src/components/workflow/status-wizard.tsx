@@ -3,13 +3,11 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Ruler,
-  FileText,
   CheckCircle,
   Scissors,
   Package,
   Truck,
   Wrench,
-  ClipboardList,
   Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,15 +35,6 @@ const STEP_ICONS: Record<OsStatus, LucideIcon> = {
   instalacao_estrutural: Wrench,
   instalacao_vidros: Wrench,
   concluido: CheckCircle,
-  // Legado
-  orcamento_enviado: FileText,
-  aprovado_cliente: CheckCircle,
-  os_gerada: ClipboardList,
-  em_corte: Scissors,
-  corte_concluido: Scissors,
-  em_transporte: Truck,
-  transporte_entregue: Package,
-  instalacao_final: CheckCircle,
 };
 
 export type StatusWizardProps = {

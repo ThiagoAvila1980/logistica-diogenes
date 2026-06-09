@@ -48,20 +48,15 @@ export const KANBAN_PIPELINE_STATUSES: OsStatus[] = KANBAN_PHASES.flatMap(
   (phase) => [...phase.statuses],
 );
 
-/** Mapeia status legados para o pipeline atual (exibição / drag) */
-export const LEGACY_STATUS_MAP: Partial<Record<OsStatus, OsStatus>> = {
-  orcamento_enviado: "medicao_orcamento",
-  aprovado_cliente: "medicao_orcamento",
-  os_gerada: "cortes",
-  em_corte: "cortes",
-  corte_concluido: "embalagem",
-  em_transporte: "transporte_perfil",
-  transporte_entregue: "transporte_levar_vidro",
-  instalacao_final: "instalacao_vidros",
-};
-
+/**
+ * Normaliza o status para o pipeline do Kanban.
+ *
+ * Os status legados foram removidos do enum (migration 0027); esta função
+ * permanece como identidade para preservar a assinatura dos chamadores e
+ * facilitar futuros remapeamentos, caso necessário.
+ */
 export function normalizeKanbanStatus(status: OsStatus): OsStatus {
-  return LEGACY_STATUS_MAP[status] ?? status;
+  return status;
 }
 
 export function getKanbanPhaseForStatus(status: OsStatus): KanbanPhase | null {

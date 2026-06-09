@@ -6,9 +6,6 @@ export function getAdvanceStatusFlow(): Partial<Record<OsStatus, OsStatus[]>> {
   return getAdvanceFlow();
 }
 
-/** @deprecated Use getAdvanceStatusFlow() */
-export const ADVANCE_STATUS_FLOW: Partial<Record<OsStatus, OsStatus[]>> =
-  getAdvanceFlow();
 
 export const ADVANCE_TARGET_STATUSES = [
   "medicao_orcamento",

@@ -5,8 +5,19 @@ import type { OsStatus } from "@/db/schema";
 import type { TransportSteps, InstallationSteps, CuttingSteps } from "@/lib/transport-gates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
-import { aggregateCuttingStepsFromItems } from "@/lib/data/cutting-detail";
-import { aggregateTransportStepsFromItems } from "@/lib/data/transport-detail";
+import {
+  aggregateCuttingStepsFromItems,
+  aggregateTransportStepsFromItems,
+  aggregateInstallationStepsFromItems,
+  effectiveCuttingSteps,
+  isInstallationOrLater,
+} from "@/lib/workflow/aggregates";
+
+/**
+ * @deprecated Importe de `@/lib/workflow/aggregates`.
+ * Reexport mantido para compatibilidade com importadores existentes.
+ */
+export { aggregateInstallationStepsFromItems };
 
 async function resolveItemMedia(items: MeasurementLineItem[]): Promise<MeasurementLineItem[]> {
   return Promise.all(
@@ -30,22 +41,6 @@ async function resolveItemMedia(items: MeasurementLineItem[]): Promise<Measureme
   );
 }
 
-/**
- * Computa o aggregate de instalação a partir dos itens (vãos).
- *
- * - instalacaoEstruturalFeita → todos os vãos têm estrutural concluído
- * - instalacaoVidrosFeita    → todos os vãos têm vidros concluídos
- */
-export function aggregateInstallationStepsFromItems(items: MeasurementLineItem[]): InstallationSteps {
-  if (!items.length) {
-    return { instalacaoEstruturalFeita: false, instalacaoVidrosFeita: false };
-  }
-  return {
-    instalacaoEstruturalFeita: items.every((i) => i.installationProgress?.estrutural === true),
-    instalacaoVidrosFeita: items.every((i) => i.installationProgress?.vidros === true),
-  };
-}
-
 export type InstallationDetail = {
   osId: string;
   osStatus: OsStatus;
@@ -66,8 +61,7 @@ export async function getInstallationDetailForOs(
 ): Promise<InstallationDetail> {
   const db = getDb();
 
-  const isLatePhase =
-    osStatus.startsWith("instalacao") || osStatus === "concluido";
+  const isLatePhase = isInstallationOrLater(osStatus);
 
   const [measRows, transport, installation] = await Promise.all([
     db
@@ -107,13 +101,10 @@ export async function getInstallationDetailForOs(
   const items = await resolveItemMedia(rawItems);
 
   // Cutting steps from items aggregate
-  const computedCutting = aggregateCuttingStepsFromItems(items);
-  const cuttingSteps: CuttingSteps = {
-    corteFeito: computedCutting.corteFeito || isLatePhase,
-    embalagemFeita: computedCutting.embalagemFeita || isLatePhase,
-    acessoriosFeitos: computedCutting.acessoriosFeitos || isLatePhase,
-    vidrosFeitos: computedCutting.vidrosFeitos || isLatePhase,
-  };
+  const cuttingSteps: CuttingSteps = effectiveCuttingSteps(
+    aggregateCuttingStepsFromItems(items),
+    isLatePhase,
+  );
 
   // Transport steps from items aggregate (with fallback to transport_logs)
   const hasTransportPerVaoData = items.some((i) => i.transportProgress !== undefined);

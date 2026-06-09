@@ -12,6 +12,33 @@ export async function requireSession(): Promise<SessionUser> {
   return session;
 }
 
+/**
+ * Revogação server-side: garante que o usuário da sessão ainda existe e está
+ * ativo. Como roles e status vivem no cookie assinado, sem esta checagem um
+ * usuário desativado continuaria operando até a sessão expirar.
+ *
+ * Roda apenas com banco real (em modo mock não há tabela de usuários).
+ */
+async function assertUserActive(userId: string): Promise<void> {
+  const { useMockData } = await import("@/lib/data/config");
+  if (useMockData()) return;
+
+  const { getDb } = await import("@/db");
+  const { users } = await import("@/db/schema");
+  const { eq } = await import("drizzle-orm");
+
+  const db = getDb();
+  const [row] = await db
+    .select({ active: users.active })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!row?.active) {
+    throw new AuthError("UNAUTHORIZED", "Conta inativa. Faça login novamente.");
+  }
+}
+
 export async function requireRole(
   allowed: readonly UserRole[],
 ): Promise<SessionUser> {
@@ -19,5 +46,6 @@ export async function requireRole(
   if (!hasAnyRole(session.roles, allowed)) {
     throw new AuthError("FORBIDDEN", "Sem permissão para esta ação");
   }
+  await assertUserActive(session.userId);
   return session;
 }

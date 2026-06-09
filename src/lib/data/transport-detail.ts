@@ -4,43 +4,18 @@ import { transportLogs, vehicles, measurements } from "@/db/schema";
 import type { OsStatus } from "@/db/schema";
 import type { TransportSteps, CuttingSteps } from "@/lib/transport-gates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { aggregateCuttingStepsFromItems } from "@/lib/data/cutting-detail";
+import {
+  aggregateCuttingStepsFromItems,
+  aggregateTransportStepsFromItems,
+  effectiveCuttingSteps,
+  isTransportOrLater,
+} from "@/lib/workflow/aggregates";
 
 /**
- * Computa o aggregate de progresso de transporte a partir dos itens (vãos).
- *
- * - levarPerfilEstrutural → qualquer vão entregou perfil estrutural
- * - levarPerfilTotal      → todos os vãos entregaram perfis (embalagem)
- * - levarAcessorios       → todos os vãos entregaram acessórios
- * - levarVidros           → todos os vãos entregaram vidros
- * - transporteConcluido   → todas as 4 entregas acima completas
+ * @deprecated Importe de `@/lib/workflow/aggregates`.
+ * Reexport mantido para compatibilidade com importadores existentes.
  */
-export function aggregateTransportStepsFromItems(items: MeasurementLineItem[]): TransportSteps {
-  if (!items.length) {
-    return {
-      levarPerfilEstrutural: false,
-      levarPerfilTotal: false,
-      levarAcessorios: false,
-      levarVidros: false,
-      transporteConcluido: false,
-    };
-  }
-
-  const levarPerfilEstrutural = items.some((i) => i.transportProgress?.perfilEstrutural === true);
-  const levarPerfilTotal = items.every((i) => i.transportProgress?.perfilTotal === true);
-  const levarAcessorios = items.every((i) => i.transportProgress?.acessorios === true);
-  const levarVidros = items.every((i) => i.transportProgress?.vidros === true);
-  const transporteConcluido =
-    levarPerfilEstrutural && levarPerfilTotal && levarAcessorios && levarVidros;
-
-  return {
-    levarPerfilEstrutural,
-    levarPerfilTotal,
-    levarAcessorios,
-    levarVidros,
-    transporteConcluido,
-  };
-}
+export { aggregateTransportStepsFromItems };
 
 export type TransportDetail = {
   osId: string;
@@ -67,10 +42,7 @@ export async function getTransportDetailForOs(
 ): Promise<TransportDetail> {
   const db = getDb();
 
-  const isLatePhase =
-    osStatus.startsWith("transporte_") ||
-    osStatus.startsWith("instalacao") ||
-    osStatus === "concluido";
+  const isLatePhase = isTransportOrLater(osStatus);
 
   const [measRows, transport] = await Promise.all([
     db
@@ -102,13 +74,10 @@ export async function getTransportDetailForOs(
   const items = (meas?.items as MeasurementLineItem[]) ?? [];
 
   // Compute aggregate cutting steps
-  const computedCutting = aggregateCuttingStepsFromItems(items);
-  const cuttingSteps: CuttingSteps = {
-    corteFeito: computedCutting.corteFeito || isLatePhase,
-    embalagemFeita: computedCutting.embalagemFeita || isLatePhase,
-    acessoriosFeitos: computedCutting.acessoriosFeitos || isLatePhase,
-    vidrosFeitos: computedCutting.vidrosFeitos || isLatePhase,
-  };
+  const cuttingSteps: CuttingSteps = effectiveCuttingSteps(
+    aggregateCuttingStepsFromItems(items),
+    isLatePhase,
+  );
 
   // Compute aggregate transport steps from items (source of truth)
   // Fallback to transport_logs values for data saved before this migration

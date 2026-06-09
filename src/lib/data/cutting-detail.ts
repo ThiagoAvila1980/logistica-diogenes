@@ -6,6 +6,13 @@ import { useMockData } from "./config";
 import { mockRepository } from "./mock-repository";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { CuttingSteps } from "@/lib/transport-gates";
+import { aggregateCuttingStepsFromItems } from "@/lib/workflow/aggregates";
+
+/**
+ * @deprecated Importe de `@/lib/workflow/aggregates`.
+ * Reexport mantido para compatibilidade com importadores existentes.
+ */
+export { aggregateCuttingStepsFromItems };
 
 async function resolveMeasurementItems(
   items: MeasurementLineItem[],
@@ -31,26 +38,6 @@ async function resolveMeasurementItems(
         : item.photos,
     })),
   );
-}
-
-/**
- * Computa o aggregate de progresso de corte a partir dos itens (vãos).
- *
- * - corteFeito      → qualquer vão tem corte concluído (libera transporte)
- * - embalagemFeita  → todos os vãos têm embalagem concluída
- * - acessoriosFeitos → todos os vãos têm acessórios concluídos
- * - vidrosFeitos    → todos os vãos têm vidros concluídos
- */
-export function aggregateCuttingStepsFromItems(items: MeasurementLineItem[]): CuttingSteps {
-  if (!items.length) {
-    return { corteFeito: false, embalagemFeita: false, acessoriosFeitos: false, vidrosFeitos: false };
-  }
-  return {
-    corteFeito: items.some((i) => i.cuttingProgress?.corte === true),
-    embalagemFeita: items.every((i) => i.cuttingProgress?.embalagem === true),
-    acessoriosFeitos: items.every((i) => i.cuttingProgress?.acessorios === true),
-    vidrosFeitos: items.every((i) => i.cuttingProgress?.vidros === true),
-  };
 }
 
 export type CuttingDetail = {

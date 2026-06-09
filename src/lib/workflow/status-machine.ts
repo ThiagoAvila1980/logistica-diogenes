@@ -7,31 +7,6 @@ import {
   getWizardStepsForFlow,
 } from "./measurement-flow";
 
-/** @deprecated Use getAllowedTransitions(from) — mantido para compatibilidade */
-export const STATUS_FLOW: Record<OsStatus, OsStatus[]> = {
-  medicao_orcamento: ["medicao_final"],
-  medicao_final: ["cortes"],
-  cortes: ["embalagem"],
-  embalagem: ["acessorios_plano"],
-  acessorios_plano: ["transporte_perfil"],
-  transporte_perfil: ["transporte_estrutural"],
-  transporte_estrutural: ["transporte_perfis_total"],
-  transporte_perfis_total: ["transporte_acessorios"],
-  transporte_acessorios: ["transporte_levar_vidro"],
-  transporte_levar_vidro: ["instalacao_estrutural"],
-  instalacao_estrutural: ["instalacao_vidros"],
-  instalacao_vidros: ["concluido"],
-  concluido: [],
-  // Legado
-  orcamento_enviado: [],
-  aprovado_cliente: [],
-  os_gerada: [],
-  em_corte: [],
-  corte_concluido: [],
-  em_transporte: [],
-  transporte_entregue: [],
-  instalacao_final: [],
-};
 
 /** Labels para UI (StatusWizard) */
 export const STATUS_LABELS: Record<OsStatus, string> = {
@@ -48,15 +23,6 @@ export const STATUS_LABELS: Record<OsStatus, string> = {
   instalacao_estrutural: "Instalação estrutural",
   instalacao_vidros: "Instalação dos vidros",
   concluido: "Concluído",
-  // Legado
-  orcamento_enviado: "Orçamento enviado (legado)",
-  aprovado_cliente: "Aprovado pelo cliente (legado)",
-  os_gerada: "OS gerada (legado)",
-  em_corte: "Em corte (legado)",
-  corte_concluido: "Corte concluído (legado)",
-  em_transporte: "Em transporte (legado)",
-  transporte_entregue: "Transporte entregue (legado)",
-  instalacao_final: "Instalação final (legado)",
 };
 
 /** Ordem visual padrão do pipeline */

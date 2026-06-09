@@ -37,7 +37,7 @@ export function isCuttingPhaseStatus(status: OsStatus): boolean {
 }
 
 export function isTransportPhaseStatus(status: OsStatus): boolean {
-  return status.startsWith("transporte_");
+  return (TRANSPORT_PHASE_STATUSES as readonly OsStatus[]).includes(status);
 }
 
 export function isInstallationPhaseStatus(status: OsStatus): boolean {
@@ -115,108 +115,3 @@ export type InstallationSteps = {
   instalacaoVidrosFeita: boolean;
 };
 
-export type TransportGate = {
-  unlocked: boolean;
-  /** Descrição do pré-requisito quando bloqueado */
-  lockedReason: string | null;
-};
-
-export type TransportGates = {
-  levarPerfilEstrutural: TransportGate;
-  levarPerfilTotal: TransportGate;
-  levarAcessorios: TransportGate;
-  levarVidros: TransportGate;
-  transporteConcluido: TransportGate;
-};
-
-/** Sub-etapas exibidas no checklist operacional de transporte */
-export type TransportChecklistStep = keyof TransportSteps;
-
-export type InstallationGate = {
-  unlocked: boolean;
-  lockedReason: string | null;
-};
-
-export type InstallationGates = {
-  instalacaoEstrutural: InstallationGate;
-  instalacaoVidros: InstallationGate;
-};
-
-export type TransportGateOptions = {
-  /** Veículo atribuído ao transporte — obrigatório para a 1ª entrega */
-  hasVehicle?: boolean;
-};
-
-export function getTransportGates(
-  cutting: CuttingSteps,
-  transport: TransportSteps,
-  options?: TransportGateOptions,
-): TransportGates {
-  const hasVehicle = options?.hasVehicle ?? false;
-  const perfilOk = cutting.corteFeito;
-  const totalOk = cutting.embalagemFeita;
-  const acessoriosOk = cutting.acessoriosFeitos;
-  const vidrosOk = cutting.vidrosFeitos;
-
-  const deliveriesDone =
-    transport.levarPerfilEstrutural &&
-    transport.levarPerfilTotal &&
-    transport.levarAcessorios &&
-    transport.levarVidros;
-
-  return {
-    levarPerfilEstrutural: {
-      unlocked: perfilOk && hasVehicle,
-      lockedReason: !perfilOk
-        ? "Aguardando corte ser concluído"
-        : !hasVehicle
-          ? "Selecione o veículo antes de iniciar a entrega"
-          : null,
-    },
-    levarPerfilTotal: {
-      unlocked: totalOk,
-      lockedReason: totalOk ? null : "Aguardando embalagem ser concluída",
-    },
-    levarAcessorios: {
-      unlocked: acessoriosOk,
-      lockedReason: acessoriosOk ? null : "Aguardando acessórios serem separados",
-    },
-    levarVidros: {
-      unlocked: vidrosOk,
-      lockedReason: vidrosOk ? null : "Aguardando vidros serem separados",
-    },
-    transporteConcluido: {
-      unlocked: deliveriesDone,
-      lockedReason: deliveriesDone
-        ? null
-        : "Todas as entregas anteriores devem ser concluídas",
-    },
-  };
-}
-
-export function getInstallationGates(
-  transport: TransportSteps,
-  cutting: CuttingSteps,
-): InstallationGates {
-  const estruturalOk = cutting.corteFeito;
-  const vidrosOk =
-    cutting.vidrosFeitos ||
-    transport.levarVidros ||
-    cutting.acessoriosFeitos ||
-    transport.levarAcessorios;
-
-  return {
-    instalacaoEstrutural: {
-      unlocked: estruturalOk,
-      lockedReason: estruturalOk
-        ? null
-        : "Aguardando conclusão do corte estrutural",
-    },
-    instalacaoVidros: {
-      unlocked: vidrosOk,
-      lockedReason: vidrosOk
-        ? null
-        : "Aguardando separação dos vidros ou entrega na obra",
-    },
-  };
-}

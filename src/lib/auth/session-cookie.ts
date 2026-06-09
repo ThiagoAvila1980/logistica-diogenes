@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { parseSessionPayload } from "./session-parse";
-import type { SessionUser } from "./session-types";
+import { SESSION_TTL_SECONDS, type SessionUser } from "./session-types";
 
 function getSessionSecret(): string {
   const secret =
@@ -14,8 +14,13 @@ function getSessionSecret(): string {
   return "fluxo-diogenes-dev-session-secret";
 }
 
-export function signSession(user: SessionUser): string {
-  const body = Buffer.from(JSON.stringify(user)).toString("base64url");
+export function signSession(
+  user: SessionUser,
+  ttlSeconds: number = SESSION_TTL_SECONDS,
+): string {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = { ...user, iat: now, exp: now + ttlSeconds };
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const sig = createHmac("sha256", getSessionSecret())
     .update(body)
     .digest("base64url");

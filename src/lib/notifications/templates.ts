@@ -6,18 +6,6 @@ export function buildClientEmail(
 ): { subject: string; html: string } {
   const statusLabel = STATUS_LABELS[ctx.newStatus] ?? ctx.newStatus;
 
-  if (ctx.newStatus === "aprovado_cliente") {
-    return {
-      subject: `Orçamento aprovado — ${ctx.osNumber}`,
-      html: `
-        <p>Olá, <strong>${ctx.clientName}</strong>,</p>
-        <p>Seu orçamento <strong>${ctx.osNumber}</strong> foi <strong>aprovado</strong>.</p>
-        <p>Em breve iniciaremos a produção. Qualquer dúvida, responda este e-mail.</p>
-        <p style="color:#666;font-size:12px">Logística Diógenes — Vidraçaria</p>
-      `,
-    };
-  }
-
   if (ctx.newStatus === "transporte_levar_vidro") {
     return {
       subject: `Material entregue — ${ctx.osNumber}`,
@@ -37,9 +25,6 @@ export function buildClientEmail(
 }
 
 export function buildClientWhatsAppMessage(ctx: ClientNotificationContext): string {
-  if (ctx.newStatus === "aprovado_cliente") {
-    return `Olá ${ctx.clientName}! ✅ Orçamento ${ctx.osNumber} foi APROVADO. Em breve iniciamos a produção. — Logística Diógenes`;
-  }
   if (ctx.newStatus === "transporte_perfil") {
     return `Olá ${ctx.clientName}! 🚚 Orçamento ${ctx.osNumber} está EM TRANSPORTE. Avisaremos quando os materiais chegarem ao local. — Logística Diógenes`;
   }

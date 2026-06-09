@@ -2,9 +2,24 @@
 
 import { eq, sql } from "drizzle-orm";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
+import {
+  assertTransitionGuards,
+  TransitionValidationError,
+  type TransitionContext,
+} from "@/lib/workflow/status-machine";
 import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
 import { getDb } from "@/lib/db";
-import { measurements, statusHistory, osStatus, type OsStatus } from "@/db/schema";
+import {
+  measurements,
+  statusHistory,
+  osStatus,
+  type OsStatus,
+} from "@/db/schema";
+import {
+  aggregateCuttingStepsFromItems,
+  aggregateInstallationStepsFromItems,
+} from "@/lib/workflow/aggregates";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { loadClientNotificationContext } from "@/lib/notifications/order-context";
@@ -24,6 +39,57 @@ const VALID_OS_STATUSES = new Set(osStatus.enumValues);
 
 function parseOsStatus(value: string): OsStatus | null {
   return VALID_OS_STATUSES.has(value as OsStatus) ? (value as OsStatus) : null;
+}
+
+/**
+ * Carrega o contexto necessário para `assertTransitionGuards`.
+ * Usa um único JOIN para evitar round-trips adicionais.
+ */
+async function loadTransitionContext(
+  osId: string,
+  db: ReturnType<typeof getDb>,
+): Promise<TransitionContext> {
+  // Fonte única de verdade: corte e instalação derivam do JSONB `items`,
+  // as mesmas funções usadas pelos módulos operacionais e pelo kanban.
+  const [row] = await db
+    .select({
+      measStatus: measurements.status,
+      items: measurements.items,
+    })
+    .from(measurements)
+    .where(eq(measurements.id, osId))
+    .limit(1);
+
+  if (!row) {
+    return {
+      hasFinalMeasurement: false,
+      cuttingSteps: {
+        corteFeito: false,
+        embalagemFeita: false,
+        acessoriosFeitos: false,
+        vidrosFeitos: false,
+      },
+      installationComplete: false,
+    };
+  }
+
+  const items = (row.items as MeasurementLineItem[]) ?? [];
+  const hasFinalMeasurement = row.measStatus === "medida" || items.length > 0;
+
+  // Espelha a regra dos módulos: se há vãos enviados ao corte, considera só esses.
+  const hasSentFlag = items.some((i) => i.sentToCutting === true);
+  const cuttingItems = hasSentFlag
+    ? items.filter((i) => i.sentToCutting === true)
+    : items;
+
+  const installation = aggregateInstallationStepsFromItems(items);
+
+  return {
+    hasFinalMeasurement,
+    cuttingSteps: aggregateCuttingStepsFromItems(cuttingItems),
+    installationComplete:
+      installation.instalacaoEstruturalFeita && installation.instalacaoVidrosFeita,
+  };
 }
 
 export type MoveOSCardResult =
@@ -107,6 +173,17 @@ export async function moveOSCard(
         success: false,
         message: `Transição não permitida: ${fromStatus} → ${target}`,
       };
+    }
+
+    // Valida as regras de negócio (medição final, etapas de corte, instalação)
+    const ctx = await loadTransitionContext(osId, db);
+    try {
+      assertTransitionGuards(fromStatus, target, ctx);
+    } catch (err) {
+      if (err instanceof TransitionValidationError) {
+        return { success: false, message: err.message };
+      }
+      throw err;
     }
 
     await db.transaction(async (tx) => {

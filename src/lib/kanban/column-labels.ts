@@ -16,15 +16,6 @@ export const KANBAN_SHORT_LABELS: Record<OsStatus, string> = {
   instalacao_estrutural: "Inst. estrutural",
   instalacao_vidros: "Inst. vidros",
   concluido: "Concluído",
-  // Legado
-  orcamento_enviado: "Orçamento",
-  aprovado_cliente: "Aprovado",
-  os_gerada: "OS gerada",
-  em_corte: "Corte",
-  corte_concluido: "Corte OK",
-  em_transporte: "Transporte",
-  transporte_entregue: "Entrega",
-  instalacao_final: "Inst. final",
 };
 
 export function kanbanColumnTitle(status: OsStatus): string {

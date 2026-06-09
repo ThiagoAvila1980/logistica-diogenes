@@ -47,21 +47,17 @@ npm run db:seed
 | `src/components/workflow/status-wizard.tsx` | Wizard visual (shadcn + Lucide) |
 | `docs/ESTRUTURA_PROJETO.md` | Árvore de pastas Next.js recomendada |
 
-## Exemplo de transição
+## Exemplo de transição (Kanban)
 
 ```typescript
-import { advanceOSStatus } from "@/actions/os-actions";
+import { moveOSCard } from "@/actions/kanban-actions";
 
-const result = await advanceOSStatus({
-  osId: "...",
-  nextStatus: "em_corte",
-  payload: {
-    cuts: [{ item: "Perfil", length: 2100, width: 50, qty: 4 }],
-  },
-});
+// Requer papel "gerente" ou "admin".
+// Valida o grafo de transições + os guards de negócio antes de persistir.
+const result = await moveOSCard(osId, "cortes");
 
 if (!result.success) {
-  console.error(result.message);
+  console.error(result.message); // ex: "Registre a medição final antes de avançar."
 }
 ```
 
@@ -96,5 +92,5 @@ Para migrations novas geradas pelo Drizzle (`db:generate`), o `when` já vem cor
 ```tsx
 import { StatusWizard } from "@/components/workflow/status-wizard";
 
-<StatusWizard currentStatus="em_corte" overdueSteps={["medicao_final"]} />
+<StatusWizard currentStatus="cortes" overdueSteps={["medicao_final"]} />
 ```

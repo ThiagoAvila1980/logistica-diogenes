@@ -10,8 +10,14 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { useMockData } from "@/lib/data/config";
 import { vehicleMockStore } from "@/lib/data/admin-mock-store";
 import { canOperateTransportModule } from "@/lib/transport-gates";
-import { aggregateCuttingStepsFromItems } from "@/lib/data/cutting-detail";
-import { aggregateTransportStepsFromItems } from "@/lib/data/transport-detail";
+import {
+  aggregateCuttingStepsFromItems,
+  aggregateTransportStepsFromItems,
+  effectiveCuttingSteps,
+  isTransportOrLater,
+} from "@/lib/workflow/aggregates";
+import { WorkflowActionError } from "@/lib/workflow/errors";
+import { logger } from "@/lib/logger";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -72,19 +78,10 @@ export async function assignVehicleToTransportAction(
     if (!order) return { success: false, message: "OS não encontrada" };
 
     const items = await loadMeasurementItems(osId);
-    const cuttingAggregate = aggregateCuttingStepsFromItems(items);
-
-    const isLatePhase =
-      order.status.startsWith("transporte_") ||
-      order.status.startsWith("instalacao") ||
-      order.status === "concluido";
-
-    const cuttingSteps = {
-      corteFeito: cuttingAggregate.corteFeito || isLatePhase,
-      embalagemFeita: cuttingAggregate.embalagemFeita || isLatePhase,
-      acessoriosFeitos: cuttingAggregate.acessoriosFeitos || isLatePhase,
-      vidrosFeitos: cuttingAggregate.vidrosFeitos || isLatePhase,
-    };
+    const cuttingSteps = effectiveCuttingSteps(
+      aggregateCuttingStepsFromItems(items),
+      isTransportOrLater(order.status),
+    );
 
     if (!canOperateTransportModule(order.status, cuttingSteps)) {
       return {
@@ -168,104 +165,114 @@ export async function updateItemTransportStepAction(
     if (!order) return { success: false, message: "OS não encontrada" };
 
     const db = getDb();
+    const isLatePhase = isTransportOrLater(order.status);
 
-    const items = await loadMeasurementItems(osId);
-    const cuttingAggregate = aggregateCuttingStepsFromItems(items);
+    // Leitura + escrita na mesma transação com lock de linha (FOR UPDATE),
+    // evitando lost update quando dois operadores editam vãos da mesma OS.
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
 
-    const isLatePhase =
-      order.status.startsWith("transporte_") ||
-      order.status.startsWith("instalacao") ||
-      order.status === "concluido";
+      if (!meas) throw new WorkflowActionError("OS não encontrada");
 
-    const cuttingSteps = {
-      corteFeito: cuttingAggregate.corteFeito || isLatePhase,
-      embalagemFeita: cuttingAggregate.embalagemFeita || isLatePhase,
-      acessoriosFeitos: cuttingAggregate.acessoriosFeitos || isLatePhase,
-      vidrosFeitos: cuttingAggregate.vidrosFeitos || isLatePhase,
-    };
+      const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const cuttingSteps = effectiveCuttingSteps(
+        aggregateCuttingStepsFromItems(items),
+        isLatePhase,
+      );
 
-    if (!canOperateTransportModule(order.status, cuttingSteps)) {
-      return { success: false, message: "Aguardando conclusão do corte para liberar transporte" };
-    }
+      if (!canOperateTransportModule(order.status, cuttingSteps)) {
+        throw new WorkflowActionError(
+          "Aguardando conclusão do corte para liberar transporte",
+        );
+      }
 
-    // Busca o veículo atribuído
-    const [trans] = await db
-      .select({ vehicleId: transportLogs.vehicleId })
-      .from(transportLogs)
-      .where(eq(transportLogs.idMedicao, osId))
-      .limit(1);
+      // Busca o veículo atribuído
+      const [trans] = await tx
+        .select({ vehicleId: transportLogs.vehicleId })
+        .from(transportLogs)
+        .where(eq(transportLogs.idMedicao, osId))
+        .limit(1);
 
-    const hasVehicle = Boolean(trans?.vehicleId);
+      const hasVehicle = Boolean(trans?.vehicleId);
 
-    // Verifica gate por vão
-    const item = items.find((i) => i.id === itemId);
-    if (!item) return { success: false, message: "Vão não encontrado" };
+      // Verifica gate por vão
+      const item = items.find((i) => i.id === itemId);
+      if (!item) throw new WorkflowActionError("Vão não encontrado");
 
-    if (done) {
-      const cutProg = item.cuttingProgress ?? {
-        corte: false, embalagem: false, acessorios: false, vidros: false,
+      if (done) {
+        const cutProg = item.cuttingProgress ?? {
+          corte: false, embalagem: false, acessorios: false, vidros: false,
+        };
+
+        if (step === "perfilEstrutural") {
+          if (!cutProg.corte && !isLatePhase) {
+            throw new WorkflowActionError("Aguardando corte deste vão ser concluído", "gate_locked");
+          }
+          if (!hasVehicle) {
+            throw new WorkflowActionError("Selecione o veículo antes de iniciar a entrega", "vehicle_required");
+          }
+        }
+        if (step === "perfilTotal" && !cutProg.embalagem && !isLatePhase) {
+          throw new WorkflowActionError("Aguardando embalagem deste vão ser concluída", "gate_locked");
+        }
+        if (step === "acessorios" && !cutProg.acessorios && !isLatePhase) {
+          throw new WorkflowActionError("Aguardando acessórios deste vão serem separados", "gate_locked");
+        }
+        if (step === "vidros" && !cutProg.vidros && !isLatePhase) {
+          throw new WorkflowActionError("Aguardando vidros deste vão serem separados", "gate_locked");
+        }
+      }
+
+      // Atualiza o item no JSONB
+      const updatedItems = items.map((i) => {
+        if (i.id !== itemId) return i;
+        const prev = i.transportProgress ?? {
+          perfilEstrutural: false, perfilTotal: false, acessorios: false, vidros: false,
+        };
+        return { ...i, transportProgress: { ...prev, [step]: done } };
+      });
+
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
+
+      // Atualiza o aggregate no transport_logs (compat. com installation gates)
+      const newAggregate = aggregateTransportStepsFromItems(updatedItems);
+      const [existingLog] = await tx
+        .select({ id: transportLogs.id })
+        .from(transportLogs)
+        .where(eq(transportLogs.idMedicao, osId))
+        .limit(1);
+
+      const logFields = {
+        levarPerfilEstrutural: newAggregate.levarPerfilEstrutural,
+        levarPerfilTotal: newAggregate.levarPerfilTotal,
+        levarAcessorios: newAggregate.levarAcessorios,
+        levarVidros: newAggregate.levarVidros,
+        transporteConcluido: newAggregate.transporteConcluido,
+        updatedAt: new Date(),
       };
 
-      if (step === "perfilEstrutural") {
-        if (!cutProg.corte && !isLatePhase) {
-          return { success: false, message: "Aguardando corte deste vão ser concluído", reason: "gate_locked" };
-        }
-        if (!hasVehicle) {
-          return { success: false, message: "Selecione o veículo antes de iniciar a entrega", reason: "vehicle_required" };
-        }
+      if (existingLog) {
+        await tx.update(transportLogs).set(logFields).where(eq(transportLogs.id, existingLog.id));
+      } else {
+        await tx.insert(transportLogs).values({ idMedicao: osId, ...logFields });
       }
-      if (step === "perfilTotal" && !cutProg.embalagem && !isLatePhase) {
-        return { success: false, message: "Aguardando embalagem deste vão ser concluída", reason: "gate_locked" };
-      }
-      if (step === "acessorios" && !cutProg.acessorios && !isLatePhase) {
-        return { success: false, message: "Aguardando acessórios deste vão serem separados", reason: "gate_locked" };
-      }
-      if (step === "vidros" && !cutProg.vidros && !isLatePhase) {
-        return { success: false, message: "Aguardando vidros deste vão serem separados", reason: "gate_locked" };
-      }
-    }
-
-    // Atualiza o item no JSONB
-    const updatedItems = items.map((i) => {
-      if (i.id !== itemId) return i;
-      const prev = i.transportProgress ?? {
-        perfilEstrutural: false, perfilTotal: false, acessorios: false, vidros: false,
-      };
-      return { ...i, transportProgress: { ...prev, [step]: done } };
     });
-
-    await db
-      .update(measurements)
-      .set({ items: updatedItems, updatedAt: new Date() })
-      .where(eq(measurements.id, osId));
-
-    // Atualiza o aggregate no transport_logs para manter compatibilidade com installation gates
-    const newAggregate = aggregateTransportStepsFromItems(updatedItems);
-    const [existingLog] = await db
-      .select({ id: transportLogs.id })
-      .from(transportLogs)
-      .where(eq(transportLogs.idMedicao, osId))
-      .limit(1);
-
-    const logFields = {
-      levarPerfilEstrutural: newAggregate.levarPerfilEstrutural,
-      levarPerfilTotal: newAggregate.levarPerfilTotal,
-      levarAcessorios: newAggregate.levarAcessorios,
-      levarVidros: newAggregate.levarVidros,
-      transporteConcluido: newAggregate.transporteConcluido,
-      updatedAt: new Date(),
-    };
-
-    if (existingLog) {
-      await db.update(transportLogs).set(logFields).where(eq(transportLogs.id, existingLog.id));
-    } else {
-      await db.insert(transportLogs).values({ idMedicao: osId, ...logFields });
-    }
 
     revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
-    console.error("[updateItemTransportStep]", err);
+    if (err instanceof WorkflowActionError) {
+      return { success: false, message: err.message, reason: err.reason };
+    }
+    logger.error("updateItemTransportStep failed", { osId, itemId, step, err });
     return { success: false, message: "Erro ao atualizar etapa de transporte" };
   }
 }

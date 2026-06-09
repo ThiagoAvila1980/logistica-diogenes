@@ -1,6 +1,6 @@
-import { eq, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { getDb } from "@/db";
-import { measurements, cuttingPlans, transportLogs, installationLogs } from "@/db/schema";
+import { measurements } from "@/db/schema";
 import {
   hasMeasurementItems,
   measurementClientName,
@@ -10,6 +10,12 @@ import {
   hasPendingCuttingSteps,
   isTransportFullyDone,
 } from "@/lib/transport-gates";
+import {
+  aggregateCuttingStepsFromItems,
+  aggregateTransportStepsFromItems,
+  aggregateInstallationStepsFromItems,
+} from "@/lib/workflow/aggregates";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { KanbanOrderItem } from "./kanban";
 
 const TRANSPORT_STATUSES = new Set([
@@ -28,6 +34,10 @@ const INSTALLATION_STATUSES = new Set([
 
 export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
   const db = getDb();
+  // Fonte única de verdade: os agregados por etapa são derivados do JSONB
+  // `items` (mantido pelo fluxo por-vão), com as MESMAS funções usadas nas
+  // telas de detalhe — evitando a divergência com as colunas de log, que não
+  // eram atualizadas pelo fluxo operacional.
   const rows = await db
     .select({
       id: measurements.id,
@@ -41,25 +51,9 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       scheduledDate: measurements.scheduledDate,
       updatedAt: measurements.updatedAt,
       hasMeasurement: hasMeasurementItems,
-      // Cutting steps
-      corteFeito: cuttingPlans.corteFeito,
-      embalagemFeita: cuttingPlans.embalagemFeita,
-      acessoriosFeitos: cuttingPlans.acessoriosFeitos,
-      vidrosFeitos: cuttingPlans.vidrosFeitos,
-      // Transport steps
-      levarPerfilEstrutural: transportLogs.levarPerfilEstrutural,
-      levarPerfilTotal: transportLogs.levarPerfilTotal,
-      levarAcessorios: transportLogs.levarAcessorios,
-      levarVidros: transportLogs.levarVidros,
-      transporteConcluido: transportLogs.transporteConcluido,
-      // Installation steps
-      instalacaoEstruturalFeita: installationLogs.instalacaoEstruturalFeita,
-      instalacaoVidrosFeita: installationLogs.instalacaoVidrosFeita,
+      items: measurements.items,
     })
     .from(measurements)
-    .leftJoin(cuttingPlans, eq(cuttingPlans.idMedicao, measurements.id))
-    .leftJoin(transportLogs, eq(transportLogs.idMedicao, measurements.id))
-    .leftJoin(installationLogs, eq(installationLogs.idMedicao, measurements.id))
     .orderBy(desc(measurements.updatedAt));
 
   return rows.map((r) => {
@@ -71,32 +65,32 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
     const isTransportPhase = TRANSPORT_STATUSES.has(r.status);
     const isInstallationPhase = INSTALLATION_STATUSES.has(r.status);
 
+    const items = (r.items as MeasurementLineItem[] | null) ?? [];
+
+    // Espelha a regra da tela de produção: se há vãos marcados para corte,
+    // o agregado considera apenas esses; senão, todos os vãos.
+    const hasSentFlag = items.some((i) => i.sentToCutting === true);
+    const cuttingItems = hasSentFlag
+      ? items.filter((i) => i.sentToCutting === true)
+      : items;
+    const cuttingAggregate = aggregateCuttingStepsFromItems(cuttingItems);
+
     const cuttingStepsData = {
-      corte: r.corteFeito ?? false,
-      embalagem: r.embalagemFeita ?? false,
-      acessorios: r.acessoriosFeitos ?? false,
-      vidros: r.vidrosFeitos ?? false,
+      corte: cuttingAggregate.corteFeito,
+      embalagem: cuttingAggregate.embalagemFeita,
+      acessorios: cuttingAggregate.acessoriosFeitos,
+      vidros: cuttingAggregate.vidrosFeitos,
     };
 
     const hasPendingCutting =
-      isTransportPhase &&
-      hasPendingCuttingSteps({
-        corteFeito: cuttingStepsData.corte,
-        embalagemFeita: cuttingStepsData.embalagem,
-        acessoriosFeitos: cuttingStepsData.acessorios,
-        vidrosFeitos: cuttingStepsData.vidros,
-      });
+      isTransportPhase && hasPendingCuttingSteps(cuttingAggregate);
 
-    const transportStepsData = {
-      levarPerfilEstrutural: r.levarPerfilEstrutural ?? false,
-      levarPerfilTotal: r.levarPerfilTotal ?? false,
-      levarAcessorios: r.levarAcessorios ?? false,
-      levarVidros: r.levarVidros ?? false,
-      transporteConcluido: r.transporteConcluido ?? false,
-    };
+    const transportStepsData = aggregateTransportStepsFromItems(items);
 
     const transportFullyDone =
       isTransportPhase && isTransportFullyDone(transportStepsData);
+
+    const installationStepsData = aggregateInstallationStepsFromItems(items);
 
     return {
       id: r.id,
@@ -115,10 +109,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       transportSteps: isTransportPhase ? transportStepsData : null,
       installationSteps:
         isInstallationPhase || transportFullyDone
-          ? {
-              instalacaoEstruturalFeita: r.instalacaoEstruturalFeita ?? false,
-              instalacaoVidrosFeita: r.instalacaoVidrosFeita ?? false,
-            }
+          ? installationStepsData
           : null,
     };
   });

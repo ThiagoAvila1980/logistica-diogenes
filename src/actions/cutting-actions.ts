@@ -12,7 +12,9 @@ import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { getServiceOrderById } from "@/lib/data/orders";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { aggregateCuttingStepsFromItems } from "@/lib/data/cutting-detail";
+import { aggregateCuttingStepsFromItems } from "@/lib/workflow/aggregates";
+import { WorkflowActionError } from "@/lib/workflow/errors";
+import { logger } from "@/lib/logger";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
 import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
 
@@ -60,69 +62,77 @@ export async function updateItemCuttingStepAction(
 
     const db = getDb();
 
-    // Carrega itens atuais da medição
-    const [meas] = await db
-      .select({ items: measurements.items })
-      .from(measurements)
-      .where(eq(measurements.id, osId))
-      .limit(1);
+    // Leitura + escrita na mesma transação com lock de linha (FOR UPDATE),
+    // evitando lost update quando dois operadores editam vãos da mesma OS.
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items, etapa: measurements.etapa })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
 
-    if (!meas) return { success: false, message: "OS não encontrada" };
+      if (!meas) throw new WorkflowActionError("OS não encontrada");
 
-    const allItems = (meas.items as MeasurementLineItem[]) ?? [];
-    const hasSentFlag = allItems.some((i) => i.sentToCutting === true);
-    const cuttingItems = hasSentFlag
-      ? allItems.filter((i) => i.sentToCutting === true)
-      : allItems;
-    const aggregate = aggregateCuttingStepsFromItems(cuttingItems);
+      const status = meas.etapa as OsStatus;
+      const allItems = (meas.items as MeasurementLineItem[]) ?? [];
+      const hasSentFlag = allItems.some((i) => i.sentToCutting === true);
+      const cuttingItems = hasSentFlag
+        ? allItems.filter((i) => i.sentToCutting === true)
+        : allItems;
+      const aggregate = aggregateCuttingStepsFromItems(cuttingItems);
 
-    if (!canOperateCuttingModule(order.status as OsStatus, aggregate)) {
-      return { success: false, message: "OS não está em etapa de corte" };
-    }
+      if (!canOperateCuttingModule(status, aggregate)) {
+        throw new WorkflowActionError("OS não está em etapa de corte");
+      }
 
-    // Atualiza o item específico no array JSONB (preserva todos os items)
-    const updatedItems = allItems.map((item) => {
-      if (item.id !== itemId) return item;
-      const prev = item.cuttingProgress ?? { corte: false, embalagem: false, acessorios: false, vidros: false };
-      return { ...item, cuttingProgress: { ...prev, [step]: done } };
-    });
+      // Atualiza o item específico no array JSONB (preserva todos os items)
+      const updatedItems = allItems.map((item) => {
+        if (item.id !== itemId) return item;
+        const prev = item.cuttingProgress ?? {
+          corte: false, embalagem: false, acessorios: false, vidros: false,
+        };
+        return { ...item, cuttingProgress: { ...prev, [step]: done } };
+      });
 
-    await db
-      .update(measurements)
-      .set({ items: updatedItems, updatedAt: new Date() })
-      .where(eq(measurements.id, osId));
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
 
-    const updatedCuttingItems = hasSentFlag
-      ? updatedItems.filter((i) => i.sentToCutting === true)
-      : updatedItems;
-    const newAggregate = aggregateCuttingStepsFromItems(updatedCuttingItems);
+      const updatedCuttingItems = hasSentFlag
+        ? updatedItems.filter((i) => i.sentToCutting === true)
+        : updatedItems;
+      const newAggregate = aggregateCuttingStepsFromItems(updatedCuttingItems);
 
-    // Quando o primeiro vão tem corte feito, libera transporte em paralelo
-    if (
-      step === "corte" &&
-      done &&
-      newAggregate.corteFeito &&
-      !aggregate.corteFeito &&
-      isCuttingPhaseStatus(order.status as OsStatus)
-    ) {
-      await db.transaction(async (tx) => {
+      // Quando o primeiro vão tem corte feito, libera transporte em paralelo
+      if (
+        step === "corte" &&
+        done &&
+        newAggregate.corteFeito &&
+        !aggregate.corteFeito &&
+        isCuttingPhaseStatus(status)
+      ) {
         await tx
           .update(measurements)
           .set({ etapa: "transporte_perfil", updatedAt: new Date() })
           .where(eq(measurements.id, osId));
         await tx.insert(statusHistory).values({
           measurementId: osId,
-          fromStatus: order.status as OsStatus,
+          fromStatus: status,
           toStatus: "transporte_perfil",
           metadata: { source: "cutting_unlock_transport_per_vao" },
         });
-      });
-    }
+      }
+    });
 
     revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
-    console.error("[updateItemCuttingStep]", err);
+    if (err instanceof WorkflowActionError) {
+      return { success: false, message: err.message };
+    }
+    logger.error("updateItemCuttingStep failed", { osId, itemId, step, err });
     return { success: false, message: "Erro ao atualizar etapa" };
   }
 }

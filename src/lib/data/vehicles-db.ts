@@ -9,7 +9,6 @@ const ACTIVE_TRANSPORT_STATUSES = [
   "transporte_perfis_total",
   "transporte_acessorios",
   "transporte_levar_vidro",
-  "em_transporte",
 ] as const;
 
 export async function listVehiclesDb(): Promise<VehicleRow[]> {

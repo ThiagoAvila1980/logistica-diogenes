@@ -49,15 +49,6 @@ export const osStatus = pgEnum("os_status", [
   "instalacao_estrutural",
   "instalacao_vidros",
   "concluido",
-  // Legado (registros antigos / histórico)
-  "orcamento_enviado",
-  "aprovado_cliente",
-  "os_gerada",
-  "em_corte",
-  "corte_concluido",
-  "em_transporte",
-  "transporte_entregue",
-  "instalacao_final",
 ]);
 
 export const measurementTypes = pgEnum("measurement_types", [

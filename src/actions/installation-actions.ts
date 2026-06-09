@@ -12,7 +12,11 @@ import { getDb } from "@/lib/db";
 import { installationLogs, measurements } from "@/db/schema";
 import type { InstallationPhotos, MeasurementLineItem } from "@/lib/workflow/schemas";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
-import { aggregateCuttingStepsFromItems } from "@/lib/data/cutting-detail";
+import {
+  aggregateCuttingStepsFromItems,
+  effectiveCuttingSteps,
+  isInstallationOrLater,
+} from "@/lib/workflow/aggregates";
 
 export type SaveInstallationServicePhotosResult =
   | { success: true; message: string }
@@ -83,16 +87,10 @@ export async function saveInstallationServicePhotos(
     .limit(1);
 
   const items = (measRow?.items as MeasurementLineItem[]) ?? [];
-  const cuttingAggregate = aggregateCuttingStepsFromItems(items);
-  const isLatePhase =
-    order.status.startsWith("instalacao") || order.status === "concluido";
-
-  const cuttingSteps = {
-    corteFeito: cuttingAggregate.corteFeito || isLatePhase,
-    embalagemFeita: cuttingAggregate.embalagemFeita || isLatePhase,
-    acessoriosFeitos: cuttingAggregate.acessoriosFeitos || isLatePhase,
-    vidrosFeitos: cuttingAggregate.vidrosFeitos || isLatePhase,
-  };
+  const cuttingSteps = effectiveCuttingSteps(
+    aggregateCuttingStepsFromItems(items),
+    isInstallationOrLater(order.status),
+  );
 
   if (!canOperateInstallationModule(order.status, cuttingSteps)) {
     return {
