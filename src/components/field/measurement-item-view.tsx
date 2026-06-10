@@ -25,6 +25,8 @@ type MeasurementItemViewProps = {
   lookups?: MeasurementLookups;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  /** Ao tocar em um desenho salvo, abre o editor no canvas. */
+  onDrawingClick?: (drawingId: string) => void;
 };
 
 export function MeasurementItemView({
@@ -33,6 +35,7 @@ export function MeasurementItemView({
   lookups,
   expanded,
   onExpandedChange,
+  onDrawingClick,
 }: MeasurementItemViewProps) {
   const [photosExpanded, setPhotosExpanded] = useState(false);
   const photoUrls = filterDisplayableUploadUrls(item.photos ?? []);
@@ -119,12 +122,31 @@ export function MeasurementItemView({
                       Desenho {dIdx + 1}
                     </p>
                   )}
-                  <ResolvedImage
-                    src={drawing.url}
-                    alt={`Desenho ${dIdx + 1} da medição ${index + 1}`}
-                    className="mx-auto max-h-[min(70vh,480px)] w-full object-contain"
-                    fallbackClassName="min-h-[120px]"
-                  />
+                  {onDrawingClick ? (
+                    <button
+                      type="button"
+                      className="block w-full cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => onDrawingClick(drawing.id)}
+                      aria-label={`Editar desenho ${dIdx + 1} da medição ${index + 1}`}
+                    >
+                      <ResolvedImage
+                        src={drawing.url}
+                        alt={`Desenho ${dIdx + 1} da medição ${index + 1}`}
+                        className="mx-auto max-h-[min(70vh,480px)] w-full object-contain"
+                        fallbackClassName="min-h-[120px]"
+                      />
+                      <p className="border-t bg-muted/20 px-3 py-1.5 text-center text-xs text-muted-foreground">
+                        Toque para editar
+                      </p>
+                    </button>
+                  ) : (
+                    <ResolvedImage
+                      src={drawing.url}
+                      alt={`Desenho ${dIdx + 1} da medição ${index + 1}`}
+                      className="mx-auto max-h-[min(70vh,480px)] w-full object-contain"
+                      fallbackClassName="min-h-[120px]"
+                    />
+                  )}
                 </div>
               ))}
             </div>

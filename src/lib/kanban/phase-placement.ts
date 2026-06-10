@@ -1,8 +1,5 @@
 import type { KanbanOrderItem } from "@/lib/data/kanban";
-import {
-  isTransportFullyDone,
-  isTransportPhaseStatus,
-} from "@/lib/transport-gates";
+import { isTransportPhaseStatus } from "@/lib/transport-gates";
 import { KANBAN_PHASES, getPhaseIdForStatus } from "./column-groups";
 
 const DRAGGABLE_SEP = "::";
@@ -61,7 +58,7 @@ export function getKanbanPhaseIdsForOrder(os: KanbanOrderItem): string[] {
   const transport = os.transportSteps;
   if (
     transport &&
-    isTransportFullyDone(transport) &&
+    transport.levarPerfilEstrutural &&
     isTransportPhaseStatus(os.status)
   ) {
     phases.add("instalacao");

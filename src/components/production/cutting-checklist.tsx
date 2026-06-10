@@ -20,9 +20,11 @@ import {
 } from "@/actions/cutting-actions";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { formatDimensionsSummary } from "@/lib/measurement/dimensions";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
-import { resolveLookupLabel } from "@/lib/data/lookup-types";
+import {
+  buildVaoItemSubtitle,
+  formatVaoItemFullLabel,
+} from "@/lib/measurement/vao-item-subtitle";
 
 type Step = "corte" | "embalagem" | "acessorios" | "vidros";
 
@@ -42,22 +44,6 @@ function getItemProgress(item: MeasurementLineItem): ItemProgress {
     acessorios: item.cuttingProgress?.acessorios ?? false,
     vidros: item.cuttingProgress?.vidros ?? false,
   };
-}
-
-function buildItemLabel(
-  item: MeasurementLineItem,
-  index: number,
-  lookups?: MeasurementLookups,
-): string {
-  const ambiente = resolveLookupLabel(
-    lookups?.ambientes ?? [],
-    item.idAmbiente ?? null,
-  );
-  const dims = formatDimensionsSummary(item);
-  if (ambiente && dims) return `${ambiente} — ${dims}`;
-  if (ambiente) return ambiente;
-  if (dims) return dims;
-  return `Vão ${index + 1}`;
 }
 
 type Props = {
@@ -220,7 +206,8 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
             };
             const doneSteps = STEPS.filter(({ key }) => itemProgress[key]).length;
             const itemAllDone = doneSteps === 4;
-            const label = buildItemLabel(item, index, lookups);
+            const subtitle = buildVaoItemSubtitle(item, index, lookups);
+            const fullLabel = formatVaoItemFullLabel(subtitle);
             const isSelected = selectedItemId === item.id;
 
             return (
@@ -251,10 +238,18 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
                     </p>
                     <p
                       className="mt-0.5 truncate text-[11px] text-muted-foreground"
-                      title={label}
+                      title={fullLabel}
                     >
-                      {label}
+                      {subtitle.spec}
                     </p>
+                    {subtitle.dims ? (
+                      <p
+                        className="mt-0.5 truncate text-[11px] text-muted-foreground tabular-nums"
+                        title={subtitle.dims}
+                      >
+                        {subtitle.dims}
+                      </p>
+                    ) : null}
                   </div>
 
                   {STEPS.map(({ key }) => {
@@ -298,9 +293,20 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
                       >
                         Vão {index + 1}
                       </p>
-                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {label}
+                      <p
+                        className="mt-0.5 truncate text-[11px] text-muted-foreground"
+                        title={fullLabel}
+                      >
+                        {subtitle.spec}
                       </p>
+                      {subtitle.dims ? (
+                        <p
+                          className="mt-0.5 truncate text-[11px] text-muted-foreground tabular-nums"
+                          title={subtitle.dims}
+                        >
+                          {subtitle.dims}
+                        </p>
+                      ) : null}
                     </div>
                     {itemAllDone ? (
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />

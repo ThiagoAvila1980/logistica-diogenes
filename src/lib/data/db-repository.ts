@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, or, isNull, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
-import { measurements, installationLogs } from "@/db/schema";
+import { measurements } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session-types";
 import { getVisibleStatusesForRoles } from "@/lib/auth/order-access";
 import { canViewAllOrders } from "@/lib/auth/permissions";
@@ -17,7 +17,6 @@ function buildOrderAccessWhere(session: SessionUser | null): SQL | undefined {
 
   const visibleStatuses = getVisibleStatusesForRoles(session.roles);
 
-  // Instaladores só veem OS com installerId explicitamente atribuído a eles.
   const isInstaladorOnly =
     session.roles.every((r) => r === "instalador") ||
     (session.roles.includes("instalador") &&
@@ -26,12 +25,8 @@ function buildOrderAccessWhere(session: SessionUser | null): SQL | undefined {
       ));
 
   if (isInstaladorOnly) {
-    const installerClause = eq(installationLogs.installerId, session.userId);
-    if (!visibleStatuses?.length) return installerClause;
-    return and(
-      installerClause,
-      inArray(measurements.etapa, visibleStatuses),
-    );
+    if (!visibleStatuses?.length) return undefined;
+    return inArray(measurements.etapa, visibleStatuses);
   }
 
   const assignedClause = or(
@@ -56,8 +51,6 @@ function mapMeasurementRow(r: {
   scheduledDate: Date | null;
   updatedAt: Date;
   assignedUserId: string | null;
-  installerId: string | null;
-  scheduledInstallationDate: Date | null;
   clientName: string;
   budgetReference: string | null;
   hasMeasurement: boolean;
@@ -71,8 +64,6 @@ function mapMeasurementRow(r: {
     priority: r.priority,
     clientName: r.clientName,
     assignedUserId: r.assignedUserId,
-    installerId: r.installerId,
-    scheduledInstallationDate: r.scheduledInstallationDate,
     scheduledDate: r.scheduledDate,
     updatedAt: r.updatedAt,
     budgetReference: r.budgetReference,
@@ -97,17 +88,11 @@ export async function listServiceOrdersDb(
       scheduledDate: measurements.scheduledDate,
       updatedAt: measurements.updatedAt,
       assignedUserId: measurements.assignedUserId,
-      installerId: installationLogs.installerId,
-      scheduledInstallationDate: installationLogs.scheduledInstallationDate,
       clientName: measurementClientName,
       budgetReference: resolvedBudgetReference,
       hasMeasurement: hasMeasurementItems,
     })
     .from(measurements)
-    .leftJoin(
-      installationLogs,
-      eq(installationLogs.idMedicao, measurements.id),
-    )
     .orderBy(desc(measurements.updatedAt))
     .$dynamic();
 
@@ -136,8 +121,6 @@ export async function getServiceOrderByIdDb(
       description: measurements.description,
       notes: measurements.notes,
       assignedUserId: measurements.assignedUserId,
-      installerId: installationLogs.installerId,
-      scheduledInstallationDate: installationLogs.scheduledInstallationDate,
       clientName: measurementClientName,
       clientPhone: measurementClientPhone,
       budgetReference: resolvedBudgetReference,
@@ -145,10 +128,6 @@ export async function getServiceOrderByIdDb(
       hasMeasurement: hasMeasurementItems,
     })
     .from(measurements)
-    .leftJoin(
-      installationLogs,
-      eq(installationLogs.idMedicao, measurements.id),
-    )
     .where(eq(measurements.id, id))
     .limit(1);
 

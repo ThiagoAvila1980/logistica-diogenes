@@ -284,22 +284,16 @@ export const installationLogs = pgTable(
     // Sub-etapas independentes — desbloqueadas pelos transport steps correspondentes
     instalacaoEstruturalFeita: boolean("instalacao_estrutural_feita").default(false).notNull(),
     instalacaoVidrosFeita: boolean("instalacao_vidros_feita").default(false).notNull(),
+    instalacaoAcabamentoFeito: boolean("instalacao_acabamento_feito").default(false).notNull(),
     photos: jsonb("photos").$type<InstallationPhotos>(),
     dailyNotes: jsonb("daily_notes").$type<InstallationDailyNote[]>(),
     notes: text("notes"),
-    installerId: uuid("installer_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    scheduledInstallationDate: timestamp("scheduled_installation_date", {
-      withTimezone: true,
-    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (t) => [
     uniqueIndex("idx_inst_medicao_unique").on(t.idMedicao),
-    index("idx_inst_installer").on(t.installerId),
   ],
 );
 
@@ -415,10 +409,6 @@ export const installationLogsRelations = relations(installationLogs, ({ one }) =
   measurement: one(measurements, {
     fields: [installationLogs.idMedicao],
     references: [measurements.id],
-  }),
-  installer: one(users, {
-    fields: [installationLogs.installerId],
-    references: [users.id],
   }),
 }));
 

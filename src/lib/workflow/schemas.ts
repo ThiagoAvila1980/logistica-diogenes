@@ -46,6 +46,9 @@ export type ItemCuttingProgress = z.infer<typeof itemCuttingProgressSchema>;
 export const itemInstallationProgressSchema = z.object({
   estrutural: z.boolean().default(false),
   vidros: z.boolean().default(false),
+  acabamento: z.boolean().default(false),
+  installerId: z.string().uuid().nullable().optional(),
+  scheduledInstallationDate: z.string().nullable().optional(),
 });
 
 export type ItemInstallationProgress = z.infer<typeof itemInstallationProgressSchema>;

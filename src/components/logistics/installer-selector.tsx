@@ -13,12 +13,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { assignInstallerToOsAction } from "@/actions/installer-actions";
+import { assignInstallerToVaoAction } from "@/actions/installer-actions";
 import type { InstallerOption } from "@/lib/data/installers-db";
 import { cn } from "@/lib/utils";
 
 type Props = {
   osId: string;
+  itemId: string;
   installerId: string | null;
   installerName: string | null;
   scheduledInstallationDate: Date | null;
@@ -28,6 +29,7 @@ type Props = {
 
 export function InstallerSelector({
   osId,
+  itemId,
   installerId,
   installerName,
   scheduledInstallationDate,
@@ -64,8 +66,9 @@ export function InstallerSelector({
     setLoading(true);
     setError(null);
 
-    const result = await assignInstallerToOsAction({
+    const result = await assignInstallerToVaoAction({
       osId,
+      itemId,
       installerId: selectedInstallerId || null,
       scheduledInstallationDate: selectedDate || null,
     });
@@ -80,14 +83,14 @@ export function InstallerSelector({
 
   if (!canChange && installerId) {
     return (
-      <Card className="mb-4 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
+      <Card className="mb-2 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
             <UserCheck className="h-4 w-4 text-primary" />
             Instalador designado
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-1.5 pb-3">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
             <span className="font-medium">{installerName ?? "—"}</span>
@@ -109,16 +112,16 @@ export function InstallerSelector({
   }
 
   return (
-    <Card className="mb-4 min-w-0 overflow-hidden border-warning-border bg-warning-muted/60">
+    <Card className="mb-2 min-w-0 overflow-hidden border-warning-border bg-warning-muted/60">
       <CardHeader className="p-0">
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-2 px-6 pt-3 pb-3 text-left"
+          className="flex w-full items-center justify-between gap-2 px-4 pt-3 pb-3 text-left"
           onClick={() => setOpen((current) => !current)}
           aria-expanded={open}
-          aria-controls="installer-selector-panel"
+          aria-controls={`installer-panel-${itemId}`}
         >
-          <CardTitle className="flex min-w-0 items-center gap-2 text-base">
+          <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
             <UserCheck className="h-4 w-4 shrink-0 text-warning" />
             <span className="truncate">
               {installerId && installerName
@@ -136,85 +139,85 @@ export function InstallerSelector({
         </button>
       </CardHeader>
       {open && (
-        <CardContent id="installer-selector-panel" className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          {installerId
-            ? "Altere o instalador responsável e/ou a data agendada."
-            : "Escolha o instalador que realizará o serviço e, opcionalmente, a data agendada."}
-        </p>
+        <CardContent id={`installer-panel-${itemId}`} className="space-y-3 pt-0">
+          <p className="text-sm text-muted-foreground">
+            {installerId
+              ? "Altere o instalador responsável e/ou a data agendada."
+              : "Escolha o instalador que realizará este vão e, opcionalmente, a data agendada."}
+          </p>
 
-        {installerId && installerName && (
-          <div className="flex items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-            <span>
-              Atual:{" "}
-              <span className="font-medium">{installerName}</span>
-              {scheduledInstallationDate && (
-                <span className="text-muted-foreground">
-                  {" "}— {formatDateDisplay(scheduledInstallationDate)}
-                </span>
-              )}
-            </span>
-          </div>
-        )}
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="space-y-2">
-          <Label htmlFor="installer-select">Instalador</Label>
-          <Select
-            id="installer-select"
-            value={selectedInstallerId}
-            disabled={loading || installers.length === 0}
-            className="h-11"
-            onChange={(e) => setSelectedInstallerId(e.target.value)}
-          >
-            <option value="">
-              {installers.length === 0
-                ? "Nenhum instalador cadastrado"
-                : "Selecione um instalador..."}
-            </option>
-            {installers.map((installer) => (
-              <option key={installer.id} value={installer.id}>
-                {installer.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="installation-date">Data de instalação (opcional)</Label>
-          <input
-            id="installation-date"
-            type="date"
-            value={selectedDate}
-            disabled={loading}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-          />
-        </div>
-
-        <Button
-          type="button"
-          disabled={loading || !hasChanges || installers.length === 0}
-          onClick={handleConfirm}
-          className="w-full sm:w-auto"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Confirmando...
-            </>
-          ) : installerId ? (
-            "Confirmar alteração"
-          ) : (
-            "Confirmar instalador"
+          {installerId && installerName && (
+            <div className="flex items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+              <span>
+                Atual:{" "}
+                <span className="font-medium">{installerName}</span>
+                {scheduledInstallationDate && (
+                  <span className="text-muted-foreground">
+                    {" "}— {formatDateDisplay(scheduledInstallationDate)}
+                  </span>
+                )}
+              </span>
+            </div>
           )}
-        </Button>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor={`installer-select-${itemId}`}>Instalador</Label>
+            <Select
+              id={`installer-select-${itemId}`}
+              value={selectedInstallerId}
+              disabled={loading || installers.length === 0}
+              className="h-11"
+              onChange={(e) => setSelectedInstallerId(e.target.value)}
+            >
+              <option value="">
+                {installers.length === 0
+                  ? "Nenhum instalador cadastrado"
+                  : "Selecione um instalador..."}
+              </option>
+              {installers.map((installer) => (
+                <option key={installer.id} value={installer.id}>
+                  {installer.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`installation-date-${itemId}`}>Data de instalação (opcional)</Label>
+            <input
+              id={`installation-date-${itemId}`}
+              type="date"
+              value={selectedDate}
+              disabled={loading}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <Button
+            type="button"
+            disabled={loading || !hasChanges || installers.length === 0}
+            onClick={handleConfirm}
+            className="w-full sm:w-auto"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Confirmando...
+              </>
+            ) : installerId ? (
+              "Confirmar alteração"
+            ) : (
+              "Confirmar instalador"
+            )}
+          </Button>
         </CardContent>
       )}
     </Card>

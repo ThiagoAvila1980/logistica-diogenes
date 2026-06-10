@@ -13,7 +13,6 @@ import {
   hasPendingCuttingWorkOnItems,
   selectCuttingLineItems,
 } from "@/lib/workflow/aggregates";
-import { isTransportFullyDone } from "@/lib/transport-gates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { KanbanOrderItem } from "./kanban";
 
@@ -83,8 +82,8 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
 
     const transportStepsData = aggregateTransportStepsFromItems(items);
 
-    const transportFullyDone =
-      isTransportPhase && isTransportFullyDone(transportStepsData);
+    const hasFirstTransportDelivery =
+      isTransportPhase && transportStepsData.levarPerfilEstrutural;
 
     const installationStepsData = aggregateInstallationStepsFromItems(items);
 
@@ -104,7 +103,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
         isCortePhase || hasPendingCutting ? cuttingStepsData : null,
       transportSteps: isTransportPhase ? transportStepsData : null,
       installationSteps:
-        isInstallationPhase || transportFullyDone
+        isInstallationPhase || hasFirstTransportDelivery
           ? installationStepsData
           : null,
     };

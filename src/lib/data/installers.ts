@@ -12,19 +12,3 @@ export async function listActiveInstallers(): Promise<InstallerOption[]> {
   const { listActiveInstallersDb } = await import("./installers-db");
   return listActiveInstallersDb();
 }
-
-export async function getInstallerAssignment(osId: string): Promise<{
-  installerId: string | null;
-  installerName: string | null;
-  scheduledInstallationDate: Date | null;
-}> {
-  if (useMockData()) {
-    return {
-      installerId: null,
-      installerName: null,
-      scheduledInstallationDate: null,
-    };
-  }
-  const { getInstallerAssignmentDb } = await import("./installers-db");
-  return getInstallerAssignmentDb(osId);
-}

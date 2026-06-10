@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { cn, generateId } from "@/lib/utils";
 import type { DrawingItem } from "@/lib/workflow/schemas";
 import { DrawingBoard } from "@/components/field/drawing-board";
@@ -20,7 +20,18 @@ type MultiDrawingSectionProps = {
   templateImageUrl?: string | null;
   templateKey?: number;
   disabled?: boolean;
+  /** Abre o editor deste desenho ao montar (ex.: vindo do modo visualização). */
+  initialActiveDrawingId?: string | null;
+  onInitialActiveDrawingApplied?: () => void;
 };
+
+function isDirectDisplayUrl(url: string): boolean {
+  return (
+    url.startsWith("data:") ||
+    url.startsWith("/uploads/") ||
+    url.startsWith("uploads/")
+  );
+}
 
 export function MultiDrawingSection({
   drawings,
@@ -30,6 +41,8 @@ export function MultiDrawingSection({
   templateImageUrl,
   templateKey = 0,
   disabled,
+  initialActiveDrawingId,
+  onInitialActiveDrawingApplied,
 }: MultiDrawingSectionProps) {
   const [activeDrawingId, setActiveDrawingId] = useState<string | null>(null);
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
@@ -40,6 +53,12 @@ export function MultiDrawingSection({
   useEffect(() => {
     onDirtyChangeRef.current = onDirtyChange;
   });
+
+  useEffect(() => {
+    if (!initialActiveDrawingId) return;
+    setActiveDrawingId(initialActiveDrawingId);
+    onInitialActiveDrawingApplied?.();
+  }, [initialActiveDrawingId, onInitialActiveDrawingApplied]);
 
   // Notifica o pai APÓS o commit, nunca durante render
   useEffect(() => {
@@ -60,9 +79,10 @@ export function MultiDrawingSection({
 
     for (const d of effectiveDrawings) {
       if (!d.url) continue;
-      if (d.url.startsWith("data:") || d.url.startsWith("/uploads/")) {
+      if (isDirectDisplayUrl(d.url)) {
+        const direct = d.url.startsWith("uploads/") ? `/${d.url}` : d.url;
         setResolvedUrls((prev) =>
-          prev[d.id] === d.url ? prev : { ...prev, [d.id]: d.url },
+          prev[d.id] === direct ? prev : { ...prev, [d.id]: direct },
         );
         continue;
       }
@@ -120,6 +140,23 @@ export function MultiDrawingSection({
   const activeDrawing =
     effectiveDrawings.find((d) => d.id === activeDrawingId) ?? null;
 
+  function getDisplayUrl(d: DrawingItem): string | null {
+    if (!d.url) return null;
+    if (isDirectDisplayUrl(d.url)) {
+      return d.url.startsWith("uploads/") ? `/${d.url}` : d.url;
+    }
+    return resolvedUrls[d.id] ?? null;
+  }
+
+  const activeDrawingDisplayUrl = activeDrawing
+    ? getDisplayUrl(activeDrawing)
+    : null;
+
+  const activeDrawingNeedsResolve =
+    Boolean(activeDrawing?.url) &&
+    !isDirectDisplayUrl(activeDrawing!.url) &&
+    !activeDrawingDisplayUrl;
+
   // Desenho novo = ainda não existe na lista (usuário acabou de tocar em "+")
   const isNewDrawing =
     activeDrawingId !== null && activeDrawing === null;
@@ -170,9 +207,7 @@ export function MultiDrawingSection({
         /* Faixa horizontal de miniaturas */
         <div className="flex gap-2 overflow-x-auto pb-1">
           {effectiveDrawings.map((d, idx) => {
-            const resolvedUrl =
-              resolvedUrls[d.id] ??
-              (d.url.startsWith("data:") ? d.url : undefined);
+            const resolvedUrl = getDisplayUrl(d) ?? undefined;
             const isDirty = dirtyIds.has(d.id);
 
             return (
@@ -250,7 +285,8 @@ export function MultiDrawingSection({
             effectiveDrawings.length + 1
           }
           isNew={isNewDrawing}
-          initialImageUrl={activeDrawing?.url ?? null}
+          initialImageUrl={activeDrawingDisplayUrl}
+          imageLoading={activeDrawingNeedsResolve}
           templateImageUrl={shouldLoadTemplate ? templateImageUrl : null}
           templateKey={templateKey}
           isDirty={dirtyIds.has(activeDrawingId)}
@@ -273,6 +309,7 @@ type DrawingEditorModalProps = {
   drawingNumber: number;
   isNew: boolean;
   initialImageUrl: string | null;
+  imageLoading?: boolean;
   templateImageUrl?: string | null;
   templateKey?: number;
   isDirty: boolean;
@@ -287,6 +324,7 @@ function DrawingEditorModal({
   drawingNumber,
   isNew,
   initialImageUrl,
+  imageLoading,
   templateImageUrl,
   templateKey,
   isDirty,
@@ -341,16 +379,23 @@ function DrawingEditorModal({
 
       {/* Área do canvas — ocupa o restante da tela */}
       <div className="min-h-0 flex-1">
-        <DrawingBoard
-          key={drawingId}
-          fill
-          initialImageUrl={initialImageUrl}
-          templateImageUrl={templateImageUrl}
-          templateKey={templateKey}
-          disabled={disabled}
-          onSave={onSave}
-          onDirtyChange={onDirtyChange}
-        />
+        {imageLoading ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            Carregando desenho…
+          </div>
+        ) : (
+          <DrawingBoard
+            key={`${drawingId}:${initialImageUrl ?? "new"}`}
+            fill
+            initialImageUrl={initialImageUrl}
+            templateImageUrl={templateImageUrl}
+            templateKey={templateKey}
+            disabled={disabled}
+            onSave={onSave}
+            onDirtyChange={onDirtyChange}
+          />
+        )}
       </div>
     </div>
   );

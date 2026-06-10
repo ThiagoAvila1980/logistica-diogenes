@@ -40,7 +40,7 @@ export const ROLE_ROUTE_ACCESS: Record<UserRole, readonly string[]> = {
   medidor: ["/field"],
   cortador: ["/production"],
   motorista: ["/logistics"],
-  instalador: ["/installation"],
+  instalador: ["/installation", "/concluded"],
 };
 
 const DEFAULT_ROUTE_PRIORITY: readonly UserRole[] = [
@@ -154,6 +154,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/production", label: "Corte e Logística", match: "/production" },
   { href: "/logistics", label: "Transporte", match: "/logistics" },
   { href: "/installation", label: "Instalação", match: "/installation" },
+  { href: "/concluded", label: "Concluídos", match: "/concluded" },
 ];
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [

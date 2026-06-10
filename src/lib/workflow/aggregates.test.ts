@@ -161,8 +161,8 @@ describe("aggregateTransportStepsFromItems", () => {
 describe("aggregateInstallationStepsFromItems", () => {
   it("exige TODOS os vãos em cada etapa", () => {
     const items = [
-      item("a", { installationProgress: { estrutural: true, vidros: true } }),
-      item("b", { installationProgress: { estrutural: true, vidros: false } }),
+      item("a", { installationProgress: { estrutural: true, vidros: true, acabamento: false } }),
+      item("b", { installationProgress: { estrutural: true, vidros: false, acabamento: false } }),
     ];
     const agg = aggregateInstallationStepsFromItems(items);
     expect(agg.instalacaoEstruturalFeita).toBe(true);

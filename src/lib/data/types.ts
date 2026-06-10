@@ -15,10 +15,6 @@ export type OrderListItem = {
   priority: MeasurementPriority;
   clientName: string;
   assignedUserId: string | null;
-  /** Instalador atribuído explicitamente à OS (via installation_logs) */
-  installerId: string | null;
-  /** Data agendada para instalação (via installation_logs) */
-  scheduledInstallationDate: Date | null;
   scheduledDate: Date | null;
   updatedAt: Date;
   budgetReference: string | null;

@@ -9,6 +9,7 @@ import {
   Lock,
   Hammer,
   GlassWater,
+  Sparkles,
   BadgeCheck,
   ImageOff,
 } from "lucide-react";
@@ -27,12 +28,14 @@ import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { DrawingPreview } from "@/components/production/drawing-preview";
 import { MeasurementDimensionsSummary } from "@/components/field/measurement-item-view";
 import type { MeasurementLineItem, InstallationDailyNote } from "@/lib/workflow/schemas";
-import { formatDimensionsSummary } from "@/lib/measurement/dimensions";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
-import { resolveLookupLabel } from "@/lib/data/lookup-types";
+import {
+  buildVaoItemSubtitle,
+  formatVaoItemFullLabel,
+} from "@/lib/measurement/vao-item-subtitle";
 import { InstallationDailyNotes } from "@/components/installation/installation-daily-notes";
 
-type InstStep = "estrutural" | "vidros";
+type InstStep = "estrutural" | "vidros" | "acabamento";
 
 const INST_STEPS: {
   key: InstStep;
@@ -42,6 +45,7 @@ const INST_STEPS: {
 }[] = [
   { key: "estrutural", label: "Estrutural", shortLabel: "Estr.", icon: Hammer },
   { key: "vidros", label: "Vidros", shortLabel: "Vidr.", icon: GlassWater },
+  { key: "acabamento", label: "Acabamento", shortLabel: "Acab.", icon: Sparkles },
 ];
 
 type ItemInstProgress = Record<InstStep, boolean>;
@@ -50,18 +54,21 @@ function getItemInstProgress(item: MeasurementLineItem): ItemInstProgress {
   return {
     estrutural: item.installationProgress?.estrutural ?? false,
     vidros: item.installationProgress?.vidros ?? false,
+    acabamento: item.installationProgress?.acabamento ?? false,
   };
 }
 
 function getItemInstGates(
   item: MeasurementLineItem,
   isLatePhase: boolean,
+  itemProgress: ItemInstProgress,
 ): Record<InstStep, { unlocked: boolean; reason: string | null }> {
   const cut = item.cuttingProgress ?? { corte: false, embalagem: false, acessorios: false, vidros: false };
   const trans = item.transportProgress ?? { perfilEstrutural: false, perfilTotal: false, acessorios: false, vidros: false };
 
   const estruturalOk = cut.corte || isLatePhase;
-  const vidrosOk = cut.vidros || trans.vidros || cut.acessorios || trans.acessorios || isLatePhase;
+  const vidrosOk = trans.vidros || isLatePhase;
+  const acabamentoOk = itemProgress.vidros || isLatePhase;
 
   return {
     estrutural: {
@@ -70,22 +77,13 @@ function getItemInstGates(
     },
     vidros: {
       unlocked: vidrosOk,
-      reason: vidrosOk ? null : "Aguardando vidros ou acessórios deste vão",
+      reason: vidrosOk ? null : "Aguardando entrega dos vidros pelo motorista",
+    },
+    acabamento: {
+      unlocked: acabamentoOk,
+      reason: acabamentoOk ? null : "Aguardando instalação dos vidros deste vão",
     },
   };
-}
-
-function buildItemLabel(
-  item: MeasurementLineItem,
-  index: number,
-  lookups?: MeasurementLookups,
-): string {
-  const ambiente = resolveLookupLabel(lookups?.ambientes ?? [], item.idAmbiente ?? null);
-  const dims = formatDimensionsSummary(item);
-  if (ambiente && dims) return `${ambiente} — ${dims}`;
-  if (ambiente) return ambiente;
-  if (dims) return dims;
-  return `Vão ${index + 1}`;
 }
 
 /** Painel inline de mídia de um vão — desenhos e fotos */
@@ -211,7 +209,8 @@ export function InstallationChecklist({
 
   const allEstrutural = items.length > 0 && items.every((i) => progress[i.id]?.estrutural);
   const allVidros = items.length > 0 && items.every((i) => progress[i.id]?.vidros);
-  const allDone = allEstrutural && allVidros;
+  const allAcabamento = items.length > 0 && items.every((i) => progress[i.id]?.acabamento);
+  const allDone = allEstrutural && allVidros && allAcabamento;
 
   function toggleExpand(itemId: string) {
     setExpandedId((prev) => (prev === itemId ? null : itemId));
@@ -303,11 +302,12 @@ export function InstallationChecklist({
         {/* Lista de vãos */}
         <div className="space-y-2">
           {items.map((item, index) => {
-            const itemProgress = progress[item.id] ?? { estrutural: false, vidros: false };
-            const gates = getItemInstGates(item, isLatePhase);
+            const itemProgress = progress[item.id] ?? { estrutural: false, vidros: false, acabamento: false };
+            const gates = getItemInstGates(item, isLatePhase, itemProgress);
             const doneSteps = INST_STEPS.filter(({ key }) => itemProgress[key]).length;
-            const itemAllDone = doneSteps === 2;
-            const label = buildItemLabel(item, index, lookups);
+            const itemAllDone = doneSteps === 3;
+            const subtitle = buildVaoItemSubtitle(item, index, lookups);
+            const fullLabel = formatVaoItemFullLabel(subtitle);
             const isExpanded = expandedId === item.id;
 
             return (
@@ -336,9 +336,20 @@ export function InstallationChecklist({
                     >
                       Vão {index + 1}
                     </p>
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground" title={label}>
-                      {label}
+                    <p
+                      className="mt-0.5 truncate text-[11px] text-muted-foreground"
+                      title={fullLabel}
+                    >
+                      {subtitle.spec}
                     </p>
+                    {subtitle.dims ? (
+                      <p
+                        className="mt-0.5 truncate text-[11px] text-muted-foreground tabular-nums"
+                        title={subtitle.dims}
+                      >
+                        {subtitle.dims}
+                      </p>
+                    ) : null}
                   </button>
 
                   {/* Checkboxes inline (desktop) */}
@@ -384,7 +395,7 @@ export function InstallationChecklist({
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                     ) : (
                       <Badge variant="outline" className="shrink-0 text-[11px]">
-                        {doneSteps}/2
+                        {doneSteps}/3
                       </Badge>
                     )}
                   </div>

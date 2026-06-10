@@ -113,5 +113,6 @@ export type TransportSteps = {
 export type InstallationSteps = {
   instalacaoEstruturalFeita: boolean;
   instalacaoVidrosFeita: boolean;
+  instalacaoAcabamentoFeito: boolean;
 };
 

@@ -3,14 +3,16 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
+  CornerUpLeft,
   Eraser,
   Maximize2,
   Minimize2,
   PenLine,
   Redo2,
+  RotateCcw,
+  RotateCw,
   Save,
   Trash2,
-  Undo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canvasToDrawingDataUrl } from "@/lib/upload/canvas-export";
@@ -233,21 +235,10 @@ export function DrawingBoard({
 
       const img = new Image();
       img.onload = () => {
-        const dpr = window.devicePixelRatio || 1;
-        const width = parent.clientWidth;
-        const height = parent.clientHeight;
-        const fit = fitImageInRect(
-          img.naturalWidth,
-          img.naturalHeight,
-          width,
-          height,
-        );
-
         ctx.save();
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(img, fit.x, fit.y, fit.width, fit.height);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         ctx.restore();
         applyStrokeSettings(ctx);
       };
@@ -490,6 +481,40 @@ export function DrawingBoard({
     markDirty();
   };
 
+  const rotateCanvas = useCallback(
+    (clockwise: boolean) => {
+      const canvas = canvasRef.current;
+      const parent = containerRef.current;
+      if (!canvas || !parent) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const width = parent.clientWidth;
+      const height = parent.clientHeight;
+      const dataUrl = canvas.toDataURL("image/png");
+
+      const snapshot = new Image();
+      snapshot.onload = () => {
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+
+        const angle = clockwise ? Math.PI / 2 : -Math.PI / 2;
+        ctx.translate(width / 2, height / 2);
+        ctx.rotate(angle);
+        ctx.drawImage(snapshot, -width / 2, -height / 2, width, height);
+        ctx.restore();
+        applyStrokeSettings(ctx);
+        saveToHistory();
+        markDirty();
+      };
+      snapshot.src = dataUrl;
+    },
+    [applyStrokeSettings, saveToHistory, markDirty],
+  );
+
   const saveCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -541,6 +566,23 @@ export function DrawingBoard({
 
       <div className="my-0.5 h-px w-full bg-inverse-muted" />
 
+      <ToolbarButton
+        onClick={undo}
+        disabled={disabled || !historyUI.canUndo}
+        title="Desfazer"
+      >
+        <CornerUpLeft className="h-4 w-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        onClick={redo}
+        disabled={disabled || !historyUI.canRedo}
+        title="Refazer"
+      >
+        <Redo2 className="h-4 w-4" />
+      </ToolbarButton>
+
+      <div className="my-0.5 h-px w-full bg-inverse-muted" />
+
       <label
         className="cursor-pointer"
         title="Cor"
@@ -570,19 +612,22 @@ export function DrawingBoard({
       <div className="my-0.5 h-px w-full bg-inverse-muted" />
 
       <ToolbarButton
-        onClick={undo}
-        disabled={disabled || !historyUI.canUndo}
-        title="Desfazer"
+        onClick={() => rotateCanvas(false)}
+        disabled={disabled}
+        title="Girar 90° anti-horário"
       >
-        <Undo2 className="h-4 w-4" />
+        <RotateCcw className="h-4 w-4" />
       </ToolbarButton>
       <ToolbarButton
-        onClick={redo}
-        disabled={disabled || !historyUI.canRedo}
-        title="Refazer"
+        onClick={() => rotateCanvas(true)}
+        disabled={disabled}
+        title="Girar 90° horário"
       >
-        <Redo2 className="h-4 w-4" />
+        <RotateCw className="h-4 w-4" />
       </ToolbarButton>
+
+      <div className="my-0.5 h-px w-full bg-inverse-muted" />
+
       <ToolbarButton
         onClick={clearCanvas}
         disabled={disabled}

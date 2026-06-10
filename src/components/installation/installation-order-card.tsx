@@ -40,12 +40,10 @@ export function InstallationOrderCard({ order }: InstallationOrderCardProps) {
         </div>
         <ChevronRight className="h-5 w-5 shrink-0 text-primary/30 transition-colors group-hover:text-primary" />
       </div>
-      {(order.scheduledInstallationDate ?? order.scheduledDate) && (
+      {order.scheduledDate && (
         <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
           <CalendarDays className="h-3 w-3" />
-          {order.scheduledInstallationDate
-            ? formatBrDate(order.scheduledInstallationDate)
-            : formatBrDate(order.scheduledDate!)}
+          {formatBrDate(order.scheduledDate)}
         </p>
       )}
     </Link>

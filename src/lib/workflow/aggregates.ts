@@ -137,7 +137,7 @@ export function aggregateInstallationStepsFromItems(
   items: MeasurementLineItem[],
 ): InstallationSteps {
   if (!items.length) {
-    return { instalacaoEstruturalFeita: false, instalacaoVidrosFeita: false };
+    return { instalacaoEstruturalFeita: false, instalacaoVidrosFeita: false, instalacaoAcabamentoFeito: false };
   }
   return {
     instalacaoEstruturalFeita: items.every(
@@ -145,6 +145,9 @@ export function aggregateInstallationStepsFromItems(
     ),
     instalacaoVidrosFeita: items.every(
       (i) => i.installationProgress?.vidros === true,
+    ),
+    instalacaoAcabamentoFeito: items.every(
+      (i) => i.installationProgress?.acabamento === true,
     ),
   };
 }

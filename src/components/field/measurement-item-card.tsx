@@ -39,6 +39,8 @@ type MeasurementItemCardProps = {
   onRemove: () => void;
   onExpandedChange: (expanded: boolean) => void;
   onDrawingDirtyChange?: (dirty: boolean) => void;
+  initialActiveDrawingId?: string | null;
+  onInitialActiveDrawingApplied?: () => void;
   osId: string;
   pendingFiles?: File[];
   onPendingFilesChange?: (files: File[]) => void;
@@ -55,6 +57,8 @@ export function MeasurementItemCard({
   onRemove,
   onExpandedChange,
   onDrawingDirtyChange,
+  initialActiveDrawingId,
+  onInitialActiveDrawingApplied,
   osId,
   pendingFiles = [],
   onPendingFilesChange,
@@ -265,6 +269,8 @@ export function MeasurementItemCard({
             templateImageUrl={hasTemplate ? resolvedTemplateUrl : null}
             templateKey={templateKey}
             disabled={disabled}
+            initialActiveDrawingId={initialActiveDrawingId}
+            onInitialActiveDrawingApplied={onInitialActiveDrawingApplied}
             onDirtyChange={onDrawingDirtyChange}
             onDrawingsChange={handleDrawingsChange}
           />

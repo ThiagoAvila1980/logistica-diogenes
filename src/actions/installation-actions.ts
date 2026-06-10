@@ -6,7 +6,6 @@ import { z } from "zod";
 import { useMockData } from "@/lib/data/config";
 import { mockRepository } from "@/lib/data/mock-repository";
 import { getServiceOrderById } from "@/lib/data/orders";
-import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/require-role";
 import { getDb } from "@/lib/db";
 import { installationLogs, measurements } from "@/db/schema";
@@ -41,7 +40,6 @@ const saveDailyNoteSchema = z.object({
 async function upsertInstallationServicePhotosDb(
   osId: string,
   servicePhotos: string[],
-  installerId?: string,
 ): Promise<void> {
   const db = getDb();
   const [existing] = await db
@@ -58,14 +56,10 @@ async function upsertInstallationServicePhotosDb(
   if (existing) {
     await db
       .update(installationLogs)
-      .set({ photos, installerId: installerId ?? null })
+      .set({ photos })
       .where(eq(installationLogs.id, existing.id));
   } else {
-    await db.insert(installationLogs).values({
-      idMedicao: osId,
-      photos,
-      installerId: installerId ?? null,
-    });
+    await db.insert(installationLogs).values({ idMedicao: osId, photos });
   }
 }
 
@@ -123,12 +117,7 @@ export async function saveInstallationServicePhotos(
   }
 
   try {
-    const session = await getSession();
-    await upsertInstallationServicePhotosDb(
-      osId,
-      photos,
-      session?.userId,
-    );
+    await upsertInstallationServicePhotosDb(osId, photos);
     revalidatePath("/installation");
     revalidatePath(`/installation/${osId}`);
     revalidatePath("/dashboard");
@@ -141,7 +130,6 @@ export async function saveInstallationServicePhotos(
 async function upsertInstallationDailyNoteDb(
   osId: string,
   note: InstallationDailyNote,
-  installerId?: string,
 ): Promise<void> {
   const db = getDb();
   const [existing] = await db
@@ -160,14 +148,10 @@ async function upsertInstallationDailyNoteDb(
   if (existing) {
     await db
       .update(installationLogs)
-      .set({ dailyNotes: nextNotes, installerId: installerId ?? null })
+      .set({ dailyNotes: nextNotes })
       .where(eq(installationLogs.id, existing.id));
   } else {
-    await db.insert(installationLogs).values({
-      idMedicao: osId,
-      dailyNotes: nextNotes,
-      installerId: installerId ?? null,
-    });
+    await db.insert(installationLogs).values({ idMedicao: osId, dailyNotes: nextNotes });
   }
 }
 
@@ -267,8 +251,7 @@ export async function saveInstallationDailyNote(input: {
       updatedAt: now,
     };
 
-    const session = await getSession();
-    await upsertInstallationDailyNoteDb(osId, note, session?.userId);
+    await upsertInstallationDailyNoteDb(osId, note);
 
     revalidatePath("/installation");
     revalidatePath(`/installation/${osId}`);

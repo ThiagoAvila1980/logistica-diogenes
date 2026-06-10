@@ -52,8 +52,6 @@ export type InstallationDetail = {
   notes: string | null;
   servicePhotos: string[];
   dailyNotes: InstallationDailyNote[];
-  installerId: string | null;
-  scheduledInstallationDate: Date | null;
 };
 
 export async function getInstallationDetailForOs(
@@ -85,11 +83,10 @@ export async function getInstallationDetailForOs(
       .select({
         instalacaoEstruturalFeita: installationLogs.instalacaoEstruturalFeita,
         instalacaoVidrosFeita: installationLogs.instalacaoVidrosFeita,
+        instalacaoAcabamentoFeito: installationLogs.instalacaoAcabamentoFeito,
         notes: installationLogs.notes,
         dailyNotes: installationLogs.dailyNotes,
         photos: installationLogs.photos,
-        installerId: installationLogs.installerId,
-        scheduledInstallationDate: installationLogs.scheduledInstallationDate,
       })
       .from(installationLogs)
       .where(eq(installationLogs.idMedicao, osId))
@@ -127,6 +124,7 @@ export async function getInstallationDetailForOs(
     : {
         instalacaoEstruturalFeita: inst?.instalacaoEstruturalFeita ?? false,
         instalacaoVidrosFeita: inst?.instalacaoVidrosFeita ?? false,
+        instalacaoAcabamentoFeito: inst?.instalacaoAcabamentoFeito ?? false,
       };
 
   return {
@@ -140,7 +138,5 @@ export async function getInstallationDetailForOs(
     notes: inst?.notes ?? null,
     servicePhotos: inst?.photos?.service ?? [],
     dailyNotes: inst?.dailyNotes ?? [],
-    installerId: inst?.installerId ?? null,
-    scheduledInstallationDate: inst?.scheduledInstallationDate ?? null,
   };
 }

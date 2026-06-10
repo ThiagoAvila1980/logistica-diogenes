@@ -161,6 +161,10 @@ export function FieldMeasurementForm({
   const [drawingDirtyById, setDrawingDirtyById] = useState<
     Record<string, boolean>
   >({});
+  const [pendingDrawingEdit, setPendingDrawingEdit] = useState<{
+    itemId: string;
+    drawingId: string;
+  } | null>(null);
   const [viewMode, setViewMode] = useState(initialViewMode);
   const [specValues, setSpecValues] = useState({
     priority: order.priority,
@@ -337,6 +341,12 @@ export function FieldMeasurementForm({
 
   function setItemExpanded(itemId: string, expanded: boolean) {
     setExpandedItemId(expanded ? itemId : null);
+  }
+
+  function handleDrawingEditRequest(itemId: string, drawingId: string) {
+    setViewMode(false);
+    setExpandedItemId(itemId);
+    setPendingDrawingEdit({ itemId, drawingId });
   }
 
   function handleConfirmSave() {
@@ -544,6 +554,12 @@ export function FieldMeasurementForm({
                     onExpandedChange={(expanded) =>
                       setItemExpanded(item.id, expanded)
                     }
+                    onDrawingClick={
+                      allowedActions.length > 0
+                        ? (drawingId) =>
+                            handleDrawingEditRequest(item.id, drawingId)
+                        : undefined
+                    }
                   />
                 ))
               : items.map((item, index) => (
@@ -564,6 +580,14 @@ export function FieldMeasurementForm({
                       }))
                     }
                     onDrawingFullscreenChange={handleDrawingFullscreenChange}
+                    initialActiveDrawingId={
+                      pendingDrawingEdit?.itemId === item.id
+                        ? pendingDrawingEdit.drawingId
+                        : null
+                    }
+                    onInitialActiveDrawingApplied={() =>
+                      setPendingDrawingEdit(null)
+                    }
                     onChange={(next) => updateItem(index, next)}
                     onRemove={() => removeItem(index)}
                     onExpandedChange={(expanded) =>

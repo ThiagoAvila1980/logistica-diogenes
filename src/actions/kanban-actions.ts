@@ -88,7 +88,9 @@ async function loadTransitionContext(
     hasFinalMeasurement,
     cuttingSteps: aggregateCuttingStepsFromItems(cuttingItems),
     installationComplete:
-      installation.instalacaoEstruturalFeita && installation.instalacaoVidrosFeita,
+      installation.instalacaoEstruturalFeita &&
+      installation.instalacaoVidrosFeita &&
+      installation.instalacaoAcabamentoFeito,
   };
 }
 

@@ -3,11 +3,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Truck } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getTransportDetailForOs } from "@/lib/data/transport-detail";
+import { listMeasurementLookups } from "@/lib/data/lookups";
 import { listVehiclesForTransportSelection } from "@/lib/data/vehicles";
-import {
-  listActiveInstallers,
-  getInstallerAssignment,
-} from "@/lib/data/installers";
+import { listActiveInstallers } from "@/lib/data/installers";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
@@ -17,7 +15,6 @@ import { MeasurementNotesCard } from "@/components/measurement/measurement-notes
 import { Button } from "@/components/ui/button";
 import { TransportChecklist } from "@/components/logistics/transport-checklist";
 import { VehicleSelector } from "@/components/logistics/vehicle-selector";
-import { InstallerSelector } from "@/components/logistics/installer-selector";
 
 type Props = { params: Promise<{ osId: string }> };
 
@@ -31,16 +28,14 @@ export default async function LogisticsOsPage({ params }: Props) {
 
   const isManager = canViewAllOrders(session?.roles ?? []);
 
-  const detail = await getTransportDetailForOs(osId, order.status);
+  const [detail, lookups] = await Promise.all([
+    getTransportDetailForOs(osId, order.status),
+    listMeasurementLookups(),
+  ]);
   const vehicles = await listVehiclesForTransportSelection(osId);
   const canChangeVehicle = true;
 
-  const [installers, installerAssignment] = isManager
-    ? await Promise.all([
-        listActiveInstallers(),
-        getInstallerAssignment(osId),
-      ])
-    : [[], { installerId: null, installerName: null, scheduledInstallationDate: null }];
+  const installers = isManager ? await listActiveInstallers() : [];
 
   if (!canOperateTransportModule(order.status, detail.cuttingSteps)) {
     return (
@@ -55,8 +50,8 @@ export default async function LogisticsOsPage({ params }: Props) {
           <p className="mt-1 text-base font-medium text-muted-foreground">
             {order.clientName}
           </p>
-          <MeasurementNotesCard notes={order.notes} className="mt-4" />
         </div>
+        <MeasurementNotesCard notes={order.notes} collapsible />
         <div className="rounded-xl border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">
             Aguardando conclusão do corte para liberar o transporte desta OS.
@@ -96,8 +91,9 @@ export default async function LogisticsOsPage({ params }: Props) {
             readOnly
           />
         </div>
-        <MeasurementNotesCard notes={order.notes} className="mt-4" />
       </div>
+
+      <MeasurementNotesCard notes={order.notes} collapsible />
 
       <VehicleSelector
         osId={osId}
@@ -108,24 +104,14 @@ export default async function LogisticsOsPage({ params }: Props) {
         canChange={canChangeVehicle}
       />
 
-      {isManager && (
-        <InstallerSelector
-          osId={osId}
-          installerId={installerAssignment.installerId}
-          installerName={installerAssignment.installerName}
-          scheduledInstallationDate={
-            installerAssignment.scheduledInstallationDate
-          }
-          installers={installers}
-          canChange
-        />
-      )}
-
       <TransportChecklist
         osId={osId}
         osStatus={order.status}
         items={detail.items}
         vehicleId={detail.vehicleId}
+        lookups={lookups}
+        installers={installers}
+        canAssignInstaller={isManager}
       />
     </>
   );

@@ -27,7 +27,7 @@ export type UpdateInstallationStepResult =
 const updateItemInstallationStepSchema = z.object({
   osId: z.string().uuid(),
   itemId: z.string().min(1),
-  step: z.enum(["estrutural", "vidros"]),
+  step: z.enum(["estrutural", "vidros", "acabamento"]),
   done: z.boolean(),
 });
 
@@ -98,11 +98,21 @@ export async function updateItemInstallationStepAction(
         }
 
         if (step === "vidros") {
-          const vidrosOk =
-            cut.vidros || trans.vidros || cut.acessorios || trans.acessorios || isLatePhase;
+          const vidrosOk = trans.vidros || isLatePhase;
           if (!vidrosOk) {
             throw new WorkflowActionError(
-              "Aguardando vidros ou acessórios deste vão serem entregues",
+              "Aguardando entrega dos vidros pelo motorista",
+              "gate_locked",
+            );
+          }
+        }
+
+        if (step === "acabamento") {
+          const inst = item.installationProgress ?? { estrutural: false, vidros: false, acabamento: false };
+          const acabamentoOk = inst.vidros || isLatePhase;
+          if (!acabamentoOk) {
+            throw new WorkflowActionError(
+              "Aguardando instalação dos vidros deste vão",
               "gate_locked",
             );
           }
@@ -112,7 +122,7 @@ export async function updateItemInstallationStepAction(
       // Atualiza o item no JSONB
       const updatedItems = items.map((i) => {
         if (i.id !== itemId) return i;
-        const prev = i.installationProgress ?? { estrutural: false, vidros: false };
+        const prev = i.installationProgress ?? { estrutural: false, vidros: false, acabamento: false };
         return { ...i, installationProgress: { ...prev, [step]: done } };
       });
 
@@ -133,6 +143,7 @@ export async function updateItemInstallationStepAction(
       const logFields = {
         instalacaoEstruturalFeita: newAggregate.instalacaoEstruturalFeita,
         instalacaoVidrosFeita: newAggregate.instalacaoVidrosFeita,
+        instalacaoAcabamentoFeito: newAggregate.instalacaoAcabamentoFeito,
       };
 
       if (existingLog) {

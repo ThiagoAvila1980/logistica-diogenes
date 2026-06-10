@@ -7,6 +7,7 @@ import {
   Scissors,
   Truck,
   Hammer,
+  BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ const MOBILE_ICONS: Record<string, LucideIcon> = {
   "/production": Scissors,
   "/logistics": Truck,
   "/installation": Hammer,
+  "/concluded": BadgeCheck,
 };
 
 const MOBILE_LABELS: Record<string, string> = {
@@ -27,6 +29,7 @@ const MOBILE_LABELS: Record<string, string> = {
   "/production": "Corte",
   "/logistics": "Transporte",
   "/installation": "Instalação",
+  "/concluded": "Concluídos",
 };
 
 export function MobileBottomNav({
@@ -37,8 +40,8 @@ export function MobileBottomNav({
   session?: SessionUser;
 }) {
   const items = session
-    ? getNavItemsForRoles(session.roles).slice(0, 5)
-    : getNavItemsForRoles(["admin"]).slice(0, 5);
+    ? getNavItemsForRoles(session.roles).slice(0, 6)
+    : getNavItemsForRoles(["admin"]).slice(0, 6);
 
   return (
     <nav

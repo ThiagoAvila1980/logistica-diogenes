@@ -181,7 +181,6 @@ async function main() {
   await db.insert(schema.installationLogs).values([
     {
       idMedicao: medInstalacao.id,
-      installerId: instalador.id,
     },
   ]);
 

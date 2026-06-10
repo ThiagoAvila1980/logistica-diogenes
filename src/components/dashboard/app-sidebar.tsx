@@ -5,6 +5,7 @@ import {
   Scissors,
   Truck,
   Hammer,
+  BadgeCheck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/production": Scissors,
   "/logistics": Truck,
   "/installation": Hammer,
+  "/concluded": BadgeCheck,
   "/admin/users": Users,
 };
 

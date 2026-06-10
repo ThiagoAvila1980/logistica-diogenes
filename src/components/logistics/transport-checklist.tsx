@@ -20,9 +20,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { updateItemTransportStepAction } from "@/actions/transport-actions";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { formatDimensionsSummary } from "@/lib/measurement/dimensions";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
-import { resolveLookupLabel } from "@/lib/data/lookup-types";
+import type { InstallerOption } from "@/lib/data/installers-db";
+import {
+  buildVaoItemSubtitle,
+  formatVaoItemFullLabel,
+} from "@/lib/measurement/vao-item-subtitle";
+import { InstallerSelector } from "@/components/logistics/installer-selector";
 
 type TransportStep = "perfilEstrutural" | "perfilTotal" | "acessorios" | "vidros";
 
@@ -86,28 +90,14 @@ function getItemTransportGates(
   };
 }
 
-function buildItemLabel(
-  item: MeasurementLineItem,
-  index: number,
-  lookups?: MeasurementLookups,
-): string {
-  const ambiente = resolveLookupLabel(
-    lookups?.ambientes ?? [],
-    item.idAmbiente ?? null,
-  );
-  const dims = formatDimensionsSummary(item);
-  if (ambiente && dims) return `${ambiente} — ${dims}`;
-  if (ambiente) return ambiente;
-  if (dims) return dims;
-  return `Vão ${index + 1}`;
-}
-
 type Props = {
   osId: string;
   osStatus: string;
   items: MeasurementLineItem[];
   vehicleId: string | null;
   lookups?: MeasurementLookups;
+  installers?: InstallerOption[];
+  canAssignInstaller?: boolean;
 };
 
 export function TransportChecklist({
@@ -116,6 +106,8 @@ export function TransportChecklist({
   items,
   vehicleId,
   lookups,
+  installers = [],
+  canAssignInstaller = false,
 }: Props) {
   const isLatePhase =
     osStatus.startsWith("instalacao") || osStatus === "concluido";
@@ -242,7 +234,8 @@ export function TransportChecklist({
             const gates = getItemTransportGates(item, Boolean(vehicleId), isLatePhase);
             const doneSteps = TRANSPORT_STEPS.filter(({ key }) => itemProgress[key]).length;
             const itemAllDone = doneSteps === 4;
-            const label = buildItemLabel(item, index, lookups);
+            const subtitle = buildVaoItemSubtitle(item, index, lookups);
+            const fullLabel = formatVaoItemFullLabel(subtitle);
 
             return (
               <div
@@ -267,10 +260,18 @@ export function TransportChecklist({
                     </p>
                     <p
                       className="mt-0.5 truncate text-[11px] text-muted-foreground"
-                      title={label}
+                      title={fullLabel}
                     >
-                      {label}
+                      {subtitle.spec}
                     </p>
+                    {subtitle.dims ? (
+                      <p
+                        className="mt-0.5 truncate text-[11px] text-muted-foreground tabular-nums"
+                        title={subtitle.dims}
+                      >
+                        {subtitle.dims}
+                      </p>
+                    ) : null}
                   </div>
 
                   {TRANSPORT_STEPS.map(({ key }) => {
@@ -307,6 +308,29 @@ export function TransportChecklist({
                   })}
                 </div>
 
+                {/* Instalador por vão */}
+                {(canAssignInstaller || item.installationProgress?.installerId) && (
+                  <div className="mt-2.5">
+                    <InstallerSelector
+                      osId={osId}
+                      itemId={item.id}
+                      installerId={item.installationProgress?.installerId ?? null}
+                      installerName={
+                        item.installationProgress?.installerId
+                          ? (installers.find((i) => i.id === item.installationProgress?.installerId)?.name ?? null)
+                          : null
+                      }
+                      scheduledInstallationDate={
+                        item.installationProgress?.scheduledInstallationDate
+                          ? new Date(item.installationProgress.scheduledInstallationDate)
+                          : null
+                      }
+                      installers={installers}
+                      canChange={canAssignInstaller}
+                    />
+                  </div>
+                )}
+
                 {/* Mobile: label + 4 botões */}
                 <div className="sm:hidden">
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -319,9 +343,20 @@ export function TransportChecklist({
                       >
                         Vão {index + 1}
                       </p>
-                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {label}
+                      <p
+                        className="mt-0.5 truncate text-[11px] text-muted-foreground"
+                        title={fullLabel}
+                      >
+                        {subtitle.spec}
                       </p>
+                      {subtitle.dims ? (
+                        <p
+                          className="mt-0.5 truncate text-[11px] text-muted-foreground tabular-nums"
+                          title={subtitle.dims}
+                        >
+                          {subtitle.dims}
+                        </p>
+                      ) : null}
                     </div>
                     {itemAllDone ? (
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />

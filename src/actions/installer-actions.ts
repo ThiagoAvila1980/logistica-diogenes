@@ -1,29 +1,32 @@
 "use server";
 
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { requireRole } from "@/lib/auth/require-role";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getServiceOrderById } from "@/lib/data/orders";
-
-const assignInstallerSchema = z.object({
-  osId: z.string().uuid(),
-  installerId: z.string().uuid().nullable(),
-  scheduledInstallationDate: z.string().nullable(),
-});
+import { getDb } from "@/lib/db";
+import { measurements } from "@/db/schema";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { logger } from "@/lib/logger";
 
 export type AssignInstallerResult =
   | { success: true }
   | { success: false; message: string };
 
-export async function assignInstallerToOsAction(
-  raw: z.infer<typeof assignInstallerSchema>,
+const assignInstallerToVaoSchema = z.object({
+  osId: z.string().uuid(),
+  itemId: z.string().min(1),
+  installerId: z.string().uuid().nullable(),
+  scheduledInstallationDate: z.string().nullable(),
+});
+
+export async function assignInstallerToVaoAction(
+  raw: z.infer<typeof assignInstallerToVaoSchema>,
 ): Promise<AssignInstallerResult> {
-  const parsed = assignInstallerSchema.safeParse(raw);
+  const parsed = assignInstallerToVaoSchema.safeParse(raw);
   if (!parsed.success) {
-    return {
-      success: false,
-      message: "Requisição inválida. Recarregue a página e tente novamente.",
-    };
+    return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
   try {
@@ -32,29 +35,56 @@ export async function assignInstallerToOsAction(
     return { success: false, message: "Sem permissão para esta ação" };
   }
 
-  const { osId, installerId, scheduledInstallationDate } = parsed.data;
+  const { osId, itemId, installerId, scheduledInstallationDate } = parsed.data;
+
+  if (scheduledInstallationDate) {
+    const d = new Date(scheduledInstallationDate);
+    if (isNaN(d.getTime())) return { success: false, message: "Data inválida" };
+  }
 
   try {
     const order = await getServiceOrderById(osId);
     if (!order) return { success: false, message: "OS não encontrada" };
 
-    const { assignInstallerToInstallationDb } = await import(
-      "@/lib/data/installers-db"
-    );
+    const db = getDb();
 
-    const parsedDate = scheduledInstallationDate
-      ? new Date(scheduledInstallationDate)
-      : null;
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
 
-    if (parsedDate && isNaN(parsedDate.getTime())) {
-      return { success: false, message: "Data inválida" };
-    }
+      if (!meas) throw new Error("OS não encontrada");
 
-    await assignInstallerToInstallationDb(osId, installerId, parsedDate);
+      const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const idx = items.findIndex((i) => i.id === itemId);
+      if (idx === -1) throw new Error("Vão não encontrado");
+
+      const updatedItems = items.map((i) => {
+        if (i.id !== itemId) return i;
+        const prev = i.installationProgress ?? { estrutural: false, vidros: false, acabamento: false };
+        return {
+          ...i,
+          installationProgress: {
+            ...prev,
+            installerId: installerId ?? null,
+            scheduledInstallationDate: scheduledInstallationDate ?? null,
+          },
+        };
+      });
+
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
+    });
+
     revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
-    console.error("[assignInstallerToOsAction]", err);
-    return { success: false, message: "Erro ao atribuir instalador" };
+    logger.error("assignInstallerToVaoAction failed", { osId, itemId, err });
+    return { success: false, message: "Erro ao atribuir instalador ao vão" };
   }
 }
