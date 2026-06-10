@@ -38,7 +38,10 @@ export function KanbanPhaseColumn({
     >
       <div
         className={cn(
-          "mb-1.5 rounded-sm bg-primary/20 px-2 py-2 text-primary",
+          "mb-1.5 rounded-sm px-2 py-2",
+          phase.readOnly
+            ? "bg-emerald-700/20 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+            : "bg-primary/20 text-primary",
           isCarousel && "mb-2",
         )}
       >
@@ -49,13 +52,20 @@ export function KanbanPhaseColumn({
           >
             {phase.title}
           </span>
-          <span className="shrink-0 rounded-full bg-primary/50 px-1 py-px text-[10px] font-semibold tabular-nums text-primary-foreground sm:px-2 sm:py-0.5 sm:text-[11px]">
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-1 py-px text-[10px] font-semibold tabular-nums text-primary-foreground sm:px-2 sm:py-0.5 sm:text-[11px]",
+              phase.readOnly
+                ? "bg-emerald-700/60 dark:bg-emerald-500/60"
+                : "bg-primary/50",
+            )}
+          >
             {items.length}
           </span>
         </div>
       </div>
 
-      <Droppable droppableId={phase.id} isDropDisabled={isDropDisabled}>
+      <Droppable droppableId={phase.id} isDropDisabled={isDropDisabled || !!phase.readOnly}>
         {(provided, snapshot) => (
           <ScrollArea
             className={cn(

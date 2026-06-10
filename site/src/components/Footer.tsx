@@ -28,7 +28,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-3 mb-5">
               <Image
-                src="/logotipo 01.png"
+                src="/logotipo.png"
                 alt="Diogenes Envidraçamentos"
                 width={674}
                 height={574}

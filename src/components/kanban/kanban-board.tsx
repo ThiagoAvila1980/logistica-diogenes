@@ -270,6 +270,10 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
 
     const sourcePhaseId = source.droppableId;
     const destPhaseId = destination.droppableId;
+
+    const destPhase = KANBAN_PHASES.find((p) => p.id === destPhaseId);
+    if (destPhase?.readOnly) return;
+
     const { osId } = parseKanbanDraggableId(draggableId);
     const order = findOrder(osId);
     if (!order) return;
@@ -434,7 +438,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
           ))}
         </KanbanMobileCarousel>
 
-        <div className="hidden min-h-0 min-w-0 flex-1 gap-2 md:grid md:grid-cols-4">
+        <div className="hidden min-h-0 min-w-0 flex-1 gap-2 md:grid md:grid-cols-5">
           {KANBAN_PHASES.map((phase) => (
             <KanbanPhaseColumn
               key={phase.id}

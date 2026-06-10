@@ -178,7 +178,7 @@ async function drawHeader(
   const logoSize = 56;
   try {
     const logoBytes = await readFile(
-      path.join(process.cwd(), "public", "logotipo 01.png"),
+      path.join(process.cwd(), "public", "logotipo.png"),
     );
     const resizedLogo = await sharp(logoBytes)
       .resize({ width: 256, height: 256, fit: "inside" })

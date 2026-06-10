@@ -31,7 +31,7 @@ export default function Hero() {
           className="flex justify-center mb-8"
         >
           <Image
-            src="/logotipo 01.png"
+            src="/logotipo.png"
             alt="Diogenes Envidraçamentos"
             width={674}
             height={574}

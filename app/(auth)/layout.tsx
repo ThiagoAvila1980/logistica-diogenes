@@ -64,7 +64,7 @@ export default async function AuthLayout({
       <div className="flex flex-1 items-center justify-center bg-background px-4 py-6 safe-bottom safe-top sm:px-6 sm:py-10 lg:py-10">
         <div className="flex w-full max-w-md flex-col items-center gap-6">
           <Image
-            src="/public/logotipo 01.png"
+            src="/logotipo.png"
             alt="Diógenes Envidraçamentos Especiais"
             width={1024}
             height={1024}

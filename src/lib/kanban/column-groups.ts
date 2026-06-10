@@ -7,6 +7,8 @@ export type KanbanPhase = {
   /** Rótulo curto para colunas estreitas (mobile) */
   shortTitle: string;
   statuses: readonly OsStatus[];
+  /** Impede drop de entrada (coluna terminal) */
+  readOnly?: boolean;
 };
 
 /** 4 colunas do Kanban — cards agrupados por fase; sub-status no card */
@@ -39,7 +41,14 @@ export const KANBAN_PHASES: readonly KanbanPhase[] = [
     id: "instalacao",
     title: "INSTALAÇÃO",
     shortTitle: "Inst.",
-    statuses: ["instalacao_estrutural", "instalacao_vidros", "concluido"],
+    statuses: ["instalacao_estrutural", "instalacao_vidros"],
+  },
+  {
+    id: "concluidos",
+    title: "CONCLUÍDOS",
+    shortTitle: "Concl.",
+    statuses: ["concluido"],
+    readOnly: true,
   },
 ] as const;
 
