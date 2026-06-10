@@ -3,6 +3,8 @@
 import { useState } from "react";
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Loader2,
   Lock,
   Truck,
@@ -118,8 +120,13 @@ export function TransportChecklist({
         items.map((item) => [item.id, getItemTransportProgress(item)]),
       ),
   );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+
+  function toggleExpand(itemId: string) {
+    setExpandedId((prev) => (prev === itemId ? null : itemId));
+  }
 
   // Progresso agregado para o banner de status
   const anyPerfilEst = items.some((i) => progress[i.id]?.perfilEstrutural);
@@ -209,19 +216,6 @@ export function TransportChecklist({
           </Alert>
         )}
 
-        {/* Cabeçalho das colunas (desktop) */}
-        <div className="hidden grid-cols-[1fr_repeat(4,56px)] gap-2 px-3 sm:grid">
-          <span />
-          {TRANSPORT_STEPS.map(({ key, label }) => (
-            <span
-              key={key}
-              className="text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-
         {/* Lista de vãos */}
         <div className="space-y-2">
           {items.map((item, index) => {
@@ -237,19 +231,26 @@ export function TransportChecklist({
             const subtitle = buildVaoItemSubtitle(item, index, lookups);
             const fullLabel = formatVaoItemFullLabel(subtitle);
 
+            const isExpanded = expandedId === item.id;
+
             return (
               <div
                 key={item.id}
                 className={cn(
-                  "rounded-lg border px-3 py-2.5 transition-colors",
+                  "rounded-lg border transition-colors",
                   itemAllDone
                     ? "border-success-border bg-success-muted"
                     : "border-border bg-card",
                 )}
               >
-                {/* Desktop: grid com 4 colunas de checkboxes */}
-                <div className="hidden items-center gap-2 sm:grid sm:grid-cols-[1fr_repeat(4,56px)]">
-                  <div className="min-w-0">
+                {/* Cabeçalho do vão — sempre visível */}
+                <div className="flex w-full items-center gap-2 px-3 py-2.5">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => toggleExpand(item.id)}
+                    aria-expanded={isExpanded}
+                  >
                     <p
                       className={cn(
                         "text-xs font-semibold leading-tight",
@@ -272,92 +273,10 @@ export function TransportChecklist({
                         {subtitle.dims}
                       </p>
                     ) : null}
-                  </div>
+                  </button>
 
-                  {TRANSPORT_STEPS.map(({ key }) => {
-                    const done = itemProgress[key];
-                    const gate = gates[key];
-                    const lKey = `${item.id}-${key}`;
-                    const isLoading = loadingKey === lKey;
-                    const isLocked = !gate.unlocked;
-
-                    return (
-                      <div key={key} className="flex justify-center">
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        ) : isLocked && !done ? (
-                          <span title={gate.reason ?? undefined}>
-                            <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                          </span>
-                        ) : (
-                          <Checkbox
-                            checked={done}
-                            disabled={isLoading || (isLocked && !done)}
-                            onCheckedChange={(v) =>
-                              handleToggle(item.id, key, v === true)
-                            }
-                            className={cn(
-                              "shrink-0",
-                              done && "border-success bg-success",
-                            )}
-                            aria-label={`${key} — Vão ${index + 1}`}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Instalador por vão */}
-                {(canAssignInstaller || item.installationProgress?.installerId) && (
-                  <div className="mt-2.5">
-                    <InstallerSelector
-                      osId={osId}
-                      itemId={item.id}
-                      installerId={item.installationProgress?.installerId ?? null}
-                      installerName={
-                        item.installationProgress?.installerId
-                          ? (installers.find((i) => i.id === item.installationProgress?.installerId)?.name ?? null)
-                          : null
-                      }
-                      scheduledInstallationDate={
-                        item.installationProgress?.scheduledInstallationDate
-                          ? new Date(item.installationProgress.scheduledInstallationDate)
-                          : null
-                      }
-                      installers={installers}
-                      canChange={canAssignInstaller}
-                    />
-                  </div>
-                )}
-
-                {/* Mobile: label + 4 botões */}
-                <div className="sm:hidden">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p
-                        className={cn(
-                          "text-xs font-semibold leading-tight",
-                          itemAllDone ? "text-success-foreground" : "text-foreground",
-                        )}
-                      >
-                        Vão {index + 1}
-                      </p>
-                      <p
-                        className="mt-0.5 truncate text-[11px] text-muted-foreground"
-                        title={fullLabel}
-                      >
-                        {subtitle.spec}
-                      </p>
-                      {subtitle.dims ? (
-                        <p
-                          className="mt-0.5 truncate text-[11px] text-muted-foreground tabular-nums"
-                          title={subtitle.dims}
-                        >
-                          {subtitle.dims}
-                        </p>
-                      ) : null}
-                    </div>
+                  {/* Badge de progresso */}
+                  <div className="flex items-center gap-2">
                     {itemAllDone ? (
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                     ) : (
@@ -367,62 +286,151 @@ export function TransportChecklist({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {TRANSPORT_STEPS.map(({ key, label: stepLabel }) => {
-                      const done = itemProgress[key];
-                      const gate = gates[key];
-                      const lKey = `${item.id}-${key}`;
-                      const isLoading = loadingKey === lKey;
-                      const isLocked = !gate.unlocked && !done;
+                  <button
+                    type="button"
+                    className="ml-1 shrink-0 text-muted-foreground"
+                    onClick={() => toggleExpand(item.id)}
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? "Recolher" : "Expandir"} vão ${index + 1}`}
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
 
-                      return (
-                        <label
+                {/* Conteúdo expansível */}
+                {isExpanded && (
+                  <div className="px-3 pb-3">
+                    {/* Desktop: grid com 4 colunas de checkboxes */}
+                    <div className="hidden items-center gap-2 sm:grid sm:grid-cols-[1fr_repeat(4,56px)]">
+                      <div />
+                      {TRANSPORT_STEPS.map(({ key, label }) => (
+                        <span
                           key={key}
-                          className={cn(
-                            "flex cursor-pointer flex-col items-center gap-1 rounded-md border px-1 py-2 text-center transition-colors",
-                            done
-                              ? "border-success-border bg-success-muted"
-                              : isLocked
-                                ? "cursor-not-allowed border-border bg-muted/30 opacity-60"
-                                : "border-border bg-background hover:bg-muted/50",
-                            isLoading && "opacity-60",
-                          )}
+                          className="text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
                         >
-                          {isLoading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                          ) : isLocked ? (
-                            <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                          ) : (
-                            <Checkbox
-                              checked={done}
-                              disabled={isLoading}
-                              onCheckedChange={(v) =>
-                                handleToggle(item.id, key, v === true)
-                              }
-                              className={cn(
-                                "shrink-0",
-                                done && "border-success bg-success",
-                              )}
-                              aria-label={`${stepLabel} — Vão ${index + 1}`}
-                            />
-                          )}
-                          <span
+                          {label}
+                        </span>
+                      ))}
+                      <div className="min-w-0" />
+                      {TRANSPORT_STEPS.map(({ key }) => {
+                        const done = itemProgress[key];
+                        const gate = gates[key];
+                        const lKey = `${item.id}-${key}`;
+                        const isLoading = loadingKey === lKey;
+                        const isLocked = !gate.unlocked;
+
+                        return (
+                          <div key={key} className="flex justify-center">
+                            {isLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            ) : isLocked && !done ? (
+                              <span title={gate.reason ?? undefined}>
+                                <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                              </span>
+                            ) : (
+                              <Checkbox
+                                checked={done}
+                                disabled={isLoading || (isLocked && !done)}
+                                onCheckedChange={(v) =>
+                                  handleToggle(item.id, key, v === true)
+                                }
+                                className={cn(
+                                  "shrink-0",
+                                  done && "border-success bg-success",
+                                )}
+                                aria-label={`${key} — Vão ${index + 1}`}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Mobile: 4 botões */}
+                    <div className="grid grid-cols-4 gap-1.5 sm:hidden">
+                      {TRANSPORT_STEPS.map(({ key, label: stepLabel }) => {
+                        const done = itemProgress[key];
+                        const gate = gates[key];
+                        const lKey = `${item.id}-${key}`;
+                        const isLoading = loadingKey === lKey;
+                        const isLocked = !gate.unlocked && !done;
+
+                        return (
+                          <label
+                            key={key}
                             className={cn(
-                              "text-[10px] font-medium leading-tight",
+                              "flex cursor-pointer flex-col items-center gap-1 rounded-md border px-1 py-2 text-center transition-colors",
                               done
-                                ? "text-success-foreground"
+                                ? "border-success-border bg-success-muted"
                                 : isLocked
-                                  ? "text-muted-foreground/60"
-                                  : "text-muted-foreground",
+                                  ? "cursor-not-allowed border-border bg-muted/30 opacity-60"
+                                  : "border-border bg-background hover:bg-muted/50",
+                              isLoading && "opacity-60",
                             )}
                           >
-                            {stepLabel}
-                          </span>
-                        </label>
-                      );
-                    })}
+                            {isLoading ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            ) : isLocked ? (
+                              <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                            ) : (
+                              <Checkbox
+                                checked={done}
+                                disabled={isLoading}
+                                onCheckedChange={(v) =>
+                                  handleToggle(item.id, key, v === true)
+                                }
+                                className={cn(
+                                  "shrink-0",
+                                  done && "border-success bg-success",
+                                )}
+                                aria-label={`${stepLabel} — Vão ${index + 1}`}
+                              />
+                            )}
+                            <span
+                              className={cn(
+                                "text-[10px] font-medium leading-tight",
+                                done
+                                  ? "text-success-foreground"
+                                  : isLocked
+                                    ? "text-muted-foreground/60"
+                                    : "text-muted-foreground",
+                              )}
+                            >
+                              {stepLabel}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {/* Instalador por vão */}
+                    {(canAssignInstaller || item.installationProgress?.installerId) && (
+                      <div className="mt-2.5">
+                        <InstallerSelector
+                          osId={osId}
+                          itemId={item.id}
+                          installerId={item.installationProgress?.installerId ?? null}
+                          installerName={
+                            item.installationProgress?.installerId
+                              ? (installers.find((i) => i.id === item.installationProgress?.installerId)?.name ?? null)
+                              : null
+                          }
+                          scheduledInstallationDate={
+                            item.installationProgress?.scheduledInstallationDate
+                              ? new Date(item.installationProgress.scheduledInstallationDate)
+                              : null
+                          }
+                          installers={installers}
+                          canChange={canAssignInstaller}
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             );
           })}

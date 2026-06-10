@@ -200,10 +200,7 @@ export function InstallationChecklist({
     () =>
       Object.fromEntries(items.map((item) => [item.id, getItemInstProgress(item)])),
   );
-  const [expandedId, setExpandedId] = useState<string | null>(
-    // Abre o primeiro vão por padrão
-    items.length > 0 ? items[0]!.id : null,
-  );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
 
