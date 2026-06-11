@@ -19,6 +19,8 @@ export function shouldResolveUploadUrlClientSide(url: string): boolean {
   ) {
     return false;
   }
+  // Signed URLs já estão prontas para uso direto — não precisam de nova resolução
+  if (trimmed.includes("/storage/v1/object/sign/")) return false;
   if (isPersistedUploadUrl(trimmed)) return false;
   if (trimmed.startsWith("catalog/") || trimmed.startsWith("measurements/")) {
     return true;
