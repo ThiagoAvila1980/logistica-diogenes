@@ -33,7 +33,7 @@ export async function GET() {
       WHERE elem IS NOT NULL
       LIMIT 1
     `);
-    storedUrl = (rows as { url: string }[])[0]?.url ?? null;
+    storedUrl = ((rows as unknown as { url: string }[])[0]?.url) ?? null;
   } catch (e) {
     storedUrl = `ERRO ao buscar do banco: ${e instanceof Error ? e.message : String(e)}`;
   }
