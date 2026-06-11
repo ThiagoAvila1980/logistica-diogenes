@@ -41,13 +41,22 @@ function toCuttingStepsGate(os: KanbanOrderItem) {
   };
 }
 
+function isTransportKanbanPhaseComplete(os: KanbanOrderItem): boolean {
+  return os.transportSteps?.transporteConcluido === true;
+}
+
 /** Fases em que a OS deve aparecer no kanban (suporta colunas paralelas). */
 export function getKanbanPhaseIdsForOrder(os: KanbanOrderItem): string[] {
   const statusPhaseId = getPhaseIdForStatus(os.status);
   const phases = new Set<string>();
 
   if (statusPhaseId) {
-    phases.add(statusPhaseId);
+    const hideTransportColumn =
+      statusPhaseId === "transporte" && isTransportKanbanPhaseComplete(os);
+
+    if (!hideTransportColumn) {
+      phases.add(statusPhaseId);
+    }
   }
 
   const cutting = toCuttingStepsGate(os);
