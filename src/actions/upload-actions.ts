@@ -7,7 +7,7 @@ import {
 } from "@/lib/upload/save-files";
 import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
 import type { UploadScope } from "@/lib/upload/config";
-import { requireRole } from "@/lib/auth/require-role";
+import { requireRole, requireRoleFromSession } from "@/lib/auth/require-role";
 import { authErrorMessage } from "@/lib/auth/auth-error";
 
 const uploadSchema = z.object({
@@ -65,7 +65,7 @@ export async function uploadPhotos(
 export async function resolveUploadDisplayUrlAction(
   url: string,
 ): Promise<string> {
-  await requireRole(["admin", "gerente", "cortador", "motorista", "instalador", "medidor"]);
+  await requireRoleFromSession(["admin", "gerente", "cortador", "motorista", "instalador", "medidor"]);
   if (!url.trim()) return url;
   return resolveUploadDisplayUrl(url);
 }

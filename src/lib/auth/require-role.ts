@@ -49,3 +49,14 @@ export async function requireRole(
   await assertUserActive(session.userId);
   return session;
 }
+
+/** Verifica role apenas pelo cookie, sem query ao banco. Usar em actions de leitura. */
+export async function requireRoleFromSession(
+  allowed: readonly UserRole[],
+): Promise<SessionUser> {
+  const session = await requireSession();
+  if (!hasAnyRole(session.roles, allowed)) {
+    throw new AuthError("FORBIDDEN", "Sem permissão para esta ação");
+  }
+  return session;
+}
