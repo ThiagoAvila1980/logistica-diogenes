@@ -65,21 +65,7 @@ export async function uploadPhotos(
 export async function resolveUploadDisplayUrlAction(
   url: string,
 ): Promise<string> {
-  try {
-    await requireRole(["admin", "gerente", "cortador", "motorista", "instalador", "medidor"]);
-  } catch (err) {
-    console.error("[resolveUploadDisplayUrlAction] requireRole falhou:", err);
-    throw err;
-  }
+  await requireRole(["admin", "gerente", "cortador", "motorista", "instalador", "medidor"]);
   if (!url.trim()) return url;
-  try {
-    const resolved = await resolveUploadDisplayUrl(url);
-    if (!resolved || resolved === url) {
-      console.warn("[resolveUploadDisplayUrlAction] URL não resolvida:", url.slice(0, 80));
-    }
-    return resolved;
-  } catch (err) {
-    console.error("[resolveUploadDisplayUrlAction] resolveUploadDisplayUrl falhou:", err);
-    throw err;
-  }
+  return resolveUploadDisplayUrl(url);
 }
