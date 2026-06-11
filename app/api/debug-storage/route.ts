@@ -5,9 +5,21 @@ import { getStorageConfig } from "@/lib/upload/storage/config";
 import { getDb } from "@/lib/db";
 import { measurements } from "@/db/schema";
 import { sql } from "drizzle-orm";
+import { getSession } from "@/lib/auth/session";
 
 export async function GET() {
   const config = getStorageConfig();
+
+  // Testar se a sessão atual é válida
+  let sessionInfo: { userId: string; roles: string[] } | string = "sem sessão / inválida";
+  try {
+    const session = await getSession();
+    if (session) {
+      sessionInfo = { userId: session.userId, roles: session.roles };
+    }
+  } catch (e) {
+    sessionInfo = `ERRO ao ler sessão: ${e instanceof Error ? e.message : String(e)}`;
+  }
 
   // Buscar uma URL real do banco
   let storedUrl: string | null = null;
@@ -47,6 +59,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
+    session: sessionInfo,
     hasServiceKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
     serviceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().length ?? 0,
     hasSupabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()),
