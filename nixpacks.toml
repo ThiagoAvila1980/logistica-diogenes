@@ -1,0 +1,19 @@
+# Coolify/Nixpacks — app principal (Next.js).
+#
+# Trava o build/start de PRODUÇÃO. Sem este arquivo, o Coolify dependia do
+# comando configurado no painel — que estava em `next dev` e servia o site sem
+# CSS no mobile (o dev server troca os nomes dos chunks a cada recompile, então
+# navegadores com a aba em cache pedem URLs de CSS/JS que já não existem -> 404).
+#
+# build:clean apaga o .next antes de buildar, evitando misturar saída de um
+# build anterior. start = `next start` (build de produção real).
+providers = ["node"]
+
+[phases.build]
+cmds = ["npm run build:clean"]
+
+[start]
+cmd = "npm run start"
+
+[variables]
+NEXT_TELEMETRY_DISABLED = "1"
