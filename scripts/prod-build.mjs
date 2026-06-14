@@ -9,8 +9,19 @@ import { spawnSync } from "node:child_process";
 // pede URLs de CSS/JS que não existem mais (404) e a página renderiza SEM
 // nenhum estilo. Apagar o `.next` antes de cada build elimina essa classe de bug.
 
-rmSync(".next", { recursive: true, force: true });
-console.log("[prod-build] Pasta .next removida.");
+// No Coolify/Docker o .next/cache é montado via BuildKit e não pode ser
+// deletado (EBUSY). Nesses casos simplesmente pulamos — o container sempre
+// começa do zero, então não há risco de chunks órfãos.
+try {
+  rmSync(".next", { recursive: true, force: true });
+  console.log("[prod-build] Pasta .next removida.");
+} catch (err) {
+  if (err.code === "EBUSY") {
+    console.log("[prod-build] .next em uso (mount de cache do Docker) — pulando remoção.");
+  } else {
+    throw err;
+  }
+}
 
 console.log("[prod-build] Iniciando: next build");
 const result = spawnSync("next", ["build"], {
