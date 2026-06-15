@@ -14,6 +14,10 @@ import {
 } from "@/lib/workflow/measurement-actions";
 import { vehicleMockStore } from "@/lib/data/admin-mock-store";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
+import {
+  aggregateInstallationStepsFromItems,
+  aggregateTransportStepsFromItems,
+} from "@/lib/workflow/aggregates";
 import type { InstallationDailyNote, MeasurementLineItem } from "@/lib/workflow/schemas";
 
 type MockMeasurement = {
@@ -355,6 +359,7 @@ export const mockRepository = {
           ? {
               instalacaoEstruturalFeita: false,
               instalacaoVidrosFeita: false,
+              instalacaoAcabamentoFeito: false,
             }
           : null,
       };
@@ -631,6 +636,58 @@ export const mockRepository = {
             vehicleDescription: vehicle?.description ?? null,
           },
         ];
+      }),
+    );
+  },
+
+  getTransportStepsForOrders(osIds: string[]) {
+    return Object.fromEntries(
+      osIds.map((osId) => {
+        const m = findMeasurement(osId);
+        const items = (m?.items ?? []) as MeasurementLineItem[];
+        return [osId, aggregateTransportStepsFromItems(items)];
+      }),
+    );
+  },
+
+  updateItemTransportNotes(
+    osId: string,
+    itemId: string,
+    observacoes: string | null,
+  ): { success: true } | { success: false; message: string } {
+    const m = findMeasurement(osId);
+    if (!m) return { success: false, message: "OS não encontrada" };
+
+    const items = (m.items ?? []) as MeasurementLineItem[];
+    const index = items.findIndex((item) => item.id === itemId);
+    if (index === -1) return { success: false, message: "Vão não encontrado" };
+
+    const prev = items[index].transportProgress ?? {
+      perfilEstrutural: false,
+      perfilTotal: false,
+      acessorios: false,
+      vidros: false,
+    };
+
+    items[index] = {
+      ...items[index],
+      transportProgress: {
+        ...prev,
+        observacoes: observacoes ?? undefined,
+      },
+    };
+
+    m.items = items;
+    m.updatedAt = new Date();
+    return { success: true };
+  },
+
+  getInstallationStepsForOrders(osIds: string[]) {
+    return Object.fromEntries(
+      osIds.map((osId) => {
+        const m = findMeasurement(osId);
+        const items = (m?.items ?? []) as MeasurementLineItem[];
+        return [osId, aggregateInstallationStepsFromItems(items)];
       }),
     );
   },

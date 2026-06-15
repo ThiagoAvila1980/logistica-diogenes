@@ -4,6 +4,7 @@ const KANBAN_PHASE_MODULE_PATH: Record<string, string> = {
   plano_corte: "/production",
   transporte: "/logistics",
   instalacao: "/installation",
+  concluidos: "/installation",
 };
 
 /**

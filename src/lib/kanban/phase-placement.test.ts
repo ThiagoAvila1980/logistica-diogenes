@@ -67,10 +67,50 @@ describe("getKanbanPhaseIdsForOrder", () => {
         installationSteps: {
           instalacaoEstruturalFeita: false,
           instalacaoVidrosFeita: false,
+          instalacaoAcabamentoFeito: false,
         },
       }),
     );
 
     expect(phases).toEqual(["instalacao"]);
+  });
+
+  it("remove OS da coluna instalação quando instalação concluída", () => {
+    const phases = getKanbanPhaseIdsForOrder(
+      makeOrder({
+        status: "instalacao_vidros",
+        installationSteps: {
+          instalacaoEstruturalFeita: true,
+          instalacaoVidrosFeita: true,
+          instalacaoAcabamentoFeito: true,
+        },
+      }),
+    );
+
+    expect(phases).not.toContain("instalacao");
+    expect(phases).toContain("concluidos");
+  });
+
+  it("envia OS em transporte paralelo para concluídos quando instalação concluída", () => {
+    const phases = getKanbanPhaseIdsForOrder(
+      makeOrder({
+        status: "transporte_levar_vidro",
+        transportSteps: {
+          levarPerfilEstrutural: true,
+          levarPerfilTotal: true,
+          levarAcessorios: true,
+          levarVidros: true,
+          transporteConcluido: true,
+        },
+        installationSteps: {
+          instalacaoEstruturalFeita: true,
+          instalacaoVidrosFeita: true,
+          instalacaoAcabamentoFeito: true,
+        },
+      }),
+    );
+
+    expect(phases).not.toContain("instalacao");
+    expect(phases).toContain("concluidos");
   });
 });

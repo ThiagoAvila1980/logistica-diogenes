@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { CalendarDays, ChevronRight, Truck } from "lucide-react";
 import { PriorityBadge } from "@/components/dashboard/priority-badge";
-import { STATUS_LABELS } from "@/lib/workflow/status-machine";
+import {
+  TRANSPORT_STEP_LABELS,
+  WorkflowStepBadges,
+} from "@/components/dashboard/workflow-step-badges";
 import type { OrderListItem } from "@/lib/data/types";
 import type { LogisticsSummary } from "@/lib/data/logistics";
+import type { TransportSteps } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { formatBrDate } from "@/lib/date-format";
 import { cn } from "@/lib/utils";
@@ -11,11 +15,13 @@ import { cn } from "@/lib/utils";
 type LogisticsOrderCardProps = {
   order: OrderListItem;
   logistics?: LogisticsSummary | null;
+  transportSteps?: TransportSteps | null;
 };
 
 export function LogisticsOrderCard({
   order,
   logistics,
+  transportSteps,
 }: LogisticsOrderCardProps) {
   const vehicleLabel =
     logistics?.vehiclePlate != null
@@ -25,6 +31,11 @@ export function LogisticsOrderCard({
       : order.status.startsWith("transporte_") && order.status !== "transporte_levar_vidro"
         ? "Veículo não atribuído"
         : null;
+
+  const stepBadges = TRANSPORT_STEP_LABELS.map(({ key, label }) => ({
+    label,
+    done: transportSteps?.[key] ?? false,
+  }));
 
   return (
     <Link
@@ -48,9 +59,7 @@ export function LogisticsOrderCard({
           >
             {order.clientName}
           </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {STATUS_LABELS[order.status]}
-          </p>
+          <WorkflowStepBadges steps={stepBadges} />
         </div>
         <ChevronRight className="h-5 w-5 shrink-0 text-primary/30 transition-colors group-hover:text-primary" />
       </div>

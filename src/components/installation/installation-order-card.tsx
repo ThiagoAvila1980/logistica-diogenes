@@ -1,17 +1,30 @@
 import Link from "next/link";
 import { CalendarDays, ChevronRight } from "lucide-react";
 import { PriorityBadge } from "@/components/dashboard/priority-badge";
-import { STATUS_LABELS } from "@/lib/workflow/status-machine";
+import {
+  INSTALLATION_STEP_LABELS,
+  WorkflowStepBadges,
+} from "@/components/dashboard/workflow-step-badges";
 import type { OrderListItem } from "@/lib/data/types";
+import type { InstallationSteps } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { formatBrDate } from "@/lib/date-format";
 import { cn } from "@/lib/utils";
 
 type InstallationOrderCardProps = {
   order: OrderListItem;
+  installationSteps?: InstallationSteps | null;
 };
 
-export function InstallationOrderCard({ order }: InstallationOrderCardProps) {
+export function InstallationOrderCard({
+  order,
+  installationSteps,
+}: InstallationOrderCardProps) {
+  const stepBadges = INSTALLATION_STEP_LABELS.map(({ key, label }) => ({
+    label,
+    done: installationSteps?.[key] ?? false,
+  }));
+
   return (
     <Link
       href={`/installation/${order.id}`}
@@ -34,9 +47,7 @@ export function InstallationOrderCard({ order }: InstallationOrderCardProps) {
           >
             {order.clientName}
           </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {STATUS_LABELS[order.status]}
-          </p>
+          <WorkflowStepBadges steps={stepBadges} />
         </div>
         <ChevronRight className="h-5 w-5 shrink-0 text-primary/30 transition-colors group-hover:text-primary" />
       </div>

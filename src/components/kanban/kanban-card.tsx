@@ -3,13 +3,13 @@
 import type React from "react";
 import Link from "next/link";
 import { Draggable } from "@hello-pangea/dnd";
-import { GripVertical } from "lucide-react";
+import { GripVertical, BadgeCheck } from "lucide-react";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { formatBrDate } from "@/lib/date-format";
 import { getOsModuleHrefForKanbanPhase } from "@/lib/os-module-href";
 import { cn } from "@/lib/utils";
 import type { KanbanOrderItem } from "@/lib/data/kanban";
-import { KanbanStatusBadge } from "./kanban-status-badge";
+import { INSTALLATION_STEP_LABELS } from "@/components/dashboard/workflow-step-badges";
 
 const PRIORITY_BORDER: Record<string, string> = {
   normal: "border-l-border",
@@ -21,6 +21,7 @@ const MEASUREMENT_PHASE = "medicao";
 const CUTTING_PHASE = "plano_corte";
 const TRANSPORT_PHASE = "transporte";
 const INSTALLATION_PHASE = "instalacao";
+const CONCLUDED_PHASE = "concluidos";
 
 type KanbanCardProps = {
   os: KanbanOrderItem;
@@ -87,6 +88,7 @@ export function KanbanCard({
   const isCuttingColumn = phaseId === CUTTING_PHASE;
   const isTransportColumn = phaseId === TRANSPORT_PHASE;
   const isInstallationColumn = phaseId === INSTALLATION_PHASE;
+  const isConcludedColumn = phaseId === CONCLUDED_PHASE;
 
   return (
     <Draggable
@@ -232,19 +234,14 @@ export function KanbanCard({
                 </div>
               ) : isInstallationColumn ? (
                 <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                  {(
-                    [
-                      { key: "instalacaoEstruturalFeita", label: "Estru." },
-                      { key: "instalacaoVidrosFeita", label: "Vidros" },
-                    ] as const
-                  ).map(({ key, label }) => {
+                  {INSTALLATION_STEP_LABELS.map(({ key, label }) => {
                     const done = os.installationSteps?.[key] ?? false;
                     return (
                       <span
                         key={key}
                         className={cn(
                           "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
-                      text.badge,
+                          text.badge,
                           done
                             ? "bg-success-subtle text-success-foreground"
                             : "bg-muted text-muted-foreground",
@@ -255,19 +252,15 @@ export function KanbanCard({
                     );
                   })}
                 </div>
-              ) : (
-                <>
-                  <KanbanStatusBadge
-                    status={os.status}
-                    compact
-                    className="sm:hidden"
-                  />
-                  <KanbanStatusBadge
-                    status={os.status}
-                    className="hidden max-w-full sm:inline-flex"
-                  />
-                </>
-              )}
+              ) : isConcludedColumn ? (
+                <span
+                  className="inline-flex items-center text-success"
+                  title="Concluído"
+                  aria-label="Concluído"
+                >
+                  <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+                </span>
+              ) : null}
             </div>
           </div>
         </article>

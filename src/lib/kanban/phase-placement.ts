@@ -45,17 +45,32 @@ function isTransportKanbanPhaseComplete(os: KanbanOrderItem): boolean {
   return os.transportSteps?.transporteConcluido === true;
 }
 
+function isInstallationKanbanPhaseComplete(os: KanbanOrderItem): boolean {
+  const inst = os.installationSteps;
+  if (!inst) return false;
+  return (
+    inst.instalacaoEstruturalFeita &&
+    inst.instalacaoVidrosFeita &&
+    inst.instalacaoAcabamentoFeito
+  );
+}
+
 /** Fases em que a OS deve aparecer no kanban (suporta colunas paralelas). */
 export function getKanbanPhaseIdsForOrder(os: KanbanOrderItem): string[] {
   const statusPhaseId = getPhaseIdForStatus(os.status);
   const phases = new Set<string>();
+  const installationComplete = isInstallationKanbanPhaseComplete(os);
 
   if (statusPhaseId) {
     const hideTransportColumn =
       statusPhaseId === "transporte" && isTransportKanbanPhaseComplete(os);
 
     if (!hideTransportColumn) {
-      phases.add(statusPhaseId);
+      if (statusPhaseId === "instalacao") {
+        phases.add(installationComplete ? "concluidos" : "instalacao");
+      } else {
+        phases.add(statusPhaseId);
+      }
     }
   }
 
@@ -70,7 +85,7 @@ export function getKanbanPhaseIdsForOrder(os: KanbanOrderItem): string[] {
     transport.levarPerfilEstrutural &&
     isTransportPhaseStatus(os.status)
   ) {
-    phases.add("instalacao");
+    phases.add(installationComplete ? "concluidos" : "instalacao");
   }
 
   return [...phases];

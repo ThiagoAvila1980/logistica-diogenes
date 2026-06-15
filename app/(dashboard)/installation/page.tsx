@@ -1,16 +1,32 @@
 import { listServiceOrders } from "@/lib/data/orders";
-import { InstallationOrderCard } from "@/components/installation/installation-order-card";
+import { getInstallationStepsForOrders } from "@/lib/data/installation-steps-batch";
+import { InstallationOrderIndex } from "@/components/installation/installation-order-index";
 import { PageHeading } from "@/components/dashboard/page-heading";
-import { ORDER_INDEX_GRID_CLASS } from "@/lib/ui/order-index-grid";
+import { getSession } from "@/lib/auth/session";
+import {
+  isActiveInstallationListing,
+  isInstallationIndexCandidate,
+} from "@/lib/installation/filter-orders";
 import { Hammer } from "lucide-react";
 
 export default async function InstallationIndexPage() {
+  const session = await getSession();
+  const roles = session?.roles ?? [];
   const orders = await listServiceOrders();
-  const installationOrders = orders.filter(
-    (o) =>
-      o.status.startsWith("transporte_") ||
-      o.status.startsWith("instalacao") ||
-      o.status === "concluido",
+
+  const candidates = orders.filter((order) =>
+    isInstallationIndexCandidate(order, roles),
+  );
+
+  const installationStepsByOs = await getInstallationStepsForOrders(
+    candidates.map((order) => order.id),
+  );
+
+  const installationOrders = candidates.filter((order) =>
+    isActiveInstallationListing(
+      order,
+      installationStepsByOs[order.id] ?? null,
+    ),
   );
 
   return (
@@ -22,21 +38,10 @@ export default async function InstallationIndexPage() {
         icon={Hammer}
       />
 
-      {installationOrders.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-primary/20 bg-card p-8 text-center premium-card">
-          <p className="text-sm text-muted-foreground">
-            Nenhuma medição em instalação no momento.
-          </p>
-        </div>
-      ) : (
-        <ul className={ORDER_INDEX_GRID_CLASS}>
-          {installationOrders.map((order) => (
-            <li key={order.id} className="min-h-0">
-              <InstallationOrderCard order={order} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <InstallationOrderIndex
+        orders={installationOrders}
+        installationStepsByOs={installationStepsByOs}
+      />
     </div>
   );
 }

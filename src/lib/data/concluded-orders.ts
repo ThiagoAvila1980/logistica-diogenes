@@ -27,6 +27,7 @@ export type ConcludedOrderItem = {
   clientName: string;
   status: OsStatus;
   priority: "normal" | "alta" | "urgente";
+  scheduledDate: Date | null;
   updatedAt: Date;
   vaos: VaoInstallationProgress[];
   totalVaos: number;
@@ -57,6 +58,7 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
       clientName: measurementClientName,
       status: measurements.etapa,
       priority: measurements.priority,
+      scheduledDate: measurements.scheduledDate,
       updatedAt: measurements.updatedAt,
       items: measurements.items,
       hasMeasurement: hasMeasurementItems,
@@ -94,6 +96,7 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
         clientName: r.clientName,
         status: r.status,
         priority: r.priority,
+        scheduledDate: r.scheduledDate,
         updatedAt: r.updatedAt,
         vaos,
         totalVaos: vaos.length,

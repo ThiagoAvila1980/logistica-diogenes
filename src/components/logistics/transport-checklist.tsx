@@ -29,6 +29,7 @@ import {
   formatVaoItemFullLabel,
 } from "@/lib/measurement/vao-item-subtitle";
 import { InstallerSelector } from "@/components/logistics/installer-selector";
+import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
 
 type TransportStep = "perfilEstrutural" | "perfilTotal" | "acessorios" | "vidros";
 
@@ -406,6 +407,13 @@ export function TransportChecklist({
                         );
                       })}
                     </div>
+
+                    <TransportVaoNotesField
+                      osId={osId}
+                      itemId={item.id}
+                      vaoLabel={`Vão ${index + 1}`}
+                      initialNotes={item.transportProgress?.observacoes}
+                    />
 
                     {/* Instalador por vão */}
                     {(canAssignInstaller || item.installationProgress?.installerId) && (

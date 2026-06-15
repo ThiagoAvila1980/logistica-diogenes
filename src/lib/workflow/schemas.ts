@@ -59,6 +59,7 @@ export const itemTransportProgressSchema = z.object({
   perfilTotal: z.boolean().default(false),
   acessorios: z.boolean().default(false),
   vidros: z.boolean().default(false),
+  observacoes: z.string().max(2000).optional(),
 });
 
 export type ItemTransportProgress = z.infer<typeof itemTransportProgressSchema>;

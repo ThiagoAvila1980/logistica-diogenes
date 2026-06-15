@@ -1,17 +1,30 @@
 import { listServiceOrders } from "@/lib/data/orders";
 import { getLogisticsSummaries } from "@/lib/data/logistics";
-import { LogisticsOrderCard } from "@/components/logistics/logistics-order-card";
+import { getTransportStepsForOrders } from "@/lib/data/transport-steps-batch";
+import { LogisticsOrderIndex } from "@/components/logistics/logistics-order-index";
 import { PageHeading } from "@/components/dashboard/page-heading";
-import { ORDER_INDEX_GRID_CLASS } from "@/lib/ui/order-index-grid";
+import { getSession } from "@/lib/auth/session";
+import {
+  isActiveTransportListing,
+  isLogisticsIndexCandidate,
+} from "@/lib/logistics/filter-orders";
 import { Truck } from "lucide-react";
 
 export default async function LogisticsIndexPage() {
+  const session = await getSession();
+  const roles = session?.roles ?? [];
   const orders = await listServiceOrders();
-  const logisticsOrders = orders.filter(
-    (o) =>
-      o.status.startsWith("transporte_") ||
-      o.status.startsWith("instalacao") ||
-      o.status === "concluido",
+
+  const candidates = orders.filter((order) =>
+    isLogisticsIndexCandidate(order, roles),
+  );
+
+  const transportStepsByOs = await getTransportStepsForOrders(
+    candidates.map((order) => order.id),
+  );
+
+  const logisticsOrders = candidates.filter((order) =>
+    isActiveTransportListing(order, transportStepsByOs[order.id] ?? null),
   );
 
   const summaries = await getLogisticsSummaries(
@@ -27,24 +40,11 @@ export default async function LogisticsIndexPage() {
         icon={Truck}
       />
 
-      {logisticsOrders.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-primary/20 bg-card p-8 text-center premium-card">
-          <p className="text-sm text-muted-foreground">
-            Nenhuma medição em transporte no momento.
-          </p>
-        </div>
-      ) : (
-        <ul className={ORDER_INDEX_GRID_CLASS}>
-          {logisticsOrders.map((order) => (
-            <li key={order.id} className="min-h-0">
-              <LogisticsOrderCard
-                order={order}
-                logistics={summaries[order.id] ?? null}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+      <LogisticsOrderIndex
+        orders={logisticsOrders}
+        summaries={summaries}
+        transportStepsByOs={transportStepsByOs}
+      />
     </div>
   );
 }

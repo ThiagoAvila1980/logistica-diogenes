@@ -22,6 +22,7 @@ export type TransportKanbanSteps = {
 export type InstallationKanbanSteps = {
   instalacaoEstruturalFeita: boolean;
   instalacaoVidrosFeita: boolean;
+  instalacaoAcabamentoFeito: boolean;
 };
 
 export type KanbanOrderItem = {
