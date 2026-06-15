@@ -17,3 +17,4 @@ cmd = "npm run start"
 
 [variables]
 NEXT_TELEMETRY_DISABLED = "1"
+NODE_OPTIONS = "--max-old-space-size=4096"
