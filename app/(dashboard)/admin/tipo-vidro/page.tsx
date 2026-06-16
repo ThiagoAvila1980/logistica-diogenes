@@ -22,6 +22,8 @@ export default async function AdminTipoVidroPage() {
         description="Informe a descrição do tipo de vidro."
         fieldLabel="Descrição"
         placeholder="Ex: Temperado 8mm, Laminado"
+        entityLabel="tipo de vidro"
+        deleteDescription="Esta ação é permanente. O tipo de vidro será removido do catálogo."
         items={items}
         saveAction={saveTipoVidro}
         deleteAction={deleteTipoVidroItem}

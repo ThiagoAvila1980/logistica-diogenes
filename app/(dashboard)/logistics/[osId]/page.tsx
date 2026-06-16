@@ -5,7 +5,7 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { getTransportDetailForOs } from "@/lib/data/transport-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { listVehiclesForTransportSelection } from "@/lib/data/vehicles";
-import { listActiveInstallers } from "@/lib/data/installers";
+import { listActiveDrivers } from "@/lib/data/drivers";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
@@ -35,7 +35,7 @@ export default async function LogisticsOsPage({ params }: Props) {
   const vehicles = await listVehiclesForTransportSelection(osId);
   const canChangeVehicle = true;
 
-  const installers = isManager ? await listActiveInstallers() : [];
+  const drivers = isManager ? await listActiveDrivers() : [];
 
   if (!canOperateTransportModule(order.status, detail.cuttingSteps)) {
     return (
@@ -110,8 +110,8 @@ export default async function LogisticsOsPage({ params }: Props) {
         items={detail.items}
         vehicleId={detail.vehicleId}
         lookups={lookups}
-        installers={installers}
-        canAssignInstaller={isManager}
+        drivers={drivers}
+        canAssignDriver={isManager}
       />
     </>
   );

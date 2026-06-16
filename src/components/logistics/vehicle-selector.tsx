@@ -111,7 +111,7 @@ export function VehicleSelector({
   }
 
   return (
-    <Card className="mb-4 min-w-0 overflow-hidden border-warning-border bg-warning-muted/60">
+    <Card className="mb-4 min-w-0 overflow-hidden border-info-border bg-info-muted/60">
       <CardHeader className="p-0">
         <button
           type="button"
@@ -121,7 +121,7 @@ export function VehicleSelector({
           aria-controls="vehicle-selector-panel"
         >
           <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-            <Car className="h-4 w-4 shrink-0 text-warning" />
+            <Car className="h-4 w-4 shrink-0 text-info" />
             <span className="truncate">
               {vehicleId && assignedLabel ? assignedLabel : "Selecionar Veículo"}
             </span>

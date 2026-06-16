@@ -4,6 +4,7 @@ import { measurements } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session-types";
 import { getVisibleStatusesForRoles } from "@/lib/auth/order-access";
 import { canViewAllOrders } from "@/lib/auth/permissions";
+import { TRANSPORT_PHASE_STATUSES, INSTALLATION_PHASE_STATUSES } from "@/lib/transport-gates";
 import {
   hasMeasurementItems,
   measurementClientName,
@@ -25,13 +26,24 @@ function buildOrderAccessWhere(session: SessionUser | null): SQL | undefined {
       ));
 
   if (isInstaladorOnly) {
-    if (!visibleStatuses?.length) return undefined;
-    return inArray(measurements.etapa, visibleStatuses);
+    const instaladorListingStatuses = [
+      ...(visibleStatuses ?? []),
+      ...TRANSPORT_PHASE_STATUSES,
+    ];
+    const uniqueStatuses = [...new Set(instaladorListingStatuses)];
+    if (!uniqueStatuses.length) return undefined;
+    return inArray(measurements.etapa, uniqueStatuses);
   }
 
   const assignedClause = or(
     isNull(measurements.assignedUserId),
     eq(measurements.assignedUserId, session.userId),
+    ...(session.roles.includes("motorista") && !canViewAllOrders(session.roles)
+      ? [inArray(measurements.etapa, [...TRANSPORT_PHASE_STATUSES])]
+      : []),
+    ...(session.roles.includes("instalador") && !canViewAllOrders(session.roles)
+      ? [inArray(measurements.etapa, [...INSTALLATION_PHASE_STATUSES])]
+      : []),
   );
 
   if (!visibleStatuses?.length) {

@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useCallback, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useCallback, useState } from "react";
 import { useRunOnceOnActionSuccess } from "@/hooks/use-run-once-on-action-success";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus } from "lucide-react";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
 import type { LookupAdminRow } from "@/lib/data/lookup-admin-db";
+import { DeleteRecordDialog } from "@/components/admin/delete-record-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +41,6 @@ export function TipoEnvidracamentoAdminPanel({
   saveAction,
   deleteAction,
 }: TipoEnvidracamentoAdminPanelProps) {
-  const router = useRouter();
   const [createState, createAction, createPending] = useActionState<
     AdminActionResult | null,
     FormData
@@ -52,8 +51,6 @@ export function TipoEnvidracamentoAdminPanel({
     AdminActionResult | null,
     FormData
   >(saveAction, null);
-  const [deletePending, startDelete] = useTransition();
-  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [createFormKey, setCreateFormKey] = useState(0);
   const [editFormKey, setEditFormKey] = useState(0);
 
@@ -126,12 +123,6 @@ export function TipoEnvidracamentoAdminPanel({
         </CardContent>
       </Card>
 
-      {deleteMessage && (
-        <Alert variant="destructive">
-          <AlertDescription>{deleteMessage}</AlertDescription>
-        </Alert>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle>Tipos cadastrados ({items.length})</CardTitle>
@@ -179,25 +170,13 @@ export function TipoEnvidracamentoAdminPanel({
                     <Pencil className="h-4 w-4" />
                     Editar
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={deletePending || item.usageCount > 0}
-                    onClick={() => {
-                      setDeleteMessage(null);
-                      startDelete(async () => {
-                        const result = await deleteAction(item.id);
-                        if (!result.success) {
-                          setDeleteMessage(result.message);
-                          return;
-                        }
-                        router.refresh();
-                      });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <DeleteRecordDialog
+                    recordName={item.descricao}
+                    entityLabel="tipo de envidraçamento"
+                    description="Esta ação é permanente. O tipo de envidraçamento será removido do catálogo, incluindo a imagem de referência."
+                    disabled={item.usageCount > 0}
+                    onConfirm={() => deleteAction(item.id)}
+                  />
                 </div>
               </div>
             ))

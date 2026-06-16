@@ -22,6 +22,8 @@ export default async function AdminCoresPage() {
         description="Informe a descrição da cor do perfil."
         fieldLabel="Descrição"
         placeholder="Ex: Branco, Bronze, Preto"
+        entityLabel="cor"
+        deleteDescription="Esta ação é permanente. A cor será removida do catálogo."
         items={items}
         saveAction={saveCor}
         deleteAction={deleteCor}

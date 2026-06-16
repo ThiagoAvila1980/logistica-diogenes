@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState, useCallback, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useCallback, useState } from "react";
 import { useRunOnceOnActionSuccess } from "@/hooks/use-run-once-on-action-success";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus } from "lucide-react";
 import {
   deleteVehicle,
   saveVehicle,
   type AdminActionResult,
 } from "@/actions/vehicle-actions";
+import { DeleteRecordDialog } from "@/components/admin/delete-record-dialog";
 import type { VehicleRow } from "@/lib/data/admin-mock-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/dialog";
 
 export function VehicleAdminPanel({ vehicles }: { vehicles: VehicleRow[] }) {
-  const router = useRouter();
   const [createState, createAction, createPending] = useActionState<
     AdminActionResult | null,
     FormData
@@ -41,8 +40,6 @@ export function VehicleAdminPanel({ vehicles }: { vehicles: VehicleRow[] }) {
     AdminActionResult | null,
     FormData
   >(saveVehicle, null);
-  const [deletePending, startDelete] = useTransition();
-  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [createFormKey, setCreateFormKey] = useState(0);
 
   const onCreateSuccess = useCallback(() => {
@@ -121,12 +118,6 @@ export function VehicleAdminPanel({ vehicles }: { vehicles: VehicleRow[] }) {
         </CardContent>
       </Card>
 
-      {deleteMessage && (
-        <Alert variant="destructive">
-          <AlertDescription>{deleteMessage}</AlertDescription>
-        </Alert>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle>Frota ({vehicles.length})</CardTitle>
@@ -166,25 +157,14 @@ export function VehicleAdminPanel({ vehicles }: { vehicles: VehicleRow[] }) {
                     <Pencil className="h-4 w-4" />
                     Editar
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={deletePending || vehicle.inUse}
-                    onClick={() => {
-                      setDeleteMessage(null);
-                      startDelete(async () => {
-                        const result = await deleteVehicle(vehicle.id);
-                        if (!result.success) {
-                          setDeleteMessage(result.message);
-                          return;
-                        }
-                        router.refresh();
-                      });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <DeleteRecordDialog
+                    recordName={vehicle.description}
+                    recordDetail={vehicle.plate}
+                    entityLabel="veículo"
+                    description="Esta ação é permanente. O veículo será removido da frota."
+                    disabled={vehicle.inUse}
+                    onConfirm={() => deleteVehicle(vehicle.id)}
+                  />
                 </div>
               </div>
             ))

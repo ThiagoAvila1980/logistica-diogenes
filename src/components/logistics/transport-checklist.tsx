@@ -23,12 +23,12 @@ import { cn } from "@/lib/utils";
 import { updateItemTransportStepAction } from "@/actions/transport-actions";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
-import type { InstallerOption } from "@/lib/data/installers-db";
+import type { DriverOption } from "@/lib/data/drivers-db";
 import {
   buildVaoItemSubtitle,
   formatVaoItemFullLabel,
 } from "@/lib/measurement/vao-item-subtitle";
-import { InstallerSelector } from "@/components/logistics/installer-selector";
+import { DriverSelector } from "@/components/logistics/driver-selector";
 import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
 
 type TransportStep = "perfilEstrutural" | "perfilTotal" | "acessorios" | "vidros";
@@ -99,8 +99,8 @@ type Props = {
   items: MeasurementLineItem[];
   vehicleId: string | null;
   lookups?: MeasurementLookups;
-  installers?: InstallerOption[];
-  canAssignInstaller?: boolean;
+  drivers?: DriverOption[];
+  canAssignDriver?: boolean;
 };
 
 export function TransportChecklist({
@@ -109,8 +109,8 @@ export function TransportChecklist({
   items,
   vehicleId,
   lookups,
-  installers = [],
-  canAssignInstaller = false,
+  drivers = [],
+  canAssignDriver = false,
 }: Props) {
   const isLatePhase =
     osStatus.startsWith("instalacao") || osStatus === "concluido";
@@ -415,25 +415,25 @@ export function TransportChecklist({
                       initialNotes={item.transportProgress?.observacoes}
                     />
 
-                    {/* Instalador por vão */}
-                    {(canAssignInstaller || item.installationProgress?.installerId) && (
+                    {/* Motorista por vão */}
+                    {(canAssignDriver || item.transportProgress?.driverId) && (
                       <div className="mt-2.5">
-                        <InstallerSelector
+                        <DriverSelector
                           osId={osId}
                           itemId={item.id}
-                          installerId={item.installationProgress?.installerId ?? null}
-                          installerName={
-                            item.installationProgress?.installerId
-                              ? (installers.find((i) => i.id === item.installationProgress?.installerId)?.name ?? null)
+                          driverId={item.transportProgress?.driverId ?? null}
+                          driverName={
+                            item.transportProgress?.driverId
+                              ? (drivers.find((d) => d.id === item.transportProgress?.driverId)?.name ?? null)
                               : null
                           }
-                          scheduledInstallationDate={
-                            item.installationProgress?.scheduledInstallationDate
-                              ? new Date(item.installationProgress.scheduledInstallationDate)
+                          scheduledTransportDate={
+                            item.transportProgress?.scheduledTransportDate
+                              ? new Date(item.transportProgress.scheduledTransportDate)
                               : null
                           }
-                          installers={installers}
-                          canChange={canAssignInstaller}
+                          drivers={drivers}
+                          canChange={canAssignDriver}
                         />
                       </div>
                     )}

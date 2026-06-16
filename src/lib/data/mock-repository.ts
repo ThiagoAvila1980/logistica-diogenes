@@ -19,6 +19,11 @@ import {
   aggregateTransportStepsFromItems,
 } from "@/lib/workflow/aggregates";
 import type { InstallationDailyNote, MeasurementLineItem } from "@/lib/workflow/schemas";
+import {
+  collectDriverIdsFromMeasurementItems,
+  mergeDriverIds,
+} from "@/lib/logistics/transport-driver-access";
+import { collectInstallerIdsFromMeasurementItems } from "@/lib/installation/installation-installer-access";
 
 type MockMeasurement = {
   id: string;
@@ -54,6 +59,7 @@ type MockCutting = {
 type MockTransport = {
   idMedicao: string;
   vehicleId?: string | null;
+  driverId?: string | null;
 };
 
 type MockInstallation = {
@@ -276,6 +282,7 @@ let transportStore: MockTransport[] = [
   {
     idMedicao: "a1111111-1111-4111-8111-111111111106",
     vehicleId: "b1000000-0000-4000-8000-000000000001",
+    driverId: DEMO_MOTORISTA,
   },
 ];
 
@@ -635,6 +642,37 @@ export const mockRepository = {
             vehiclePlate: vehicle?.plate ?? null,
             vehicleDescription: vehicle?.description ?? null,
           },
+        ];
+      }),
+    );
+  },
+
+  getDriverIdsByOsIds(osIds: string[]) {
+    return Object.fromEntries(
+      osIds.map((osId) => {
+        const measurement = findMeasurement(osId);
+        const itemDrivers = collectDriverIdsFromMeasurementItems(
+          measurement?.items,
+        );
+        const transport = transportStore.find((t) => t.idMedicao === osId);
+        return [
+          osId,
+          mergeDriverIds(
+            itemDrivers,
+            transport?.driverId ? [transport.driverId] : [],
+          ),
+        ];
+      }),
+    );
+  },
+
+  getInstallerIdsByOsIds(osIds: string[]) {
+    return Object.fromEntries(
+      osIds.map((osId) => {
+        const measurement = findMeasurement(osId);
+        return [
+          osId,
+          collectInstallerIdsFromMeasurementItems(measurement?.items),
         ];
       }),
     );

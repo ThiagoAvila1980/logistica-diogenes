@@ -3,12 +3,19 @@ import { osStatus } from "@/db/schema";
 import type { SessionUser } from "./session-types";
 import type { UserRole } from "./permissions";
 import { canViewAllOrders, hasAnyRole } from "./permissions";
+import { isTransportPhaseStatus, isInstallationPhaseStatus } from "@/lib/transport-gates";
+import { isAssignedTransportDriver } from "@/lib/logistics/transport-driver-access";
+import { isInstallerResponsibleForOrder } from "@/lib/installation/installation-installer-access";
 
 const ALL_OS_STATUSES = osStatus.enumValues;
 
 export type OrderAccessFields = {
   assignedUserId: string | null;
   status: OsStatus;
+  /** Motoristas designados no transporte (por vão ou log legado). */
+  driverIds?: readonly string[];
+  /** Instaladores designados na instalação (por vão). */
+  installerIds?: readonly string[];
 };
 
 /** Status visíveis no módulo de cada operador (alinhado aos filtros das páginas). */
@@ -58,7 +65,8 @@ export function getVisibleStatusesForRoles(
 /**
  * Operador vê OS atribuída a si ou sem responsável (pool).
  * Admin/gerente veem todas.
- * Instalador vê todas as OSs em fase de instalação/concluído.
+ * Instalador vê instalações somente quando designado por vão.
+ * Motorista vê transportes somente quando designado como motorista.
  */
 export function canAccessOrder(
   session: SessionUser,
@@ -66,8 +74,32 @@ export function canAccessOrder(
 ): boolean {
   if (canViewAllOrders(session.roles)) return true;
 
-  if (hasAnyRole(session.roles, ["instalador"])) {
-    return isStatusVisibleToRoles(session.roles, order.status);
+  if (isTransportPhaseStatus(order.status)) {
+    const canAsDriver =
+      hasAnyRole(session.roles, ["motorista"]) &&
+      isAssignedTransportDriver(session.userId, order.driverIds);
+    const canAsInstaller =
+      hasAnyRole(session.roles, ["instalador"]) &&
+      isInstallerResponsibleForOrder(
+        session.userId,
+        order.installerIds,
+        order.assignedUserId,
+      );
+
+    if (hasAnyRole(session.roles, ["motorista", "instalador"])) {
+      return canAsDriver || canAsInstaller;
+    }
+  }
+
+  if (
+    hasAnyRole(session.roles, ["instalador"]) &&
+    isInstallationPhaseStatus(order.status)
+  ) {
+    return isInstallerResponsibleForOrder(
+      session.userId,
+      order.installerIds,
+      order.assignedUserId,
+    );
   }
 
   const assigned =

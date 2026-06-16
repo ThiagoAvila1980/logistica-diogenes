@@ -55,11 +55,20 @@ describe("isInstallationIndexCandidate", () => {
     ).toBe(false);
   });
 
-  it("inclui transporte em paralelo apenas para admin/gerente", () => {
+  it("inclui transporte em paralelo para instalador", () => {
     expect(
       isInstallationIndexCandidate(
         makeOrder({ status: "transporte_levar_vidro" }),
         ["instalador"],
+      ),
+    ).toBe(true);
+  });
+
+  it("inclui transporte em paralelo apenas para admin/gerente", () => {
+    expect(
+      isInstallationIndexCandidate(
+        makeOrder({ status: "transporte_levar_vidro" }),
+        ["medidor"],
       ),
     ).toBe(false);
     expect(

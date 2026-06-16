@@ -1,6 +1,6 @@
 "use client";
 
-import { ResolvedImage } from "@/components/ui/resolved-image";
+import { DrawingPreview } from "@/components/production/drawing-preview";
 import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
 import { cn } from "@/lib/utils";
 
@@ -42,15 +42,11 @@ export function PhotoGallery({
       )}
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {displayUrls.map((url, index) => (
-          <li
-            key={`${url}-${index}`}
-            className="relative aspect-square overflow-hidden rounded-lg border bg-muted"
-          >
-            <ResolvedImage
+          <li key={`${url}-${index}`}>
+            <DrawingPreview
               src={url}
               alt={`Foto ${index + 1}`}
-              className="h-full w-full object-cover"
-              fallbackClassName="flex h-full items-center justify-center text-xs"
+              variant="thumbnail"
             />
           </li>
         ))}

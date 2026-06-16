@@ -160,7 +160,7 @@ export function DrawingPreview({
         className={cn(
           "group relative block cursor-zoom-in border-0 p-0 text-left",
           isThumbnail
-            ? "aspect-square w-full overflow-hidden rounded-lg border bg-muted"
+            ? "h-32 w-full overflow-hidden rounded-lg border bg-muted sm:h-36"
             : "w-full bg-card",
           className,
         )}
@@ -171,7 +171,7 @@ export function DrawingPreview({
           alt={alt}
           className={
             isThumbnail
-              ? "h-full w-full object-cover transition-transform group-hover:scale-105"
+              ? "h-full w-full object-contain transition-transform group-hover:scale-105"
               : "mx-auto max-h-[min(70vh,480px)] w-full object-contain"
           }
         />

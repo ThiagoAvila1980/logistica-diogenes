@@ -345,9 +345,6 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
               Painel Administrativo
             </h1>
           </div>
-          <p className="text-[12px] tabular-nums text-muted-foreground">
-            {orders.length} OS
-          </p>
         </div>
         <Button
           type="button"

@@ -5,7 +5,7 @@ import { Camera, ImageIcon, Loader2, X } from "lucide-react";
 import { uploadPhotos } from "@/actions/upload-actions";
 import { UPLOAD_MAX_FILES } from "@/lib/upload/config";
 import type { UploadScope } from "@/lib/upload/config";
-import { ResolvedImage } from "@/components/ui/resolved-image";
+import { DrawingPreview } from "@/components/production/drawing-preview";
 import { cn } from "@/lib/utils";
 
 export type PhotoUploadItem = {
@@ -220,29 +220,16 @@ export function PhotoUpload({
 
       {items.length > 0 && (
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="relative aspect-square overflow-hidden rounded-lg border bg-muted"
-            >
-              {item.preview ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={item.preview}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <ResolvedImage
-                  src={item.url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  fallbackClassName="flex h-full items-center justify-center text-xs"
-                />
-              )}
+          {items.map((item, index) => (
+            <li key={item.id} className="relative">
+              <DrawingPreview
+                src={item.preview ?? item.url}
+                alt={`Foto ${index + 1}`}
+                variant="thumbnail"
+              />
               <button
                 type="button"
-                className="absolute right-1 top-1 rounded-full bg-overlay/60 p-1 text-primary-foreground hover:bg-overlay/80"
+                className="absolute right-1 top-1 z-10 rounded-full bg-overlay/60 p-1 text-primary-foreground hover:bg-overlay/80"
                 onClick={() => removeItem(item.id)}
                 disabled={disabled || uploading}
                 aria-label="Remover foto"

@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useCallback, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useCallback, useState } from "react";
 import { useRunOnceOnActionSuccess } from "@/hooks/use-run-once-on-action-success";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus } from "lucide-react";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
 import type { LookupAdminRow } from "@/lib/data/lookup-admin-db";
+import { DeleteRecordDialog } from "@/components/admin/delete-record-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,8 @@ type LookupAdminPanelProps = {
   description: string;
   fieldLabel: string;
   placeholder: string;
+  entityLabel?: string;
+  deleteDescription?: string;
   items: LookupAdminRow[];
   saveAction: (
     prev: AdminActionResult | null,
@@ -43,11 +45,12 @@ export function LookupAdminPanel({
   description,
   fieldLabel,
   placeholder,
+  entityLabel = "registro",
+  deleteDescription = "Esta ação é permanente. O registro será removido do catálogo.",
   items,
   saveAction,
   deleteAction,
 }: LookupAdminPanelProps) {
-  const router = useRouter();
   const [createState, createAction, createPending] = useActionState<
     AdminActionResult | null,
     FormData
@@ -58,8 +61,6 @@ export function LookupAdminPanel({
     AdminActionResult | null,
     FormData
   >(saveAction, null);
-  const [deletePending, startDelete] = useTransition();
-  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const [createFormKey, setCreateFormKey] = useState(0);
 
   const onCreateSuccess = useCallback(() => {
@@ -127,12 +128,6 @@ export function LookupAdminPanel({
         </CardContent>
       </Card>
 
-      {deleteMessage && (
-        <Alert variant="destructive">
-          <AlertDescription>{deleteMessage}</AlertDescription>
-        </Alert>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle>
@@ -168,25 +163,13 @@ export function LookupAdminPanel({
                     <Pencil className="h-4 w-4" />
                     Editar
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={deletePending || item.usageCount > 0}
-                    onClick={() => {
-                      setDeleteMessage(null);
-                      startDelete(async () => {
-                        const result = await deleteAction(item.id);
-                        if (!result.success) {
-                          setDeleteMessage(result.message);
-                          return;
-                        }
-                        router.refresh();
-                      });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <DeleteRecordDialog
+                    recordName={item.descricao}
+                    entityLabel={entityLabel}
+                    description={deleteDescription}
+                    disabled={item.usageCount > 0}
+                    onConfirm={() => deleteAction(item.id)}
+                  />
                 </div>
               </div>
             ))

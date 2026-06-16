@@ -34,6 +34,8 @@ import {
   formatVaoItemFullLabel,
 } from "@/lib/measurement/vao-item-subtitle";
 import { InstallationDailyNotes } from "@/components/installation/installation-daily-notes";
+import { InstallerSelector } from "@/components/logistics/installer-selector";
+import type { InstallerOption } from "@/lib/data/installers-db";
 
 type InstStep = "estrutural" | "vidros" | "acabamento";
 
@@ -121,12 +123,7 @@ function VaoMediaPanel({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {allDrawings.length === 1 ? "Desenho" : `Desenhos (${allDrawings.length})`}
           </p>
-          <div
-            className={cn(
-              "grid gap-2",
-              allDrawings.length === 1 ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3",
-            )}
-          >
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {allDrawings.map((d, dIdx) => (
               <div key={d.id} className="overflow-hidden rounded-lg border bg-muted/30">
                 <DrawingPreview
@@ -184,6 +181,8 @@ type Props = {
   items: MeasurementLineItem[];
   dailyNotes?: InstallationDailyNote[];
   lookups?: MeasurementLookups;
+  installers?: InstallerOption[];
+  canAssignInstaller?: boolean;
 };
 
 export function InstallationChecklist({
@@ -192,6 +191,8 @@ export function InstallationChecklist({
   items,
   dailyNotes = [],
   lookups,
+  installers = [],
+  canAssignInstaller = false,
 }: Props) {
   const isLatePhase =
     osStatus.startsWith("instalacao") || osStatus === "concluido";
@@ -484,6 +485,32 @@ export function InstallationChecklist({
                 {/* Painel de mídia expansível */}
                 {isExpanded && (
                   <div className="px-3 pb-3">
+                    {(canAssignInstaller || item.installationProgress?.installerId) && (
+                      <div className="mt-2.5">
+                        <InstallerSelector
+                          osId={osId}
+                          itemId={item.id}
+                          installerId={item.installationProgress?.installerId ?? null}
+                          installerName={
+                            item.installationProgress?.installerId
+                              ? (installers.find(
+                                  (i) =>
+                                    i.id === item.installationProgress?.installerId,
+                                )?.name ?? null)
+                              : null
+                          }
+                          scheduledInstallationDate={
+                            item.installationProgress?.scheduledInstallationDate
+                              ? new Date(
+                                  item.installationProgress.scheduledInstallationDate,
+                                )
+                              : null
+                          }
+                          installers={installers}
+                          canChange={canAssignInstaller}
+                        />
+                      </div>
+                    )}
                     <VaoMediaPanel item={item} index={index} lookups={lookups} />
                   </div>
                 )}

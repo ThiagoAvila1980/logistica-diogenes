@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CheckCircle2, ChevronDown, Loader2, UserCheck } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronDown, Loader2, UserRound } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,64 +13,65 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { assignInstallerToVaoAction } from "@/actions/installer-actions";
-import type { InstallerOption } from "@/lib/data/installers-db";
+import { assignDriverToVaoAction } from "@/actions/transport-actions";
+import type { DriverOption } from "@/lib/data/drivers-db";
 import { cn } from "@/lib/utils";
 
 type Props = {
   osId: string;
   itemId: string;
-  installerId: string | null;
-  installerName: string | null;
-  scheduledInstallationDate: Date | null;
-  installers: InstallerOption[];
+  driverId: string | null;
+  driverName: string | null;
+  scheduledTransportDate: Date | null;
+  drivers: DriverOption[];
   canChange: boolean;
 };
 
-export function InstallerSelector({
+export function DriverSelector({
   osId,
   itemId,
-  installerId,
-  installerName,
-  scheduledInstallationDate,
-  installers,
+  driverId,
+  driverName,
+  scheduledTransportDate,
+  drivers,
   canChange,
 }: Props) {
   const router = useRouter();
-  const [selectedInstallerId, setSelectedInstallerId] = useState(
-    installerId ?? "",
-  );
+  const [selectedDriverId, setSelectedDriverId] = useState(driverId ?? "");
   const [selectedDate, setSelectedDate] = useState(
-    scheduledInstallationDate
-      ? formatDateForInput(scheduledInstallationDate)
+    scheduledTransportDate
+      ? formatDateForInput(scheduledTransportDate)
       : "",
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(!installerId);
+  const [open, setOpen] = useState(!driverId);
 
   useEffect(() => {
-    setSelectedInstallerId(installerId ?? "");
+    setSelectedDriverId(driverId ?? "");
     setSelectedDate(
-      scheduledInstallationDate
-        ? formatDateForInput(scheduledInstallationDate)
+      scheduledTransportDate
+        ? formatDateForInput(scheduledTransportDate)
         : "",
     );
-  }, [installerId, scheduledInstallationDate]);
+  }, [driverId, scheduledTransportDate]);
 
   const hasChanges =
-    selectedInstallerId !== (installerId ?? "") ||
-    selectedDate !== (scheduledInstallationDate ? formatDateForInput(scheduledInstallationDate) : "");
+    selectedDriverId !== (driverId ?? "") ||
+    selectedDate !==
+      (scheduledTransportDate
+        ? formatDateForInput(scheduledTransportDate)
+        : "");
 
   async function handleConfirm() {
     setLoading(true);
     setError(null);
 
-    const result = await assignInstallerToVaoAction({
+    const result = await assignDriverToVaoAction({
       osId,
       itemId,
-      installerId: selectedInstallerId || null,
-      scheduledInstallationDate: selectedDate || null,
+      driverId: selectedDriverId || null,
+      scheduledTransportDate: selectedDate || null,
     });
 
     if (result.success) {
@@ -81,27 +82,27 @@ export function InstallerSelector({
     setLoading(false);
   }
 
-  if (!canChange && installerId) {
+  if (!canChange && driverId) {
     return (
       <Card className="mb-2 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
         <CardHeader className="pb-2 pt-3">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <UserCheck className="h-4 w-4 text-primary" />
-            Instalador designado
+            <UserRound className="h-4 w-4 text-primary" />
+            Motorista designado
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1.5 pb-3">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-            <span className="font-medium">{installerName ?? "—"}</span>
+            <span className="font-medium">{driverName ?? "—"}</span>
           </div>
-          {scheduledInstallationDate && (
+          {scheduledTransportDate && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <CalendarDays className="h-4 w-4 shrink-0" />
               <span>
-                Data para instalação:{" "}
+                Data do transporte:{" "}
                 <span className="font-medium">
-                  {formatDateDisplay(scheduledInstallationDate)}
+                  {formatDateDisplay(scheduledTransportDate)}
                 </span>
               </span>
             </div>
@@ -119,14 +120,12 @@ export function InstallerSelector({
           className="flex w-full items-center justify-between gap-2 px-4 pt-3 pb-3 text-left"
           onClick={() => setOpen((current) => !current)}
           aria-expanded={open}
-          aria-controls={`installer-panel-${itemId}`}
+          aria-controls={`driver-panel-${itemId}`}
         >
           <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
-            <UserCheck className="h-4 w-4 shrink-0 text-info" />
+            <UserRound className="h-4 w-4 shrink-0 text-info" />
             <span className="truncate">
-              {installerId && installerName
-                ? installerName
-                : "Selecionar Instalador"}
+              {driverId && driverName ? driverName : "Selecionar Motorista"}
             </span>
           </CardTitle>
           <ChevronDown
@@ -139,22 +138,23 @@ export function InstallerSelector({
         </button>
       </CardHeader>
       {open && (
-        <CardContent id={`installer-panel-${itemId}`} className="space-y-3 pt-0">
+        <CardContent id={`driver-panel-${itemId}`} className="space-y-3 pt-0">
           <p className="text-sm text-muted-foreground">
-            {installerId
-              ? "Altere o instalador responsável e/ou a data para instalação."
-              : "Escolha o instalador deste vão e, opcionalmente, a data para instalação."}
+            {driverId
+              ? "Altere o motorista responsável e/ou a data do transporte."
+              : "Escolha o motorista deste vão e, opcionalmente, a data do transporte."}
           </p>
 
-          {installerId && installerName && (
+          {driverId && driverName && (
             <div className="flex items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
               <span>
                 Atual:{" "}
-                <span className="font-medium">{installerName}</span>
-                {scheduledInstallationDate && (
+                <span className="font-medium">{driverName}</span>
+                {scheduledTransportDate && (
                   <span className="text-muted-foreground">
-                    {" "}— {formatDateDisplay(scheduledInstallationDate)}
+                    {" "}
+                    — {formatDateDisplay(scheduledTransportDate)}
                   </span>
                 )}
               </span>
@@ -168,31 +168,31 @@ export function InstallerSelector({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor={`installer-select-${itemId}`}>Instalador</Label>
+            <Label htmlFor={`driver-select-${itemId}`}>Motorista</Label>
             <Select
-              id={`installer-select-${itemId}`}
-              value={selectedInstallerId}
-              disabled={loading || installers.length === 0}
+              id={`driver-select-${itemId}`}
+              value={selectedDriverId}
+              disabled={loading || drivers.length === 0}
               className="h-11"
-              onChange={(e) => setSelectedInstallerId(e.target.value)}
+              onChange={(e) => setSelectedDriverId(e.target.value)}
             >
               <option value="">
-                {installers.length === 0
-                  ? "Nenhum instalador cadastrado"
-                  : "Selecione um instalador..."}
+                {drivers.length === 0
+                  ? "Nenhum motorista cadastrado"
+                  : "Selecione um motorista..."}
               </option>
-              {installers.map((installer) => (
-                <option key={installer.id} value={installer.id}>
-                  {installer.name}
+              {drivers.map((driver) => (
+                <option key={driver.id} value={driver.id}>
+                  {driver.name}
                 </option>
               ))}
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`installation-date-${itemId}`}>Data para instalação</Label>
+            <Label htmlFor={`transport-date-${itemId}`}>Data do transporte</Label>
             <input
-              id={`installation-date-${itemId}`}
+              id={`transport-date-${itemId}`}
               type="date"
               value={selectedDate}
               disabled={loading}
@@ -203,7 +203,7 @@ export function InstallerSelector({
 
           <Button
             type="button"
-            disabled={loading || !hasChanges || installers.length === 0}
+            disabled={loading || !hasChanges || drivers.length === 0}
             onClick={handleConfirm}
             className="w-full sm:w-auto"
           >
@@ -212,10 +212,10 @@ export function InstallerSelector({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Confirmando...
               </>
-            ) : installerId ? (
+            ) : driverId ? (
               "Confirmar alteração"
             ) : (
-              "Confirmar instalador"
+              "Confirmar motorista"
             )}
           </Button>
         </CardContent>

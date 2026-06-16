@@ -9,11 +9,17 @@ import {
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { OsStatus } from "@/db/schema";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { getSession } from "@/lib/auth/session";
+import { canViewAllOrders } from "@/lib/auth/permissions";
+import {
+  isInstallerResponsibleForOrder,
+} from "@/lib/installation/installation-installer-access";
 
 export type VaoInstallationProgress = {
   id: string;
   index: number;
   label: string;
+  installerId: string | null;
   estrutural: boolean;
   vidros: boolean;
   acabamento: boolean;
@@ -29,6 +35,7 @@ export type ConcludedOrderItem = {
   priority: "normal" | "alta" | "urgente";
   scheduledDate: Date | null;
   updatedAt: Date;
+  assignedUserId: string | null;
   vaos: VaoInstallationProgress[];
   totalVaos: number;
   estruturalCount: number;
@@ -47,6 +54,50 @@ const CONCLUDED_STATUSES: OsStatus[] = [
   "concluido",
 ];
 
+export async function listConcludedOrders(): Promise<ConcludedOrderItem[]> {
+  const session = await getSession();
+  const orders = await listConcludedOrdersDb();
+  if (!session || canViewAllOrders(session.roles)) return orders;
+
+  return orders
+    .filter((order) => {
+      const installerIds = order.vaos
+        .map((vao) => vao.installerId)
+        .filter((id): id is string => !!id);
+      return isInstallerResponsibleForOrder(
+        session.userId,
+        installerIds,
+        order.assignedUserId,
+      );
+    })
+    .map((order) => {
+      const installerIds = order.vaos
+        .map((vao) => vao.installerId)
+        .filter((id): id is string => !!id);
+      const hasPerVaoAssignment = installerIds.length > 0;
+      if (!hasPerVaoAssignment) return order;
+
+      const assignedVaos = order.vaos.filter(
+        (vao) => vao.installerId === session.userId,
+      );
+      if (assignedVaos.length === 0) return null;
+
+      const estruturalCount = assignedVaos.filter((v) => v.estrutural).length;
+      const vidrosCount = assignedVaos.filter((v) => v.vidros).length;
+      const acabamentoCount = assignedVaos.filter((v) => v.acabamento).length;
+
+      return {
+        ...order,
+        vaos: assignedVaos,
+        totalVaos: assignedVaos.length,
+        estruturalCount,
+        vidrosCount,
+        acabamentoCount,
+      };
+    })
+    .filter((order): order is ConcludedOrderItem => order !== null);
+}
+
 export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
   const db = getDb();
 
@@ -60,6 +111,7 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
       priority: measurements.priority,
       scheduledDate: measurements.scheduledDate,
       updatedAt: measurements.updatedAt,
+      assignedUserId: measurements.assignedUserId,
       items: measurements.items,
       hasMeasurement: hasMeasurementItems,
     })
@@ -75,6 +127,7 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
         id: item.id,
         index: idx,
         label: `Vão ${idx + 1}`,
+        installerId: item.installationProgress?.installerId ?? null,
         estrutural: item.installationProgress?.estrutural ?? false,
         vidros: item.installationProgress?.vidros ?? false,
         acabamento: item.installationProgress?.acabamento ?? false,
@@ -98,6 +151,7 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
         priority: r.priority,
         scheduledDate: r.scheduledDate,
         updatedAt: r.updatedAt,
+        assignedUserId: r.assignedUserId,
         vaos,
         totalVaos: vaos.length,
         estruturalCount,

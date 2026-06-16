@@ -22,6 +22,8 @@ export default async function AdminAmbientesPage() {
         description="Informe a descrição do ambiente."
         fieldLabel="Descrição"
         placeholder="Ex: Sala, Quarto, Varanda"
+        entityLabel="ambiente"
+        deleteDescription="Esta ação é permanente. O ambiente será removido do catálogo."
         items={items}
         saveAction={saveAmbiente}
         deleteAction={deleteAmbienteItem}

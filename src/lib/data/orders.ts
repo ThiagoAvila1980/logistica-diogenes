@@ -6,7 +6,36 @@ import { getSession } from "@/lib/auth/session";
 import {
   canAccessOrder,
   filterOrdersForSession,
+  type OrderAccessFields,
 } from "@/lib/auth/order-access";
+import { hasAnyRole } from "@/lib/auth/permissions";
+import { getDriverIdsByOsIds } from "@/lib/logistics/transport-driver-access";
+import { getInstallerIdsByOsIds } from "@/lib/installation/installation-installer-access";
+import type { SessionUser } from "@/lib/auth/session-types";
+
+async function enrichOrdersForAccess<
+  T extends OrderAccessFields & { id: string },
+>(orders: T[], session: SessionUser): Promise<T[]> {
+  const needsDrivers = hasAnyRole(session.roles, ["motorista"]);
+  const needsInstallers = hasAnyRole(session.roles, ["instalador"]);
+
+  if (!needsDrivers && !needsInstallers) return orders;
+
+  const [driverIdsByOs, installerIdsByOs] = await Promise.all([
+    needsDrivers
+      ? getDriverIdsByOsIds(orders.map((order) => order.id))
+      : Promise.resolve({} as Record<string, string[]>),
+    needsInstallers
+      ? getInstallerIdsByOsIds(orders.map((order) => order.id))
+      : Promise.resolve({} as Record<string, string[]>),
+  ]);
+
+  return orders.map((order) => ({
+    ...order,
+    ...(needsDrivers ? { driverIds: driverIdsByOs[order.id] ?? [] } : {}),
+    ...(needsInstallers ? { installerIds: installerIdsByOs[order.id] ?? [] } : {}),
+  }));
+}
 
 export async function listServiceOrders(): Promise<OrderListItem[]> {
   const session = await getSession();
@@ -16,7 +45,15 @@ export async function listServiceOrders(): Promise<OrderListItem[]> {
         const { listServiceOrdersDb } = await import("./db-repository");
         return listServiceOrdersDb(session);
       })();
-  return filterOrdersForSession(orders, session);
+
+  const ordersForFilter =
+    session &&
+    (hasAnyRole(session.roles, ["motorista"]) ||
+      hasAnyRole(session.roles, ["instalador"]))
+      ? await enrichOrdersForAccess(orders, session)
+      : orders;
+
+  return filterOrdersForSession(ordersForFilter, session);
 }
 
 export async function getServiceOrderById(
@@ -31,7 +68,14 @@ export async function getServiceOrderById(
       })();
 
   if (!order || !session) return null;
-  if (!canAccessOrder(session, order)) return null;
+
+  const orderForAccess =
+    hasAnyRole(session.roles, ["motorista"]) ||
+    hasAnyRole(session.roles, ["instalador"])
+      ? (await enrichOrdersForAccess([order], session))[0]
+      : order;
+
+  if (!canAccessOrder(session, orderForAccess)) return null;
   return order;
 }
 
