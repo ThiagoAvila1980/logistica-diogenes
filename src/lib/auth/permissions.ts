@@ -14,12 +14,8 @@ export const ALL_USER_ROLES: readonly UserRole[] = [
 /**
  * Prefixos de rota permitidos por papel (além de exceções globais).
  *
- * Nota: as entradas de `admin` e `gerente` nunca são consultadas por
- * `canAccessRouteForRole` — esses dois papéis têm acesso a todas as
- * rotas não-admin via atalho direto na função. As entradas abaixo
- * servem apenas como documentação de intenção; apenas as entradas dos
- * papéis operacionais (medidor, cortador, motorista, instalador) são
- * efetivamente usadas no guard de rota.
+ * Admin tem acesso a todas as rotas não-admin. Demais papéis usam esta lista
+ * em `canAccessRouteForRole` e na navegação lateral.
  */
 export const ROLE_ROUTE_ACCESS: Record<UserRole, readonly string[]> = {
   admin: [
@@ -28,14 +24,14 @@ export const ROLE_ROUTE_ACCESS: Record<UserRole, readonly string[]> = {
     "/production",
     "/logistics",
     "/installation",
+    "/concluded",
     "/admin",
   ],
   gerente: [
-    "/dashboard",
-    "/field",
     "/production",
     "/logistics",
     "/installation",
+    "/concluded",
   ],
   medidor: ["/field"],
   cortador: ["/production"],
@@ -76,6 +72,8 @@ export function normalizeRoles(
 
 function getDefaultRouteForSingleRole(role: UserRole): string {
   switch (role) {
+    case "gerente":
+      return "/production";
     case "medidor":
       return "/field";
     case "cortador":
@@ -117,7 +115,7 @@ function canAccessRouteForRole(role: UserRole, pathname: string): boolean {
     return role === "admin";
   }
 
-  if (role === "admin" || role === "gerente") {
+  if (role === "admin") {
     return true;
   }
 
@@ -138,8 +136,17 @@ export function canViewAllOrders(roles: readonly UserRole[]): boolean {
   return hasAnyRole(roles, ["admin", "gerente"]);
 }
 
+/** Concluídos: admin e gerente veem tudo; instalador vê só o que executou. */
+export function canAccessConcludedPage(roles: readonly UserRole[]): boolean {
+  return hasAnyRole(roles, ["admin", "gerente", "instalador"]);
+}
+
+export function canViewAllConcludedOrders(roles: readonly UserRole[]): boolean {
+  return canViewAllOrders(roles);
+}
+
 export function canUseKanban(roles: readonly UserRole[]): boolean {
-  return hasAnyRole(roles, ["admin", "gerente"]);
+  return hasRole(roles, "admin");
 }
 
 export type NavItem = {
@@ -188,7 +195,7 @@ export function getNavItemsForRoles(roles: readonly UserRole[]): NavItem[] {
     const items = NAV_ITEMS.filter((item) => {
       if (
         item.match === "/dashboard" &&
-        !hasAnyRole(roles, ["admin", "gerente"])
+        !hasAnyRole(roles, ["admin"])
       ) {
         return false;
       }

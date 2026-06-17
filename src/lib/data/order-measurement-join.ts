@@ -11,6 +11,8 @@ export const measurementClientName = sql<string>`coalesce(${measurements.cliente
 
 export const measurementClientPhone = measurements.telefone;
 
+export const measurementClientAddress = measurements.endereco;
+
 export const resolvedBudgetReference = sql<string | null>`coalesce(
   nullif(btrim(${measurements.budgetReference}), ''),
   nullif(btrim(${measurements.numeroOrcamento}), '')

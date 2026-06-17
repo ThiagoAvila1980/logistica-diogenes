@@ -132,6 +132,7 @@ export const measurements = pgTable(
     }),
     cliente: varchar("cliente", { length: 255 }),
     telefone: varchar("telefone", { length: 20 }),
+    endereco: text("endereco"),
     numeroOrcamento: varchar("numero_orcamento", { length: 64 }),
     budgetReference: varchar("budget_reference", { length: 64 }),
     sourcePdfUrl: text("source_pdf_url"),

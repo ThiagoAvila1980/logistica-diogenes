@@ -35,6 +35,7 @@ type MockMeasurement = {
   assignedUserId: string | null;
   cliente: string | null;
   telefone: string | null;
+  endereco?: string | null;
   numeroOrcamento: string | null;
   budgetReference: string | null;
   sourcePdfUrl: string | null;
@@ -107,6 +108,7 @@ function toOrderDetail(m: MockMeasurement): OrderDetail {
     ...toListItem(m),
     description: m.description,
     clientPhone: m.telefone,
+    clientAddress: m.endereco ?? null,
     sourcePdfUrl: m.sourcePdfUrl,
     notes: m.notes ?? null,
   };
@@ -502,6 +504,7 @@ export const mockRepository = {
     return {
       cliente: m.cliente,
       telefone: m.telefone,
+      endereco: m.endereco ?? null,
       numeroOrcamento: m.numeroOrcamento,
       dimensions: m.dimensions ?? {},
       items: m.items,
@@ -596,6 +599,7 @@ export const mockRepository = {
   createMeasurementFromPdf(input: {
     clientName: string;
     clientPhone: string | null;
+    clientAddress: string | null;
     budgetReference: string | null;
     description?: string | null;
     scheduledDate?: Date | null;
@@ -617,6 +621,7 @@ export const mockRepository = {
       assignedUserId: input.assignedUserId ?? null,
       cliente: input.clientName,
       telefone: input.clientPhone,
+      endereco: input.clientAddress,
       numeroOrcamento: input.budgetReference,
       budgetReference: input.budgetReference,
       sourcePdfUrl: null,
@@ -828,6 +833,35 @@ export const mockRepository = {
 
   listByStatus(status: OsStatus): OrderListItem[] {
     return this.list().filter((o) => o.status === status);
+  },
+
+  updateMeasurementHeader(
+    osId: string,
+    input: {
+      clientName: string;
+      clientPhone: string | null;
+      clientAddress: string | null;
+      budgetReference: string | null;
+    },
+  ): { success: true } | { success: false; message: string } {
+    const m = findMeasurement(osId);
+    if (!m) {
+      return { success: false, message: "Medição não encontrada." };
+    }
+    if (!m.etapa.startsWith("medicao")) {
+      return {
+        success: false,
+        message: "Só é possível editar medições em etapa de medição.",
+      };
+    }
+
+    m.cliente = input.clientName;
+    m.telefone = input.clientPhone;
+    m.endereco = input.clientAddress;
+    m.budgetReference = input.budgetReference;
+    m.numeroOrcamento = input.budgetReference;
+    m.updatedAt = new Date();
+    return { success: true };
   },
 
   deleteMeasurementOs(

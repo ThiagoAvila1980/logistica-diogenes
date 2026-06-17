@@ -49,9 +49,14 @@ export type DeleteMeasurementResult =
   | { success: true }
   | { success: false; message: string };
 
+export type UpdateMeasurementHeaderResult =
+  | { success: true }
+  | { success: false; message: string };
+
 const createMeasurementSchema = z.object({
   clientName: z.string().min(2, "Nome do cliente obrigatório"),
   clientPhone: z.string().max(20).optional(),
+  clientAddress: z.string().max(500).optional(),
   budgetReference: z.string().max(64).optional(),
   description: z.string().max(500).optional(),
   scheduledDate: z
@@ -62,6 +67,14 @@ const createMeasurementSchema = z.object({
     }),
   measurementType: z.enum(["orcamento", "final"]).default("final"),
   priority: z.enum(["normal", "alta", "urgente"]).default("normal"),
+});
+
+const updateMeasurementHeaderSchema = z.object({
+  osId: z.string().uuid(),
+  clientName: z.string().min(2, "Nome do cliente obrigatório"),
+  clientPhone: z.string().max(20).optional(),
+  clientAddress: z.string().max(500).optional(),
+  budgetReference: z.string().max(64).optional(),
 });
 
 function parsePriorityField(formData: FormData) {
@@ -101,6 +114,7 @@ export async function createMeasurementFromPdf(
   const parsed = createMeasurementSchema.safeParse({
     clientName: formData.get("clientName"),
     clientPhone: formData.get("clientPhone") || undefined,
+    clientAddress: formData.get("clientAddress") || undefined,
     budgetReference: formData.get("budgetReference") || undefined,
     description: formData.get("description") || undefined,
     scheduledDate: formData.get("scheduledDate") || undefined,
@@ -122,6 +136,7 @@ export async function createMeasurementFromPdf(
   const {
     clientName,
     clientPhone,
+    clientAddress,
     budgetReference,
     description,
     scheduledDate,
@@ -135,6 +150,7 @@ export async function createMeasurementFromPdf(
     const result = mockRepository.createMeasurementFromPdf({
       clientName,
       clientPhone: clientPhone ?? null,
+      clientAddress: clientAddress ?? null,
       budgetReference: budgetReference ?? null,
       description: description ?? null,
       scheduledDate: scheduled,
@@ -172,16 +188,19 @@ export async function createMeasurementFromPdf(
     let pdfHeader: {
       clientName: string | null;
       clientPhone: string | null;
+      clientAddress: string | null;
       budgetReference: string | null;
     } = {
       clientName: null,
       clientPhone: null,
+      clientAddress: null,
       budgetReference: null,
     };
 
     const finalBudgetRefInitial = budgetReference?.trim() || null;
     const finalClienteInitial = clientName.trim();
     const finalTelefoneInitial = clientPhone?.trim() || null;
+    const finalEnderecoInitial = clientAddress?.trim() || null;
 
     const [created] = await db
       .insert(measurements)
@@ -197,6 +216,7 @@ export async function createMeasurementFromPdf(
         budgetReference: finalBudgetRefInitial,
         cliente: finalClienteInitial,
         telefone: finalTelefoneInitial,
+        endereco: finalEnderecoInitial,
         numeroOrcamento: finalBudgetRefInitial,
         photos: [],
       })
@@ -228,6 +248,8 @@ export async function createMeasurementFromPdf(
       clientName.trim() || pdfHeader.clientName?.trim() || clientName;
     const finalTelefone =
       clientPhone?.trim() || pdfHeader.clientPhone?.trim() || null;
+    const finalEndereco =
+      clientAddress?.trim() || pdfHeader.clientAddress?.trim() || null;
 
     await db
       .update(measurements)
@@ -236,6 +258,7 @@ export async function createMeasurementFromPdf(
         numeroOrcamento: finalBudgetRef,
         cliente: finalCliente,
         telefone: finalTelefone,
+        endereco: finalEndereco,
         sourcePdfUrl: null,
         updatedAt: new Date(),
       })
@@ -267,6 +290,100 @@ export async function createMeasurementFromPdf(
     return {
       success: false,
       message: error instanceof Error ? error.message : "Erro ao criar medição",
+    };
+  }
+}
+
+/**
+ * Admin/gerente atualiza cabeçalho da medição (cliente, telefone, endereço, nº orçamento).
+ */
+export async function updateMeasurementHeader(
+  formData: FormData,
+): Promise<UpdateMeasurementHeaderResult> {
+  try {
+    await requireRole(["admin", "gerente"]);
+  } catch (err) {
+    return {
+      success: false,
+      message:
+        authErrorMessage(err) ?? "Sem permissão para editar dados da medição.",
+    };
+  }
+
+  const parsed = updateMeasurementHeaderSchema.safeParse({
+    osId: formData.get("osId"),
+    clientName: formData.get("clientName"),
+    clientPhone: formData.get("clientPhone") || undefined,
+    clientAddress: formData.get("clientAddress") || undefined,
+    budgetReference: formData.get("budgetReference") || undefined,
+  });
+
+  if (!parsed.success) {
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    return {
+      success: false,
+      message:
+        fieldErrors.clientName?.[0] ??
+        fieldErrors.osId?.[0] ??
+        "Dados inválidos.",
+    };
+  }
+
+  const { osId, clientName, clientPhone, clientAddress, budgetReference } =
+    parsed.data;
+
+  const { getServiceOrderById } = await import("@/lib/data/orders");
+  const order = await getServiceOrderById(osId);
+  if (!order) {
+    return { success: false, message: "Medição não encontrada." };
+  }
+
+  if (!order.status.startsWith("medicao")) {
+    return {
+      success: false,
+      message: "Só é possível editar medições em etapa de medição.",
+    };
+  }
+
+  const budgetRef = budgetReference?.trim() || null;
+
+  if (useMockData()) {
+    const result = mockRepository.updateMeasurementHeader(osId, {
+      clientName: clientName.trim(),
+      clientPhone: clientPhone?.trim() || null,
+      clientAddress: clientAddress?.trim() || null,
+      budgetReference: budgetRef,
+    });
+    if (!result.success) return result;
+
+    revalidatePath("/field");
+    revalidatePath(`/field/${osId}`);
+    return { success: true };
+  }
+
+  try {
+    const db = getDb();
+    await db
+      .update(measurements)
+      .set({
+        cliente: clientName.trim(),
+        telefone: clientPhone?.trim() || null,
+        endereco: clientAddress?.trim() || null,
+        budgetReference: budgetRef,
+        numeroOrcamento: budgetRef,
+        updatedAt: new Date(),
+      })
+      .where(eq(measurements.id, osId));
+
+    revalidatePath("/field");
+    revalidatePath(`/field/${osId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("[updateMeasurementHeader]", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Erro ao salvar dados da medição",
     };
   }
 }

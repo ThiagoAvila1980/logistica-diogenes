@@ -15,6 +15,7 @@ export async function getFieldMeasurementDb(
     .select({
       cliente: measurements.cliente,
       telefone: measurements.telefone,
+      endereco: measurements.endereco,
       numeroOrcamento: measurements.numeroOrcamento,
       dimensions: measurements.dimensions,
       items: measurements.items,
@@ -33,6 +34,7 @@ export async function getFieldMeasurementDb(
   return {
     cliente: row.cliente,
     telefone: row.telefone,
+    endereco: row.endereco,
     numeroOrcamento: row.numeroOrcamento,
     items: items ? sortMeasurementItemsOldestFirst(items) : undefined,
     largura: d.largura,

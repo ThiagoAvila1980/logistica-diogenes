@@ -43,12 +43,13 @@ export async function parsePdfBuffer(
     if (
       !header.clientName &&
       !header.clientPhone &&
+      !header.clientAddress &&
       !header.budgetReference
     ) {
       return {
         header,
         error:
-          "PDF lido, mas NOME, TELEFONE ou Nº não foram encontrados. Preencha manualmente.",
+          "PDF lido, mas NOME, TELEFONE, ENDEREÇO ou Nº não foram encontrados. Preencha manualmente.",
       };
     }
     return { header };
@@ -58,6 +59,7 @@ export async function parsePdfBuffer(
       header: {
         clientName: null,
         clientPhone: null,
+        clientAddress: null,
         budgetReference: null,
         rawHeaderText: "",
       },

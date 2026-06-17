@@ -9,6 +9,7 @@ import {
   hasMeasurementItems,
   measurementClientName,
   measurementClientPhone,
+  measurementClientAddress,
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
 import type { OrderDetail, OrderListItem } from "./types";
@@ -135,6 +136,7 @@ export async function getServiceOrderByIdDb(
       assignedUserId: measurements.assignedUserId,
       clientName: measurementClientName,
       clientPhone: measurementClientPhone,
+      clientAddress: measurementClientAddress,
       budgetReference: resolvedBudgetReference,
       sourcePdfUrl: measurements.sourcePdfUrl,
       hasMeasurement: hasMeasurementItems,
@@ -149,6 +151,7 @@ export async function getServiceOrderByIdDb(
     ...mapMeasurementRow(row),
     description: row.description,
     clientPhone: row.clientPhone,
+    clientAddress: row.clientAddress,
     sourcePdfUrl: row.sourcePdfUrl,
     notes: row.notes ?? null,
   };

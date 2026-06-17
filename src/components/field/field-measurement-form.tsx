@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   Loader2,
+  MapPin,
   Pencil,
   Plus,
   Ruler,
@@ -51,6 +52,7 @@ import {
   type MeasurementDbType,
 } from "@/lib/workflow/measurement-actions";
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
+import { EditMeasurementHeaderDialog } from "@/components/field/edit-measurement-header-dialog";
 import { SendToCuttingDialog } from "@/components/field/send-to-cutting-dialog";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
@@ -59,6 +61,7 @@ import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import type { MeasurementPriority } from "@/db/schema";
 import { buildWhatsAppUrl } from "@/lib/phone-format";
+import { buildMapsSearchUrl } from "@/lib/maps-url";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { countItemPhotos, mergeLegacyDraftPhotos } from "@/lib/measurement/item-photos";
 import { uploadPendingItemPhotos } from "@/lib/measurement/upload-item-photos-client";
@@ -396,9 +399,20 @@ export function FieldMeasurementForm({
     activeHeaderDraft?.cliente ?? currentDraft?.cliente ?? order.clientName;
   const displayTelefone =
     activeHeaderDraft?.telefone ?? currentDraft?.telefone ?? order.clientPhone;
+  const displayEndereco = (
+    activeHeaderDraft?.endereco ??
+    currentDraft?.endereco ??
+    order.clientAddress
+  )?.trim();
   const whatsAppUrl = displayTelefone
     ? buildWhatsAppUrl(displayTelefone)
     : null;
+  const mapsUrl = displayEndereco ? buildMapsSearchUrl(displayEndereco) : null;
+  const displayBudgetReference =
+    order.budgetReference?.trim() ||
+    activeHeaderDraft?.numeroOrcamento?.trim() ||
+    currentDraft?.numeroOrcamento?.trim() ||
+    null;
   const displayNumeroOrcamento = getOrderDisplayNumber({
     number: order.number,
     budgetReference: order.budgetReference,
@@ -409,7 +423,14 @@ export function FieldMeasurementForm({
     <div className="flex flex-col gap-4 mobile-form-offset md:pb-0">
       <section className="relative rounded-xl border bg-card p-4 shadow-sm">
         {canDelete && (
-          <div className="absolute right-1 top-1 z-10 sm:right-2 sm:top-2">
+          <div className="absolute right-1 top-1 z-10 flex items-center gap-0.5 sm:right-2 sm:top-2">
+            <EditMeasurementHeaderDialog
+              osId={order.id}
+              clientName={displayCliente ?? order.clientName}
+              clientPhone={displayTelefone ?? null}
+              clientAddress={displayEndereco ?? null}
+              budgetReference={displayBudgetReference}
+            />
             <DeleteMeasurementDialog
               osId={order.id}
               displayNumber={displayNumeroOrcamento}
@@ -430,7 +451,7 @@ export function FieldMeasurementForm({
             </Link>
           </Button>
 
-          <div className={cn("min-w-0 flex-1", canDelete && "pr-8")}>
+          <div className={cn("min-w-0 flex-1", canDelete && "pr-[4.75rem]")}>
             <div className="min-w-0">
               <p className="truncate text-xl font-semibold leading-tight text-primary">
                 {displayCliente}
@@ -450,7 +471,7 @@ export function FieldMeasurementForm({
                     className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
                     aria-label={`Abrir WhatsApp de ${displayTelefone}`}
                   >
-                    <WhatsAppIcon className="h-3.5 w-3.5" />
+                    <WhatsAppIcon className="h-3.5 w-3.5 text-[#25D366]" />
                     {displayTelefone}
                   </a>
                 ) : (
@@ -459,6 +480,22 @@ export function FieldMeasurementForm({
                   </span>
                 )}
               </div>
+            )}
+
+            {displayEndereco && mapsUrl && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2.5 inline-flex items-start gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
+                aria-label={`Abrir endereço no mapa: ${displayEndereco}`}
+              >
+                <MapPin
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive"
+                  aria-hidden
+                />
+                <span>{displayEndereco}</span>
+              </a>
             )}
 
             <div className="mt-3">
@@ -666,7 +703,13 @@ export function FieldMeasurementForm({
           <div className="space-y-3 text-sm">
             <div className="rounded-md border bg-muted/40 p-3">
               <p className="font-mono font-medium">{displayNumeroOrcamento}</p>
-              <p className="text-muted-foreground">{order.clientName}</p>
+              <p className="text-muted-foreground">{displayCliente}</p>
+              {displayTelefone && (
+                <p className="text-muted-foreground">{displayTelefone}</p>
+              )}
+              {displayEndereco && (
+                <p className="text-muted-foreground">{displayEndereco}</p>
+              )}
               <p className="mt-1 text-xs text-muted-foreground">
                 {getMeasurementBadgeLabel(measurementType)}
               </p>

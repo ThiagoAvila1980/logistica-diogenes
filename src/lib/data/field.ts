@@ -5,10 +5,11 @@ import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { getDraftMeasurementType } from "@/lib/workflow/measurement-actions";
 import type { MeasurementDbType } from "@/lib/workflow/measurement-actions";
 
-/** Cabeçalho da medição (cliente, telefone, nº orçamento — origem PDF) */
+/** Cabeçalho da medição (cliente, telefone, endereço, nº orçamento — origem PDF) */
 export type MeasurementHeader = {
   cliente: string | null;
   telefone: string | null;
+  endereco: string | null;
   numeroOrcamento: string | null;
 };
 
@@ -38,6 +39,7 @@ export async function getFieldMeasurementDraft(
     return {
       cliente: data.cliente,
       telefone: data.telefone,
+      endereco: data.endereco,
       numeroOrcamento: data.numeroOrcamento,
       items: data.items,
       largura: data.dimensions?.largura,

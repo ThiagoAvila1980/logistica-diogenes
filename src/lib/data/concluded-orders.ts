@@ -10,10 +10,11 @@ import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { OsStatus } from "@/db/schema";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canViewAllOrders } from "@/lib/auth/permissions";
 import {
-  isInstallerResponsibleForOrder,
-} from "@/lib/installation/installation-installer-access";
+  canAccessConcludedPage,
+  canViewAllConcludedOrders,
+  hasRole,
+} from "@/lib/auth/permissions";
 
 export type VaoInstallationProgress = {
   id: string;
@@ -54,48 +55,58 @@ const CONCLUDED_STATUSES: OsStatus[] = [
   "concluido",
 ];
 
-export async function listConcludedOrders(): Promise<ConcludedOrderItem[]> {
-  const session = await getSession();
-  const orders = await listConcludedOrdersDb();
-  if (!session || canViewAllOrders(session.roles)) return orders;
+function hasVaoInstallationWork(vao: VaoInstallationProgress): boolean {
+  return vao.estrutural || vao.vidros || vao.acabamento;
+}
 
+function summarizeVaos(vaos: VaoInstallationProgress[]) {
+  return {
+    vaos,
+    totalVaos: vaos.length,
+    estruturalCount: vaos.filter((v) => v.estrutural).length,
+    vidrosCount: vaos.filter((v) => v.vidros).length,
+    acabamentoCount: vaos.filter((v) => v.acabamento).length,
+  };
+}
+
+/** Instalador vê apenas OS/vãos em que registrou progresso de instalação. */
+export function filterConcludedOrdersForInstaller(
+  orders: ConcludedOrderItem[],
+  userId: string,
+): ConcludedOrderItem[] {
   return orders
-    .filter((order) => {
-      const installerIds = order.vaos
-        .map((vao) => vao.installerId)
-        .filter((id): id is string => !!id);
-      return isInstallerResponsibleForOrder(
-        session.userId,
-        installerIds,
-        order.assignedUserId,
-      );
-    })
     .map((order) => {
-      const installerIds = order.vaos
-        .map((vao) => vao.installerId)
-        .filter((id): id is string => !!id);
-      const hasPerVaoAssignment = installerIds.length > 0;
-      if (!hasPerVaoAssignment) return order;
+      const hasPerVaoAssignment = order.vaos.some((vao) => vao.installerId);
 
-      const assignedVaos = order.vaos.filter(
-        (vao) => vao.installerId === session.userId,
+      if (!hasPerVaoAssignment) {
+        if (order.assignedUserId !== userId) return null;
+        const workedVaos = order.vaos.filter(hasVaoInstallationWork);
+        if (workedVaos.length === 0) return null;
+        return order;
+      }
+
+      const workedVaos = order.vaos.filter(
+        (vao) => vao.installerId === userId && hasVaoInstallationWork(vao),
       );
-      if (assignedVaos.length === 0) return null;
-
-      const estruturalCount = assignedVaos.filter((v) => v.estrutural).length;
-      const vidrosCount = assignedVaos.filter((v) => v.vidros).length;
-      const acabamentoCount = assignedVaos.filter((v) => v.acabamento).length;
+      if (workedVaos.length === 0) return null;
 
       return {
         ...order,
-        vaos: assignedVaos,
-        totalVaos: assignedVaos.length,
-        estruturalCount,
-        vidrosCount,
-        acabamentoCount,
+        ...summarizeVaos(workedVaos),
       };
     })
     .filter((order): order is ConcludedOrderItem => order !== null);
+}
+
+export async function listConcludedOrders(): Promise<ConcludedOrderItem[]> {
+  const session = await getSession();
+  if (!session || !canAccessConcludedPage(session.roles)) return [];
+
+  const orders = await listConcludedOrdersDb();
+  if (canViewAllConcludedOrders(session.roles)) return orders;
+  if (!hasRole(session.roles, "instalador")) return [];
+
+  return filterConcludedOrdersForInstaller(orders, session.userId);
 }
 
 export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {

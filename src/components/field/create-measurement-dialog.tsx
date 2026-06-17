@@ -35,6 +35,7 @@ export function CreateMeasurementDialog() {
   const [open, setOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
   const [budgetReference, setBudgetReference] = useState("");
   const [measurementType, setMeasurementType] = useState<"orcamento" | "final">(
     "orcamento",
@@ -83,15 +84,17 @@ export function CreateMeasurementDialog() {
       const hasData =
         Boolean(header.clientName) ||
         Boolean(header.clientPhone) ||
+        Boolean(header.clientAddress) ||
         Boolean(header.budgetReference);
 
       setClientName(header.clientName ?? "");
       setClientPhone(formatBrPhone(header.clientPhone ?? ""));
+      setClientAddress(header.clientAddress ?? "");
       setBudgetReference(header.budgetReference ?? "");
 
       if (!hasData) {
         setPreviewWarning(
-          "PDF lido, mas NOME, TELEFONE ou Nº não foram encontrados. Preencha manualmente.",
+          "PDF lido, mas NOME, TELEFONE, ENDEREÇO ou Nº não foram encontrados. Preencha manualmente.",
         );
       }
     } catch {
@@ -111,6 +114,7 @@ export function CreateMeasurementDialog() {
     if (!next) {
       setClientName("");
       setClientPhone("");
+      setClientAddress("");
       setBudgetReference("");
       setMeasurementType("orcamento");
       setSpecValues({
@@ -134,8 +138,8 @@ export function CreateMeasurementDialog() {
         <DialogHeader className="shrink-0 space-y-1.5 px-6 pt-6">
           <DialogTitle>Nova Medição</DialogTitle>
           <DialogDescription>
-            Preencha os dados ou anexe o PDF — cliente, telefone e referência
-            são lidos automaticamente do cabeçalho.
+            Preencha os dados ou anexe o PDF — cliente, telefone, endereço e
+            referência são lidos automaticamente do cabeçalho.
           </DialogDescription>
         </DialogHeader>
 
@@ -222,7 +226,8 @@ export function CreateMeasurementDialog() {
                     {parsing ? "Lendo PDF…" : "Toque para enviar o PDF"}
                   </span>
                   <span className="text-center text-xs text-muted-foreground">
-                    Preenche cliente, telefone e referência automaticamente
+                    Preenche cliente, telefone, endereço e referência
+                    automaticamente
                   </span>
                 </label>
               )}
@@ -266,6 +271,19 @@ export function CreateMeasurementDialog() {
                 onValueChange={setClientPhone}
                 disabled={isPending}
                 className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meas-client-address">Endereço</Label>
+              <Textarea
+                id="meas-client-address"
+                name="clientAddress"
+                value={clientAddress}
+                onChange={(e) => setClientAddress(e.target.value)}
+                rows={2}
+                placeholder="Ex.: Rua Exemplo, 123 — Bairro / Cidade-UF"
+                disabled={isPending}
               />
             </div>
 

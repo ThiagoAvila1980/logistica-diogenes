@@ -197,6 +197,13 @@
       "when": 1749700000000,
       "tag": "0031_installer_per_vao",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1749800000000,
+      "tag": "0032_measurement_endereco",
+      "breakpoints": true
     }
   ]
 }

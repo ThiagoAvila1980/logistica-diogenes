@@ -7,6 +7,7 @@ export const PDF_ALLOWED_MIME = new Set([
 export type PdfHeaderData = {
   clientName: string | null;
   clientPhone: string | null;
+  clientAddress: string | null;
   budgetReference: string | null;
   rawHeaderText: string;
 };
@@ -42,6 +43,12 @@ export function parsePdfHeaderText(text: string): PdfHeaderData {
       /(\d{2}\s*\d{4,5}[\-\s]?\d{4})/,
     ]) ?? null;
 
+  const clientAddress =
+    matchFirst(flat, [
+      /ENDERE[CÇ]O\s*:\s*(.+?)(?=\s+REFER[EÊ]NCIA|$)/i,
+      /(?:endere[cç]o|end\.?)\s*[:\-–]\s*(.+?)(?=\s+REFER[EÊ]NCIA|$)/i,
+    ]) ?? null;
+
   const budgetReference =
     matchFirst(flat, [
       /N[º°o]\s*:\s*([A-Z0-9\-\/\.]+)/i,
@@ -52,6 +59,7 @@ export function parsePdfHeaderText(text: string): PdfHeaderData {
   return {
     clientName: clientName ? cleanValue(clientName) : null,
     clientPhone: clientPhone ? cleanValue(clientPhone) : null,
+    clientAddress: clientAddress ? cleanValue(clientAddress) : null,
     budgetReference: budgetReference ? cleanValue(budgetReference) : null,
     rawHeaderText: headerText,
   };

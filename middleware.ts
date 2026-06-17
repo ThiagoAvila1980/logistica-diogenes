@@ -13,6 +13,7 @@ const PROTECTED_PREFIXES = [
   "/production",
   "/logistics",
   "/installation",
+  "/concluded",
   "/admin",
 ] as const;
 
@@ -60,6 +61,7 @@ export const config = {
     "/production/:path*",
     "/logistics/:path*",
     "/installation/:path*",
+    "/concluded/:path*",
     "/admin/:path*",
   ],
 };
