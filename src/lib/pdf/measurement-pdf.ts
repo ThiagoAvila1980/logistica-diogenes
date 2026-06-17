@@ -204,9 +204,11 @@ async function drawHeader(
   });
   const clientName = draft?.cliente ?? order.clientName;
   const phone = draft?.telefone ?? order.clientPhone ?? "-";
+  const address = (draft?.endereco ?? order.clientAddress)?.trim();
   const date = formatBrDate(order.scheduledDate ?? order.updatedAt) || "-";
 
-  const line1 = ctx.y - 22;
+  const headerStartY = ctx.y;
+  const line1 = headerStartY - 22;
   const line2 = line1 - 18;
   drawLabelValue(ctx, infoX, line1, "Cliente:", clientName, {
     size: 11,
@@ -218,7 +220,44 @@ async function drawHeader(
   drawLabelValue(ctx, infoX, line2, "Telefone:", phone, { size: 11 });
   drawLabelValue(ctx, rightColX, line2, "Data:", date, { size: 11 });
 
-  ctx.y -= logoSize + 14;
+  let contentBottom = line2 - 12;
+
+  if (address) {
+    const addressLabel = "Endereço:";
+    const addressSize = 11;
+    const labelWidth = ctx.bold.widthOfTextAtSize(
+      `${sanitizeText(addressLabel)} `,
+      addressSize,
+    );
+    const valueX = infoX + labelWidth;
+    const wrapWidth = PAGE_WIDTH - MARGIN - valueX;
+    const addressLines = wrapText(address, ctx.font, addressSize, wrapWidth);
+
+    let addressY = line2 - 18;
+    for (let i = 0; i < addressLines.length; i++) {
+      if (i === 0) {
+        ctx.page.drawText(sanitizeText(addressLabel), {
+          x: infoX,
+          y: addressY,
+          size: addressSize,
+          font: ctx.bold,
+          color: INK,
+        });
+      }
+      ctx.page.drawText(addressLines[i], {
+        x: valueX,
+        y: addressY,
+        size: addressSize,
+        font: ctx.font,
+        color: INK,
+      });
+      addressY -= 14;
+    }
+    contentBottom = addressY + 2;
+  }
+
+  const blockBottom = Math.min(headerStartY - logoSize, contentBottom);
+  ctx.y = blockBottom - 14;
   ctx.page.drawLine({
     start: { x: MARGIN, y: ctx.y },
     end: { x: PAGE_WIDTH - MARGIN, y: ctx.y },
