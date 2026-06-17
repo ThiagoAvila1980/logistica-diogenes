@@ -1,13 +1,10 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   CheckCircle2,
   Loader2,
-  MapPin,
   Pencil,
   Plus,
   Ruler,
@@ -54,15 +51,13 @@ import {
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
 import { EditMeasurementHeaderDialog } from "@/components/field/edit-measurement-header-dialog";
 import { SendToCuttingDialog } from "@/components/field/send-to-cutting-dialog";
+import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { useScreenOrientationLock } from "@/hooks/use-screen-orientation-lock";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import type { MeasurementPriority } from "@/db/schema";
-import { buildWhatsAppUrl } from "@/lib/phone-format";
-import { buildMapsSearchUrl } from "@/lib/maps-url";
-import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { countItemPhotos, mergeLegacyDraftPhotos } from "@/lib/measurement/item-photos";
 import { uploadPendingItemPhotos } from "@/lib/measurement/upload-item-photos-client";
 import {
@@ -71,7 +66,6 @@ import {
   sanitizeMeasurementItem,
 } from "@/lib/measurement/dimensions";
 import { sortMeasurementItemsOldestFirst } from "@/lib/measurement/item-order";
-import { cn } from "@/lib/utils";
 
 type FieldMeasurementFormProps = {
   order: OrderDetail;
@@ -404,10 +398,6 @@ export function FieldMeasurementForm({
     currentDraft?.endereco ??
     order.clientAddress
   )?.trim();
-  const whatsAppUrl = displayTelefone
-    ? buildWhatsAppUrl(displayTelefone)
-    : null;
-  const mapsUrl = displayEndereco ? buildMapsSearchUrl(displayEndereco) : null;
   const displayBudgetReference =
     order.budgetReference?.trim() ||
     activeHeaderDraft?.numeroOrcamento?.trim() ||
@@ -421,98 +411,44 @@ export function FieldMeasurementForm({
   });
   return (
     <div className="flex flex-col gap-4 mobile-form-offset md:pb-0">
-      <section className="relative rounded-xl border bg-card p-4 shadow-sm">
-        {canDelete && (
-          <div className="absolute right-1 top-1 z-10 flex items-center gap-0.5 sm:right-2 sm:top-2">
-            <EditMeasurementHeaderDialog
-              osId={order.id}
-              clientName={displayCliente ?? order.clientName}
-              clientPhone={displayTelefone ?? null}
-              clientAddress={displayEndereco ?? null}
-              budgetReference={displayBudgetReference}
-            />
-            <DeleteMeasurementDialog
-              osId={order.id}
-              displayNumber={displayNumeroOrcamento}
-              clientName={displayCliente ?? order.clientName}
-            />
-          </div>
-        )}
-
-        <div className="flex items-start gap-2">
-          <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            className="mt-0.5 shrink-0"
-          >
-            <Link href="/field" aria-label="Voltar">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-
-          <div className={cn("min-w-0 flex-1", canDelete && "pr-[4.75rem]")}>
-            <div className="min-w-0">
-              <p className="truncate text-xl font-semibold leading-tight text-primary">
-                {displayCliente}
-              </p>
-              <p className="font-mono text-xl tabular-nums text-muted-foreground">
-                {displayNumeroOrcamento}
-              </p>
-            </div>
-
-            {displayTelefone && (
-              <div className="mt-2.5">
-                {whatsAppUrl ? (
-                  <a
-                    href={whatsAppUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
-                    aria-label={`Abrir WhatsApp de ${displayTelefone}`}
-                  >
-                    <WhatsAppIcon className="h-3.5 w-3.5 text-[#25D366]" />
-                    {displayTelefone}
-                  </a>
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    {displayTelefone}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {displayEndereco && mapsUrl && (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2.5 inline-flex items-start gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
-                aria-label={`Abrir endereço no mapa: ${displayEndereco}`}
-              >
-                <MapPin
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive"
-                  aria-hidden
-                />
-                <span>{displayEndereco}</span>
-              </a>
-            )}
-
-            <div className="mt-3">
-              <MeasurementSpecFields
-                values={specValues}
-                onChange={setSpecValues}
-                readOnly={viewMode}
-                disabled={isPending}
+      <ServiceOrderHeader
+        backHref="/field"
+        displayNumber={displayNumeroOrcamento}
+        clientName={displayCliente ?? order.clientName}
+        clientPhone={displayTelefone ?? null}
+        clientAddress={displayEndereco ?? null}
+        description={order.description}
+        actions={
+          canDelete ? (
+            <>
+              <EditMeasurementHeaderDialog
+                osId={order.id}
+                clientName={displayCliente ?? order.clientName}
+                clientPhone={displayTelefone ?? null}
+                clientAddress={displayEndereco ?? null}
+                budgetReference={displayBudgetReference}
               />
-            </div>
-
-            <div className="mt-3">
-              <StageProblemReport osId={order.id} stage="measurement" />
-            </div>
-          </div>
+              <DeleteMeasurementDialog
+                osId={order.id}
+                displayNumber={displayNumeroOrcamento}
+                clientName={displayCliente ?? order.clientName}
+              />
+            </>
+          ) : undefined
+        }
+      >
+        <div className="mt-3">
+          <MeasurementSpecFields
+            values={specValues}
+            onChange={setSpecValues}
+            readOnly={viewMode}
+            disabled={isPending}
+          />
         </div>
-      </section>
+        <div className="mt-3">
+          <StageProblemReport osId={order.id} stage="measurement" />
+        </div>
+      </ServiceOrderHeader>
 
       <section className="overflow-hidden rounded-xl border bg-card p-3 shadow-sm md:p-4">
         <StatusWizard currentStatus={wizardStatus} />

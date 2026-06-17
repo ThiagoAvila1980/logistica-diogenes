@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
-import { Button } from "@/components/ui/button";
+import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { CuttingDetailView } from "@/components/production/cutting-detail-view";
 
@@ -26,25 +24,16 @@ export default async function ProductionOsPage({ params }: Props) {
 
   return (
     <>
-      <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2 sm:mb-4">
-        <Link href="/production">
-          <ArrowLeft className="h-4 w-4" />
-          Voltar ao plano de corte
-        </Link>
-      </Button>
-
-      <div className="mb-4 sm:mb-6">
-        <h1 className="font-mono text-xl font-bold sm:text-2xl">
-          {getOrderDisplayNumber(order)}
-        </h1>
-        <p className="mt-1 text-base font-medium text-muted-foreground">
-          {order.clientName}
-        </p>
-        {order.description && (
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {order.description}
-          </p>
-        )}
+      <ServiceOrderHeader
+        backHref="/production"
+        backAriaLabel="Voltar ao plano de corte"
+        displayNumber={getOrderDisplayNumber(order)}
+        clientName={order.clientName}
+        clientPhone={order.clientPhone}
+        clientAddress={order.clientAddress}
+        description={order.description}
+        className="mb-4 sm:mb-6"
+      >
         <div className="mt-3">
           <MeasurementSpecFields
             values={{ priority: order.priority }}
@@ -52,7 +41,7 @@ export default async function ProductionOsPage({ params }: Props) {
           />
         </div>
         <MeasurementNotesCard notes={order.notes} className="mt-4" />
-      </div>
+      </ServiceOrderHeader>
 
       <div className="space-y-6">
         {measurement ? (

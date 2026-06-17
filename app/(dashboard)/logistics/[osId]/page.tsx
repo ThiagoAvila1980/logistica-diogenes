@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Truck } from "lucide-react";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getTransportDetailForOs } from "@/lib/data/transport-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
@@ -12,7 +10,7 @@ import { getSession } from "@/lib/auth/session";
 import { canViewAllOrders } from "@/lib/auth/permissions";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
-import { Button } from "@/components/ui/button";
+import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { TransportChecklist } from "@/components/logistics/transport-checklist";
 import { VehicleSelector } from "@/components/logistics/vehicle-selector";
 
@@ -37,20 +35,30 @@ export default async function LogisticsOsPage({ params }: Props) {
 
   const drivers = isManager ? await listActiveDrivers() : [];
 
+  const header = (
+    <ServiceOrderHeader
+      backHref="/logistics"
+      backAriaLabel="Voltar ao transporte"
+      displayNumber={getOrderDisplayNumber(order)}
+      clientName={order.clientName}
+      clientPhone={order.clientPhone}
+      clientAddress={order.clientAddress}
+      description={order.description}
+      className="mb-4 sm:mb-6"
+    >
+      <div className="mt-3">
+        <MeasurementSpecFields
+          values={{ priority: order.priority }}
+          readOnly
+        />
+      </div>
+    </ServiceOrderHeader>
+  );
+
   if (!canOperateTransportModule(order.status, detail.cuttingSteps)) {
     return (
       <>
-        <div className="mb-4 sm:mb-6">
-          <div className="flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
-            <h1 className="font-mono text-2xl font-bold">
-              {getOrderDisplayNumber(order)}
-            </h1>
-          </div>
-          <p className="mt-1 text-base font-medium text-muted-foreground">
-            {order.clientName}
-          </p>
-        </div>
+        {header}
         <MeasurementNotesCard notes={order.notes} collapsible />
         <div className="rounded-xl border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">
@@ -63,35 +71,7 @@ export default async function LogisticsOsPage({ params }: Props) {
 
   return (
     <>
-      <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2 sm:mb-4">
-        <Link href="/logistics">
-          <ArrowLeft className="h-4 w-4" />
-          Voltar ao transporte
-        </Link>
-      </Button>
-
-      <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <Truck className="h-5 w-5 text-primary" />
-          <h1 className="font-mono text-2xl font-bold">
-            {getOrderDisplayNumber(order)}
-          </h1>
-        </div>
-        <p className="mt-1 text-base font-medium text-muted-foreground">
-          {order.clientName}
-        </p>
-        {order.description && (
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {order.description}
-          </p>
-        )}
-        <div className="mt-3">
-          <MeasurementSpecFields
-            values={{ priority: order.priority }}
-            readOnly
-          />
-        </div>
-      </div>
+      {header}
 
       <MeasurementNotesCard notes={order.notes} collapsible />
 
