@@ -142,6 +142,10 @@ export const measurements = pgTable(
     items: jsonb("items").$type<MeasurementLineItem[]>(),
     photos: jsonb("photos").$type<string[]>(),
     notes: text("notes"),
+    /** Timestamp do dispositivo cliente ao salvar — usado para resolução de conflitos offline */
+    clientUpdatedAt: timestamp("client_updated_at", { withTimezone: true }),
+    /** Identificador do dispositivo de origem do sync offline */
+    deviceId: varchar("device_id", { length: 128 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

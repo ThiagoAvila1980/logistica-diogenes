@@ -15,6 +15,12 @@ import {
   type SaveFieldMeasurementResult,
 } from "@/actions/field-actions";
 import {
+  useOfflineMeasurement,
+  toSaveResult,
+} from "@/hooks/use-offline-measurement";
+import { useIsOffline } from "@/hooks/use-network-status";
+import { registerAutoSync } from "@/lib/offline/sync-engine";
+import {
   MeasurementItemCard,
   createEmptyMeasurementItem,
 } from "@/components/field/measurement-item-card";
@@ -167,6 +173,13 @@ export function FieldMeasurementForm({
     priority: order.priority,
   });
   const formRef = useRef<HTMLFormElement>(null);
+  const isOffline = useIsOffline();
+  const { save: saveOffline, isSaving: isOfflineSaving } = useOfflineMeasurement();
+
+  // Registrar sync automático ao reconectar (uma vez por montagem)
+  useEffect(() => {
+    registerAutoSync();
+  }, []);
 
   const { relockPage, lockLandscape } = useScreenOrientationLock(!viewMode);
 
@@ -220,16 +233,52 @@ export function FieldMeasurementForm({
         .filter(hasValidItemDimensions)
         .map(sanitizeMeasurementItem);
 
+      // Caminho offline: salvar localmente sem tentar upload imediato
+      if (isOffline) {
+        const offlineResult = await saveOffline({
+          osId: order.id,
+          items: itemsToSubmit,
+          notes: (formData.get("notes") as string) ?? "",
+          type: measurementType,
+          priority: specValues.priority,
+          pendingFilesByItemId,
+        });
+        const result = toSaveResult(offlineResult);
+        setConfirmOpen(false);
+        setSaveResult(result);
+        setSaveResultOpen(true);
+        if (result.success) {
+          setDrawingDirtyById({});
+          setPendingFilesByItemId({});
+        }
+        return result;
+      }
+
+      // Caminho online: upload de fotos + save no servidor
       const uploaded = await uploadPendingItemPhotos(
         order.id,
         itemsToSubmit,
         pendingFilesByItemId,
       );
       if (!uploaded.success) {
-        const failure = { success: false as const, message: uploaded.message };
-        setSaveResult(failure);
+        // Se falhou por rede, cair para offline
+        const offlineResult = await saveOffline({
+          osId: order.id,
+          items: itemsToSubmit,
+          notes: (formData.get("notes") as string) ?? "",
+          type: measurementType,
+          priority: specValues.priority,
+          pendingFilesByItemId,
+        });
+        const result = toSaveResult(offlineResult);
+        setConfirmOpen(false);
+        setSaveResult(result);
         setSaveResultOpen(true);
-        return failure;
+        if (result.success) {
+          setDrawingDirtyById({});
+          setPendingFilesByItemId({});
+        }
+        return result;
       }
 
       formData.set("items", JSON.stringify(uploaded.items));
@@ -244,7 +293,7 @@ export function FieldMeasurementForm({
       }
       return result;
     },
-    [order.id, pendingFilesByItemId, items, measurementType],
+    [order.id, pendingFilesByItemId, items, measurementType, isOffline, saveOffline, specValues.priority],
   );
 
   const [, formAction, isPending] = useActionState<
@@ -593,13 +642,18 @@ export function FieldMeasurementForm({
 
         {allowedActions.length > 0 && !viewMode ? (
           <div className="mobile-action-bar fixed inset-x-0 z-30 border-t bg-card/95 p-3 backdrop-blur md:static md:mt-2 md:rounded-xl md:border md:p-4 md:shadow-sm">
+            {isOffline && (
+              <p className="mb-2 text-center text-xs text-amber-600 dark:text-amber-400">
+                Sem conexão — medição será salva localmente e enviada ao sincronizar
+              </p>
+            )}
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
                 className="h-12 flex-1 text-base"
                 onClick={handleCancelOperation}
-                disabled={isPending}
+                disabled={isPending || isOfflineSaving}
               >
                 Cancelar operação
               </Button>
@@ -607,10 +661,10 @@ export function FieldMeasurementForm({
                 type="button"
                 className="h-12 flex-1 text-base"
                 onClick={handleRequestSaveMeasurement}
-                disabled={isPending || !hasValidItem}
+                disabled={isPending || isOfflineSaving || !hasValidItem}
               >
                 <Ruler className="mr-2 h-4 w-4" />
-                Salvar Medição
+                {isOffline ? "Salvar Offline" : "Salvar Medição"}
               </Button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { SwRegister } from "@/components/offline/sw-register";
 import { useMockData } from "@/lib/data/config";
 import { getSession } from "@/lib/auth/session";
 
@@ -14,8 +15,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardShell mockMode={useMockData()} session={session}>
-      {children}
-    </DashboardShell>
+    <>
+      <SwRegister />
+      <DashboardShell mockMode={useMockData()} session={session}>
+        {children}
+      </DashboardShell>
+    </>
   );
 }

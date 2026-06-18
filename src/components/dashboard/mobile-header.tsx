@@ -3,6 +3,7 @@
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { OfflineIndicator } from "@/components/offline/offline-indicator";
 
 type MobileHeaderProps = {
   title?: string;
@@ -31,6 +32,7 @@ export function MobileHeader({
         <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight">
           {title}
         </span>
+        <OfflineIndicator />
         <NotificationBell
           enabled={showNotifications}
           className="shrink-0 [&_button]:h-10 [&_button]:w-10 [&_button]:text-primary-foreground/85 [&_button:hover]:bg-white/10 [&_button:hover]:text-primary-foreground"

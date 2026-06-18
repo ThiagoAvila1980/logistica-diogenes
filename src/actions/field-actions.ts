@@ -35,6 +35,10 @@ import {
 const saveMeasurementSchema = z.object({
   osId: z.string().uuid(),
   notes: z.string().max(2000).optional(),
+  /** ISO string enviado pelo cliente offline para resolução de conflitos */
+  clientUpdatedAt: z.string().datetime().optional(),
+  /** ID do dispositivo de origem do sync offline */
+  deviceId: z.string().max(128).optional(),
 });
 
 export type SaveFieldMeasurementResult =
@@ -496,6 +500,8 @@ export async function saveFieldMeasurement(
   const parsed = saveMeasurementSchema.safeParse({
     osId: formData.get("osId"),
     notes: formData.get("notes") || undefined,
+    clientUpdatedAt: formData.get("clientUpdatedAt") || undefined,
+    deviceId: formData.get("deviceId") || undefined,
   });
   if (!parsed.success) {
     return { success: false, message: "Dados inválidos." };
@@ -506,7 +512,7 @@ export async function saveFieldMeasurement(
     rawType === ORCAMENTO_MEASUREMENT_TYPE
       ? ORCAMENTO_MEASUREMENT_TYPE
       : FINAL_MEASUREMENT_TYPE;
-  const { osId, notes } = parsed.data;
+  const { osId, notes, clientUpdatedAt, deviceId } = parsed.data;
   const items = sortMeasurementItemsOldestFirst(itemsParsed.data);
   const priorityField = parsePriorityField(formData);
 
@@ -587,6 +593,8 @@ export async function saveFieldMeasurement(
         status: "medida",
         etapa: osStatusFromMeasurementType(measurementType),
         priority: priorityField.priority,
+        clientUpdatedAt: clientUpdatedAt ? new Date(clientUpdatedAt) : null,
+        deviceId: deviceId ?? null,
         updatedAt: new Date(),
       })
       .where(eq(measurements.id, osId));
