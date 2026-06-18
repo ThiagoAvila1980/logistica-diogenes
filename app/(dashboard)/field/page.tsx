@@ -1,7 +1,11 @@
 import { listServiceOrders } from "@/lib/data/orders";
+import { listMeasurementLookups } from "@/lib/data/lookups";
 import { FieldOrderIndex } from "@/components/field/field-order-index";
 import { CreateMeasurementDialog } from "@/components/field/create-measurement-dialog";
 import { PageHeading } from "@/components/dashboard/page-heading";
+import { SyncStatusBar } from "@/components/offline/sync-status-bar";
+import { PwaInstallPrompt } from "@/components/offline/pwa-install-prompt";
+import { FieldCacheHydrator } from "@/components/offline/field-cache-hydrator";
 import { Ruler } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { hasAnyRole } from "@/lib/auth/permissions";
@@ -10,8 +14,11 @@ export default async function FieldIndexPage() {
   const session = await getSession();
   const canCreate = hasAnyRole(session?.roles ?? [], ["admin", "gerente"]);
 
-  const orders = await listServiceOrders();
-  const fieldOrders = orders.filter((o) => o.status.startsWith("medicao"));
+  const [allOrders, lookups] = await Promise.all([
+    listServiceOrders(),
+    listMeasurementLookups(),
+  ]);
+  const fieldOrders = allOrders.filter((o) => o.status.startsWith("medicao"));
 
   return (
     <div className="space-y-4">
@@ -19,7 +26,10 @@ export default async function FieldIndexPage() {
         {canCreate && <CreateMeasurementDialog />}
       </PageHeading>
 
+      <SyncStatusBar />
       <FieldOrderIndex orders={fieldOrders} canDelete={canCreate} />
+      <FieldCacheHydrator orders={fieldOrders} lookups={lookups} />
+      <PwaInstallPrompt />
     </div>
   );
 }
