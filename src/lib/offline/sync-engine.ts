@@ -53,6 +53,25 @@ export async function saveMeasurementLocally(
 ): Promise<void> {
   const db = getOfflineDb();
 
+  // Comprimir fotos ANTES de abrir a transação do IndexedDB.
+  //
+  // compressPhotos usa createImageBitmap() e canvas.toBlob() — APIs async do browser,
+  // não do IndexedDB. Se chamadas dentro de uma transação Dexie, fazem o event loop ceder
+  // para tarefas não-IDB, o que causa o auto-commit da transação (TransactionInactiveError).
+  const compressedUploadsByItemId: Array<{
+    itemId: string;
+    blob: Blob;
+    mimeType: string;
+  }> = [];
+
+  for (const [itemId, files] of Object.entries(payload.pendingFilesByItemId)) {
+    if (!files.length) continue;
+    const blobs = await compressPhotos(files);
+    for (const blob of blobs) {
+      compressedUploadsByItemId.push({ itemId, blob, mimeType: "image/jpeg" });
+    }
+  }
+
   const pending: Omit<PendingMeasurement, "id"> = {
     osId: payload.osId,
     items: payload.items,
@@ -65,8 +84,8 @@ export async function saveMeasurementLocally(
     retryCount: 0,
   };
 
+  // Agora só operações IDB dentro da transação — sem awaits não-IDB.
   await db.transaction("rw", [db.pendingMeasurements, db.pendingUploads], async () => {
-    // Substituir entrada existente para a mesma OS (upsert manual)
     const existing = await db.pendingMeasurements
       .where("osId")
       .equals(payload.osId)
@@ -74,7 +93,6 @@ export async function saveMeasurementLocally(
 
     if (existing?.id) {
       await db.pendingMeasurements.update(existing.id, pending);
-      // Limpar uploads antigos da OS para re-upload
       await db.pendingUploads
         .where("osId")
         .equals(payload.osId)
@@ -83,21 +101,17 @@ export async function saveMeasurementLocally(
       await db.pendingMeasurements.add(pending);
     }
 
-    // Salvar fotos pendentes como Blobs comprimidos
-    for (const [itemId, files] of Object.entries(payload.pendingFilesByItemId)) {
-      if (!files.length) continue;
-      const blobs = await compressPhotos(files);
-      for (const blob of blobs) {
-        await db.pendingUploads.add({
-          osId: payload.osId,
-          itemId,
-          blob,
-          mimeType: "image/jpeg",
-          uploadType: "photo",
-          status: "pending",
-          createdAt: new Date().toISOString(),
-        });
-      }
+    const createdAt = new Date().toISOString();
+    for (const { itemId, blob, mimeType } of compressedUploadsByItemId) {
+      await db.pendingUploads.add({
+        osId: payload.osId,
+        itemId,
+        blob,
+        mimeType,
+        uploadType: "photo",
+        status: "pending",
+        createdAt,
+      });
     }
   });
 }
