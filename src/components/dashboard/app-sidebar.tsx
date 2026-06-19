@@ -11,13 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth/session-types";
-import {
-  formatRolesLabel,
-  getNavItemsForRoles,
-  hasAnyRole,
-  hasRole,
-  type NavItem,
-} from "@/lib/auth/permissions";
+import { formatRolesLabel, type NavItem } from "@/lib/auth/permissions";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { SettingsNavSection } from "@/components/dashboard/settings-nav-section";
@@ -32,31 +26,25 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/users": Users,
 };
 
-function navHomeHref(roles: SessionUser["roles"]): string {
-  const items = getNavItemsForRoles(roles);
-  return items[0]?.href ?? "/field";
-}
-
 export function AppSidebar({
   pathname,
   mockMode,
   session,
+  navItems,
+  showNotifications,
+  showSettings,
   className,
   onNavigate,
 }: {
   pathname: string;
   mockMode?: boolean;
   session?: SessionUser;
+  navItems: NavItem[];
+  showNotifications: boolean;
+  showSettings: boolean;
   className?: string;
   onNavigate?: () => void;
 }) {
-  const navItems: NavItem[] = session
-    ? getNavItemsForRoles(session.roles)
-    : getNavItemsForRoles(["admin"]);
-  const showNotifications = session
-    ? hasAnyRole(session.roles, ["admin", "gerente"])
-    : false;
-  const showSettings = session ? hasRole(session.roles, "admin") : false;
 
   return (
     <aside
@@ -73,7 +61,7 @@ export function AppSidebar({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link
-              href={session ? navHomeHref(session.roles) : "/dashboard"}
+              href={navItems[0]?.href ?? "/dashboard"}
               prefetch={false}
               className="font-semibold tracking-tight text-primary-foreground"
             >

@@ -10,15 +10,13 @@ export type NetworkStatus = "online" | "offline" | "unknown";
  * Usa o NetworkMonitor singleton que faz ping real ao servidor.
  */
 export function useNetworkStatus(): NetworkStatus {
-  const [status, setStatus] = useState<NetworkStatus>(() => {
-    if (typeof navigator === "undefined") return "unknown";
-    return navigator.onLine ? "online" : "offline";
-  });
+  // Sempre inicia com "unknown" em servidor e cliente para evitar mismatch de
+  // hidratação. O estado real é definido no useEffect (pós-hidratação).
+  const [status, setStatus] = useState<NetworkStatus>("unknown");
 
   useEffect(() => {
     const monitor = getNetworkMonitor();
 
-    // Estado inicial do monitor
     setStatus(monitor.isOnline ? "online" : "offline");
 
     const unsubscribe = monitor.subscribe((isOnline) => {

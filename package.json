@@ -31,6 +31,7 @@
     "db:ping": "node --env-file=.env.local scripts/db-ping.mjs",
     "db:ping:prod": "node scripts/db-ping.mjs",
     "db:fix-auth": "node --env-file=.env.local scripts/db-fix-auth.mjs",
+    "db:role-screen-access": "node --env-file=.env.local scripts/db-apply-role-screen-access.mjs",
     "db:indexes": "node --env-file=.env.local scripts/db-apply-indexes.mjs"
   },
   "dependencies": {

@@ -169,6 +169,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
 ];
 
 export const SETTINGS_NAV_ITEMS: NavItem[] = [
+  { href: "/admin/permissions", label: "Visualização de telas", match: "/admin/permissions" },
   { href: "/admin/vehicles", label: "Veículos", match: "/admin/vehicles" },
   { href: "/admin/cores", label: "Cores", match: "/admin/cores" },
   { href: "/admin/ambientes", label: "Ambientes", match: "/admin/ambientes" },
