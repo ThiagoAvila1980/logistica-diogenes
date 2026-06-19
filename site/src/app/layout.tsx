@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/apple-touch-icon.png", type: "image/png" },
+      { url: "/logo 01.png", type: "image/png" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: "/logo 01.png",
   },
   keywords: [
     "envidraçamentos",

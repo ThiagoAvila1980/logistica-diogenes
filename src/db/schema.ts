@@ -9,6 +9,7 @@ import {
   boolean,
   index,
   uniqueIndex,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { isNull, relations } from "drizzle-orm";
 import type {
@@ -338,6 +339,24 @@ export const notifications = pgTable(
     index("idx_notifications_user_unread").on(t.userId).where(isNull(t.readAt)),
   ],
 );
+
+// ─── Role screen access ────────────────────────────────────────────────────────
+
+/** Matriz configurável de acesso tela x papel. admin não é armazenado (acesso total implícito). */
+export const roleScreenAccess = pgTable(
+  "role_screen_access",
+  {
+    role: userRoles("role").notNull(),
+    screen: text("screen").notNull(),
+    enabled: boolean("enabled").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.role, t.screen] })],
+);
+
+export type RoleScreenAccess = typeof roleScreenAccess.$inferSelect;
 
 // ─── Relations ─────────────────────────────────────────────────────────────────
 

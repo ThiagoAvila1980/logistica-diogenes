@@ -204,6 +204,20 @@
       "when": 1749800000000,
       "tag": "0032_measurement_endereco",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1749900000000,
+      "tag": "0033_offline_sync_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1750000000000,
+      "tag": "0034_role_screen_access",
+      "breakpoints": true
     }
   ]
 }

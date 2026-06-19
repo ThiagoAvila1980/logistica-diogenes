@@ -8,6 +8,14 @@ import type { DrawingItem } from "@/lib/workflow/schemas";
 import { DrawingBoard } from "@/components/field/drawing-board";
 import { resolveUploadDisplayUrlAction } from "@/actions/upload-actions";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const LEGACY_ID = "__legacy__";
 
@@ -334,17 +342,19 @@ function DrawingEditorModal({
   onClose,
 }: DrawingEditorModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   useEffect(() => setMounted(true), []);
 
   function handleClose() {
-    if (
-      isDirty &&
-      !window.confirm(
-        "O desenho tem alterações não salvas. Deseja mesmo fechar sem salvar?",
-      )
-    ) {
+    if (isDirty) {
+      setConfirmOpen(true);
       return;
     }
+    onClose();
+  }
+
+  function handleConfirmDiscard() {
+    setConfirmOpen(false);
     onClose();
   }
 
@@ -401,5 +411,35 @@ function DrawingEditorModal({
   );
 
   if (!mounted) return null;
-  return createPortal(modal, document.body);
+  return (
+    <>
+      {createPortal(modal, document.body)}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="z-[250] max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Fechar sem salvar?</DialogTitle>
+            <DialogDescription>
+              O desenho tem alterações não salvas. Se fechar agora, as alterações serão perdidas.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+            >
+              Continuar editando
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDiscard}
+            >
+              Fechar sem salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

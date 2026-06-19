@@ -10,6 +10,7 @@ import {
   Palette,
   PanelTop,
   Settings2,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/auth/permissions";
 
 const SETTINGS_ICONS: Record<string, LucideIcon> = {
+  "/admin/permissions": ShieldCheck,
   "/admin/vehicles": Car,
   "/admin/cores": Palette,
   "/admin/ambientes": DoorOpen,

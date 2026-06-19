@@ -10,7 +10,7 @@ import {
 } from "@/lib/auth/demo-users";
 import { clearSession, getSession, setSession } from "@/lib/auth/session";
 import type { SessionUser } from "@/lib/auth/session-types";
-import { resolvePostLoginPath } from "@/lib/auth/login-redirect";
+import { resolvePostLoginPathDynamic } from "@/lib/auth/login-redirect";
 import { DEMO_DEFAULT_PASSWORD } from "@/lib/auth/demo-password";
 import { verifyPassword } from "@/lib/auth/password";
 import { users } from "@/db/schema";
@@ -96,7 +96,7 @@ export async function loginWithCredentials(
       email: user.email,
       roles: user.roles,
     });
-    redirect(resolvePostLoginPath(next, user.roles));
+    redirect(await resolvePostLoginPathDynamic(next, user.roles));
   }
 
   const { getDb } = await import("@/db");
@@ -131,7 +131,7 @@ export async function loginWithCredentials(
       email: user.email,
       roles: user.roles,
     });
-    redirect(resolvePostLoginPath(next, user.roles));
+    redirect(await resolvePostLoginPathDynamic(next, user.roles));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("password_hash")) {

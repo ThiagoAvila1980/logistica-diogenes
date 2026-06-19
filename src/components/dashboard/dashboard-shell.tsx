@@ -6,6 +6,7 @@ import { AppSidebar } from "./app-sidebar";
 import { MobileHeader } from "./mobile-header";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 import { cn } from "@/lib/utils";
+import type { NavItem } from "@/lib/auth/permissions";
 
 function getMobileTitle(pathname: string): string {
   if (pathname.startsWith("/field")) return "Medições";
@@ -21,6 +22,7 @@ function getMobileTitle(pathname: string): string {
   if (pathname.startsWith("/admin/tipo-envidracamento")) {
     return "Tipo de envidraçamento";
   }
+  if (pathname.startsWith("/admin/permissions")) return "Visualização de telas";
   if (pathname.startsWith("/admin")) return "Configurações";
   return "Logística Diógenes";
 }
@@ -29,17 +31,20 @@ export function DashboardShell({
   children,
   mockMode,
   session,
+  navItems,
+  showNotifications,
+  showSettings,
 }: {
   children: React.ReactNode;
   mockMode: boolean;
   session?: import("@/lib/auth/session-types").SessionUser;
+  navItems: NavItem[];
+  showNotifications: boolean;
+  showSettings: boolean;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const isField = pathname.startsWith("/field");
-  const showNotifications = session
-    ? session.roles.some((role) => role === "admin" || role === "gerente")
-    : false;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -73,6 +78,9 @@ export function DashboardShell({
         pathname={pathname}
         mockMode={mockMode}
         session={session}
+        navItems={navItems}
+        showNotifications={showNotifications}
+        showSettings={showSettings}
         className={cn(
           "fixed inset-y-0 left-0 z-50 h-[100dvh] max-h-[100dvh] transition-transform duration-200 md:sticky md:top-0 md:z-auto md:translate-x-0",
           menuOpen ? "translate-x-0" : "-translate-x-full",
@@ -97,7 +105,7 @@ export function DashboardShell({
           <div className="mobile-page">{children}</div>
         </main>
 
-        <MobileBottomNav pathname={pathname} session={session} />
+        <MobileBottomNav pathname={pathname} navItems={navItems} />
       </div>
     </div>
   );

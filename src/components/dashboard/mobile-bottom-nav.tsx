@@ -11,8 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SessionUser } from "@/lib/auth/session-types";
-import { getNavItemsForRoles } from "@/lib/auth/permissions";
+import type { NavItem } from "@/lib/auth/permissions";
 
 const MOBILE_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
@@ -34,14 +33,12 @@ const MOBILE_LABELS: Record<string, string> = {
 
 export function MobileBottomNav({
   pathname,
-  session,
+  navItems,
 }: {
   pathname: string;
-  session?: SessionUser;
+  navItems: NavItem[];
 }) {
-  const items = session
-    ? getNavItemsForRoles(session.roles).slice(0, 6)
-    : getNavItemsForRoles(["admin"]).slice(0, 6);
+  const items = navItems.slice(0, 6);
 
   return (
     <nav
