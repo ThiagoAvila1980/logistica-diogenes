@@ -2,11 +2,11 @@
 
 import { useActionState } from "react";
 import { Loader2, Save } from "lucide-react";
+import { updateScoringRuleAction } from "@/actions/scoring-actions";
 import {
-  updateScoringRuleAction,
   EVENT_TYPE_LABELS,
   type ScoringActionResult,
-} from "@/actions/scoring-actions";
+} from "@/lib/performance/scoring-actions-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

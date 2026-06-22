@@ -8,19 +8,7 @@ import { scoringRules } from "@/db/schema";
 import type { WorkEventType, ScoringRule } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
 import { useMockData } from "@/lib/data/config";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type ScoringActionResult =
-  | { success: true; message: string }
-  | { success: false; message: string };
-
-export const EVENT_TYPE_LABELS: Record<WorkEventType, string> = {
-  corte_vao: "Corte de vão",
-  transporte_vao: "Transporte de vão",
-  instalacao_vao: "Instalação de vão",
-  medicao: "Medição",
-};
+import type { ScoringActionResult } from "@/lib/performance/scoring-actions-types";
 
 // ─── Action: ler regras ───────────────────────────────────────────────────────
 
