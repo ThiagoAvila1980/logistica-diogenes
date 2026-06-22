@@ -1,11 +1,16 @@
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type PageHeadingProps = {
   title: string;
   count?: number;
   description?: string;
   icon?: LucideIcon;
+  backHref?: string;
+  backAriaLabel?: string;
   className?: string;
   children?: React.ReactNode;
 };
@@ -15,6 +20,8 @@ export function PageHeading({
   count,
   description,
   icon: Icon,
+  backHref,
+  backAriaLabel = "Voltar",
   className,
   children,
 }: PageHeadingProps) {
@@ -23,6 +30,18 @@ export function PageHeading({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
+            {backHref ? (
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+              >
+                <Link href={backHref} aria-label={backAriaLabel}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+            ) : null}
             {Icon && (
               <Icon
                 className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6"

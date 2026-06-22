@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Share, X } from "lucide-react";
+import { Download, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,10 +11,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { consumePwaPromptCookie } from "@/lib/pwa/pwa-prompt-cookie.client";
 
 const STORAGE_KEY = "pwa-install-dismissed";
+const PROMPT_WAIT_MS = 1500;
 
-type InstallState = "idle" | "prompt-available" | "ios-guide" | "dismissed";
+type InstallState =
+  | "idle"
+  | "prompt-available"
+  | "ios-guide"
+  | "android-guide"
+  | "dismissed";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -31,10 +38,14 @@ function isRunningStandalone(): boolean {
   );
 }
 
-/** Detecta iOS (Safari não tem beforeinstallprompt) */
 function isIos(): boolean {
   if (typeof navigator === "undefined") return false;
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isAndroidMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /android/i.test(navigator.userAgent);
 }
 
 export function PwaInstallPrompt() {
@@ -43,25 +54,37 @@ export function PwaInstallPrompt() {
     useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Não exibir se já está instalado ou foi dispensado
     if (isRunningStandalone()) return;
     if (localStorage.getItem(STORAGE_KEY) === "true") return;
+    if (!consumePwaPromptCookie()) return;
 
     if (isIos()) {
-      // iOS: mostrar guia manual após 3s
-      const timer = setTimeout(() => setState("ios-guide"), 3000);
+      const timer = setTimeout(() => setState("ios-guide"), PROMPT_WAIT_MS);
       return () => clearTimeout(timer);
     }
 
-    // Android/Desktop Chrome: interceptar evento nativo
+    let promptReceived = false;
+
     const handler = (e: Event) => {
       e.preventDefault();
+      promptReceived = true;
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setState("prompt-available");
     };
 
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+
+    const fallbackTimer = window.setTimeout(() => {
+      if (promptReceived || isRunningStandalone()) return;
+      if (isAndroidMobile()) {
+        setState("android-guide");
+      }
+    }, PROMPT_WAIT_MS + 1500);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.clearTimeout(fallbackTimer);
+    };
   }, []);
 
   function dismiss() {
@@ -87,11 +110,11 @@ export function PwaInstallPrompt() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" />
-              Instalar app de medições
+              Instalar app
             </DialogTitle>
             <DialogDescription>
-              Instale o app para usar sem internet e ter acesso rápido pela tela
-              inicial do celular.
+              Instale o app para acesso rápido pela tela inicial e melhor
+              experiência offline nas medições em campo.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
@@ -119,7 +142,7 @@ export function PwaInstallPrompt() {
             </DialogTitle>
             <DialogDescription asChild>
               <div className="space-y-3 text-sm text-muted-foreground">
-                <p>Para instalar no iPhone/iPad e usar offline:</p>
+                <p>Deseja instalar o app no iPhone/iPad?</p>
                 <ol className="list-decimal space-y-1 pl-4">
                   <li>
                     Toque no ícone de{" "}
@@ -135,10 +158,49 @@ export function PwaInstallPrompt() {
               </div>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={dismiss} className="w-full">
+              Agora não
+            </Button>
             <Button onClick={dismiss} className="w-full">
-              <X className="mr-2 h-4 w-4" />
-              Fechar
+              Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (state === "android-guide") {
+    return (
+      <Dialog open onOpenChange={(open) => !open && dismiss()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-primary" />
+              Instalar app
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>Deseja instalar o app no celular?</p>
+                <ol className="list-decimal space-y-1 pl-4">
+                  <li>
+                    Toque no menu <strong>⋮</strong> do Chrome
+                  </li>
+                  <li>
+                    Selecione <strong>Instalar app</strong> ou{" "}
+                    <strong>Adicionar à tela inicial</strong>
+                  </li>
+                </ol>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={dismiss} className="w-full">
+              Agora não
+            </Button>
+            <Button onClick={dismiss} className="w-full">
+              Entendi
             </Button>
           </DialogFooter>
         </DialogContent>

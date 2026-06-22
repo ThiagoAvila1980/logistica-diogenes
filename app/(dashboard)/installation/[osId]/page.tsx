@@ -7,11 +7,13 @@ import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
 import { canViewAllOrders } from "@/lib/auth/permissions";
 import { listActiveInstallers } from "@/lib/data/installers";
+import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { InstallationChecklist } from "@/components/installation/installation-checklist";
 import { InstallationServicePhotos } from "@/components/installation/installation-service-photos";
+import { Hammer } from "lucide-react";
 
 type Props = { params: Promise<{ osId: string }> };
 
@@ -50,8 +52,6 @@ export default async function InstallationOsPage({ params }: Props) {
 
   const header = (
     <ServiceOrderHeader
-      backHref="/installation"
-      backAriaLabel="Voltar à instalação"
       displayNumber={getOrderDisplayNumber(order)}
       clientName={order.clientName}
       clientPhone={order.clientPhone}
@@ -72,6 +72,12 @@ export default async function InstallationOsPage({ params }: Props) {
   if (!canOperateInstallationModule(order.status, detail.cuttingSteps)) {
     return (
       <>
+        <PageHeading
+          title="Instalação"
+          icon={Hammer}
+          backHref="/installation"
+          backAriaLabel="Voltar à instalação"
+        />
         {header}
         <div className="rounded-xl border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">
@@ -84,6 +90,12 @@ export default async function InstallationOsPage({ params }: Props) {
 
   return (
     <>
+      <PageHeading
+        title="Instalação"
+        icon={Hammer}
+        backHref="/installation"
+        backAriaLabel="Voltar à instalação"
+      />
       {header}
 
       <div className="space-y-4 sm:space-y-6">

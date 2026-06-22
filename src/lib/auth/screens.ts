@@ -9,7 +9,8 @@ export type ScreenKey =
   | "production"
   | "logistics"
   | "installation"
-  | "concluded";
+  | "concluded"
+  | "administrative";
 
 export type Screen = {
   key: ScreenKey;
@@ -24,6 +25,7 @@ export const SCREENS: Screen[] = [
   { key: "logistics",    label: "Transporte",          route: "/logistics" },
   { key: "installation", label: "Instalação",          route: "/installation" },
   { key: "concluded",    label: "Concluídos",          route: "/concluded" },
+  { key: "administrative", label: "Administrativo",    route: "/admin/users" },
 ];
 
 export const SCREEN_KEYS: ScreenKey[] = SCREENS.map((s) => s.key);

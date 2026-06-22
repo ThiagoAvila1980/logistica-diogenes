@@ -21,6 +21,7 @@ import {
 } from "@/lib/upload/purge-os-files";
 import { requireRole } from "@/lib/auth/require-role";
 import { authErrorMessage } from "@/lib/auth/auth-error";
+import { recordWorkEvent } from "@/lib/performance/scoring";
 import { getSession } from "@/lib/auth/session";
 import { generateServiceOrderNumber } from "@/actions/service-order";
 import {
@@ -598,6 +599,16 @@ export async function saveFieldMeasurement(
         updatedAt: new Date(),
       })
       .where(eq(measurements.id, osId));
+
+    // Pontuação: medicao ao salvar medição de campo
+    if (order.assignedUserId) {
+      await recordWorkEvent(db, {
+        userId: order.assignedUserId,
+        measurementId: osId,
+        itemId: "__os__",
+        eventType: "medicao",
+      });
+    }
 
     revalidatePath("/field");
     revalidatePath(`/field/${osId}`);

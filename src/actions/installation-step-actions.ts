@@ -17,6 +17,7 @@ import {
 import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { recordWorkEvent, reverseWorkEvent } from "@/lib/performance/scoring";
 
 export type UpdateInstallationStepResult =
   | { success: true }
@@ -150,6 +151,28 @@ export async function updateItemInstallationStepAction(
         await tx.update(installationLogs).set(logFields).where(eq(installationLogs.id, existingLog.id));
       } else {
         await tx.insert(installationLogs).values({ idMedicao: osId, ...logFields });
+      }
+
+      // Pontuação: instalacao_vao ao marcar/desmarcar step=acabamento (último step)
+      if (step === "acabamento") {
+        if (done) {
+          const updatedItem = updatedItems.find((i) => i.id === itemId);
+          const installerId = updatedItem?.installationProgress?.installerId;
+          if (installerId) {
+            await recordWorkEvent(tx, {
+              userId: installerId,
+              measurementId: osId,
+              itemId,
+              eventType: "instalacao_vao",
+            });
+          }
+        } else {
+          await reverseWorkEvent(tx, {
+            measurementId: osId,
+            itemId,
+            eventType: "instalacao_vao",
+          });
+        }
       }
     });
 

@@ -16,7 +16,6 @@ import {
   isAdminOnlyPath,
   type NavItem,
   NAV_ITEMS,
-  ADMIN_NAV_ITEMS,
 } from "@/lib/auth/permissions";
 import { SCREENS, screenForPathname, type ScreenKey } from "@/lib/auth/screens";
 
@@ -195,11 +194,16 @@ export function getNavItemsForRolesDynamic(
   const order = new Map(NAV_ITEMS.map((item, idx) => [item.href, idx]));
   merged.sort((a, b) => (order.get(a.href) ?? 99) - (order.get(b.href) ?? 99));
 
-  if (roles.includes("admin")) {
-    return [...merged, ...ADMIN_NAV_ITEMS];
-  }
-
   return merged;
+}
+
+/** Exibe a seção Administrativo no menu quando o papel tem a tela habilitada. */
+export function canSeeAdministrativeNav(
+  roles: readonly UserRole[],
+  matrix: RoleScreenMatrix,
+): boolean {
+  if (roles.includes("admin")) return true;
+  return roles.some((role) => matrix[role]?.has("administrative") ?? false);
 }
 
 /**

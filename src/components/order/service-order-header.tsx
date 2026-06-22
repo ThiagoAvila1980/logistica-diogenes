@@ -7,7 +7,7 @@ import { buildMapsSearchUrl } from "@/lib/maps-url";
 import { cn } from "@/lib/utils";
 
 export type ServiceOrderHeaderProps = {
-  backHref: string;
+  backHref?: string;
   backAriaLabel?: string;
   displayNumber: string;
   clientName: string;
@@ -54,16 +54,18 @@ export function ServiceOrderHeader({
       ) : null}
 
       <div className="flex items-start gap-2">
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          className="mt-0.5 shrink-0"
-        >
-          <Link href={backHref} aria-label={backAriaLabel}>
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
+        {backHref ? (
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="mt-0.5 shrink-0"
+          >
+            <Link href={backHref} aria-label={backAriaLabel}>
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+        ) : null}
 
         <div
           className={cn(

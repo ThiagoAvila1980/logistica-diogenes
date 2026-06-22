@@ -11,6 +11,7 @@ import {
 import { clearSession, getSession, setSession } from "@/lib/auth/session";
 import type { SessionUser } from "@/lib/auth/session-types";
 import { resolvePostLoginPathDynamic } from "@/lib/auth/login-redirect";
+import { setPwaPromptPendingCookie } from "@/lib/pwa/pwa-prompt-cookie";
 import { DEMO_DEFAULT_PASSWORD } from "@/lib/auth/demo-password";
 import { verifyPassword } from "@/lib/auth/password";
 import { users } from "@/db/schema";
@@ -96,6 +97,7 @@ export async function loginWithCredentials(
       email: user.email,
       roles: user.roles,
     });
+    await setPwaPromptPendingCookie();
     redirect(await resolvePostLoginPathDynamic(next, user.roles));
   }
 
@@ -131,6 +133,7 @@ export async function loginWithCredentials(
       email: user.email,
       roles: user.roles,
     });
+    await setPwaPromptPendingCookie();
     redirect(await resolvePostLoginPathDynamic(next, user.roles));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

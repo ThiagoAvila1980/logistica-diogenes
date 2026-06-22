@@ -253,6 +253,23 @@ let measurements: MockMeasurement[] = [
     scheduledDate: new Date("2026-05-20"),
     updatedAt: new Date(),
   },
+  {
+    id: "a1111111-1111-4111-8111-111111111109",
+    number: "OS-2026-00009",
+    type: "final",
+    status: "medida",
+    etapa: "concluido",
+    priority: "normal",
+    assignedUserId: DEMO_INSTALADOR,
+    cliente: "Residencial Solar",
+    telefone: "(11) 98765-4321",
+    numeroOrcamento: "ORC-2026-0009",
+    budgetReference: "ORC-2026-0009",
+    sourcePdfUrl: null,
+    description: "Sacada envidraçada — serviço concluído",
+    scheduledDate: new Date("2026-05-19"),
+    updatedAt: new Date(),
+  },
 ];
 
 let cuttingPlans: MockCutting[] = [
@@ -406,26 +423,7 @@ export const mockRepository = {
     const m = findMeasurement(osId);
     if (!m) return { success: false, message: "OS não encontrada" };
 
-    const CUTTING_STATUSES = ["cortes", "embalagem", "acessorios_plano"];
-
     let cut = cuttingPlans.find((c) => c.idMedicao === osId);
-    const cuttingSteps = {
-      corteFeito: cut?.corteFeito ?? false,
-      embalagemFeita: cut?.embalagemFeita ?? false,
-      acessoriosFeitos: cut?.acessoriosFeitos ?? false,
-      vidrosFeitos: cut?.vidrosFeitos ?? false,
-    };
-    const canEditCutting =
-      CUTTING_STATUSES.includes(m.etapa) ||
-      (m.etapa.startsWith("transporte_") &&
-        (!cuttingSteps.corteFeito ||
-          !cuttingSteps.embalagemFeita ||
-          !cuttingSteps.acessoriosFeitos ||
-          !cuttingSteps.vidrosFeitos));
-
-    if (!canEditCutting) {
-      return { success: false, message: "OS não está em etapa de corte" };
-    }
 
     if (!cut) {
       cut = {

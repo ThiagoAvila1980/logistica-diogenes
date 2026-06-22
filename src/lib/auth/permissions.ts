@@ -26,6 +26,7 @@ export const ROLE_ROUTE_ACCESS: Record<UserRole, readonly string[]> = {
     "/installation",
     "/concluded",
     "/admin",
+    "/reports",
   ],
   gerente: [
     "/production",
@@ -166,10 +167,47 @@ export const NAV_ITEMS: NavItem[] = [
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: "/admin/users", label: "Usuários", match: "/admin/users" },
+  {
+    href: "/admin/permissions",
+    label: "Visualização de telas",
+    match: "/admin/permissions",
+  },
+];
+
+export const REPORTS_NAV_ITEMS: NavItem[] = [
+  {
+    href: "/reports/services",
+    label: "Jornada de serviços",
+    match: "/reports/services",
+  },
+  {
+    href: "/reports/kpis",
+    label: "Indicadores Operacionais",
+    match: "/reports/kpis",
+  },
+  {
+    href: "/reports/backlog",
+    label: "Pendências e Prazos",
+    match: "/reports/backlog",
+  },
+  {
+    href: "/reports/team",
+    label: "Produtividade",
+    match: "/reports/team",
+  },
+  {
+    href: "/reports/logistics",
+    label: "Logística",
+    match: "/reports/logistics",
+  },
+  {
+    href: "/reports/products",
+    label: "Produtos",
+    match: "/reports/products",
+  },
 ];
 
 export const SETTINGS_NAV_ITEMS: NavItem[] = [
-  { href: "/admin/permissions", label: "Visualização de telas", match: "/admin/permissions" },
   { href: "/admin/vehicles", label: "Veículos", match: "/admin/vehicles" },
   { href: "/admin/cores", label: "Cores", match: "/admin/cores" },
   { href: "/admin/ambientes", label: "Ambientes", match: "/admin/ambientes" },
@@ -179,10 +217,29 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
     label: "Tipo de envidraçamento",
     match: "/admin/tipo-envidracamento",
   },
+  {
+    href: "/admin/scoring",
+    label: "Pontuação",
+    match: "/admin/scoring",
+  },
 ];
 
 export function isSettingsPath(pathname: string): boolean {
   return SETTINGS_NAV_ITEMS.some(
+    (item) =>
+      pathname === item.match || pathname.startsWith(`${item.match}/`),
+  );
+}
+
+export function isAdministrativePath(pathname: string): boolean {
+  return ADMIN_NAV_ITEMS.some(
+    (item) =>
+      pathname === item.match || pathname.startsWith(`${item.match}/`),
+  );
+}
+
+export function isReportsPath(pathname: string): boolean {
+  return REPORTS_NAV_ITEMS.some(
     (item) =>
       pathname === item.match || pathname.startsWith(`${item.match}/`),
   );
@@ -215,10 +272,6 @@ export function getNavItemsForRoles(roles: readonly UserRole[]): NavItem[] {
   merged.sort(
     (a, b) => (order.get(a.href) ?? 99) - (order.get(b.href) ?? 99),
   );
-
-  if (hasRole(roles, "admin")) {
-    return [...merged, ...ADMIN_NAV_ITEMS];
-  }
 
   return merged;
 }

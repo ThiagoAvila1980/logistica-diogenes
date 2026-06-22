@@ -169,4 +169,46 @@
     box-shadow: var(--shadow-card);
     @apply border-primary/10;
   }
+
+  .bg-sidebar-surface {
+    background-color: rgb(255 255 255 / 0.08);
+  }
+
+  .bg-sidebar-active {
+    background-color: rgb(255 255 255 / 0.12);
+  }
+
+  .hover\:bg-sidebar-surface:hover {
+    background-color: rgb(255 255 255 / 0.08);
+  }
+
+  .border-sidebar-subtle {
+    border-color: rgb(255 255 255 / 0.15);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .report-print-root {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  aside,
+  .mobile-header-offset,
+  .mobile-nav-offset,
+  nav[aria-label="Navegação principal"] {
+    display: none !important;
+  }
+
+  main {
+    overflow: visible !important;
+  }
+
+  .mobile-page {
+    padding: 0 !important;
+  }
 }

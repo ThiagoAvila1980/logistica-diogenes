@@ -7,6 +7,7 @@ import {
   pgEnum,
   varchar,
   boolean,
+  integer,
   index,
   uniqueIndex,
   primaryKey,
@@ -68,6 +69,16 @@ export const measurementPriority = pgEnum("measurement_priority", [
   "alta",
   "urgente",
 ]);
+
+/** Tipos de evento de trabalho pontuados */
+export const workEventType = pgEnum("work_event_type", [
+  "corte_vao",
+  "transporte_vao",
+  "instalacao_vao",
+  "medicao",
+]);
+
+export type WorkEventType = (typeof workEventType.enumValues)[number];
 
 // ─── Lookup tables ─────────────────────────────────────────────────────────────
 
@@ -340,6 +351,42 @@ export const notifications = pgTable(
   ],
 );
 
+// ─── Pontuação por desempenho ──────────────────────────────────────────────────
+
+/** Configuração de pontos por tipo de evento — editável pelo admin */
+export const scoringRules = pgTable("scoring_rules", {
+  eventType: workEventType("event_type").primaryKey(),
+  points: integer("points").notNull().default(10),
+  active: boolean("active").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/** Ledger append-only de eventos de trabalho pontuados por funcionário */
+export const workEvents = pgTable(
+  "work_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    measurementId: uuid("measurement_id")
+      .references(() => measurements.id, { onDelete: "cascade" })
+      .notNull(),
+    /** ID do vão, ou '__os__' para eventos de OS inteira (ex.: medição) */
+    itemId: text("item_id").notNull(),
+    eventType: workEventType("event_type").notNull(),
+    /** Snapshot dos pontos no momento do registro — imune a mudanças futuras na config */
+    points: integer("points").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_work_events_unique").on(t.measurementId, t.itemId, t.eventType),
+    index("idx_work_events_user_id").on(t.userId),
+    index("idx_work_events_created_at").on(t.createdAt),
+    index("idx_work_events_user_created").on(t.userId, t.createdAt),
+  ],
+);
+
 // ─── Role screen access ────────────────────────────────────────────────────────
 
 /** Matriz configurável de acesso tela x papel. admin não é armazenado (acesso total implícito). */
@@ -436,6 +483,17 @@ export const installationLogsRelations = relations(installationLogs, ({ one }) =
   }),
 }));
 
+export const workEventsRelations = relations(workEvents, ({ one }) => ({
+  user: one(users, {
+    fields: [workEvents.userId],
+    references: [users.id],
+  }),
+  measurement: one(measurements, {
+    fields: [workEvents.measurementId],
+    references: [measurements.id],
+  }),
+}));
+
 // ─── Type exports ──────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -445,6 +503,8 @@ export type OsStatus = (typeof osStatus.enumValues)[number];
 export type MeasurementDbStatus = (typeof measurementStatus.enumValues)[number];
 export type MeasurementPriority = (typeof measurementPriority.enumValues)[number];
 export type MeasurementDbType = (typeof measurementTypes.enumValues)[number];
+export type ScoringRule = typeof scoringRules.$inferSelect;
+export type WorkEvent = typeof workEvents.$inferSelect;
 
 /** @deprecated Use Measurement — alias mantido durante migração do código */
 export type ServiceOrder = Measurement;

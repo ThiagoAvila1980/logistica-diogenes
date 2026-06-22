@@ -57,6 +57,7 @@ import {
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
 import { EditMeasurementHeaderDialog } from "@/components/field/edit-measurement-header-dialog";
 import { SendToCuttingDialog } from "@/components/field/send-to-cutting-dialog";
+import { PageHeading } from "@/components/dashboard/page-heading";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
@@ -460,8 +461,13 @@ export function FieldMeasurementForm({
   });
   return (
     <div className="flex flex-col gap-4 mobile-form-offset md:pb-0">
-      <ServiceOrderHeader
+      <PageHeading
+        title="Medição"
+        icon={Ruler}
         backHref="/field"
+        backAriaLabel="Voltar às medições"
+      />
+      <ServiceOrderHeader
         displayNumber={displayNumeroOrcamento}
         clientName={displayCliente ?? order.clientName}
         clientPhone={displayTelefone ?? null}

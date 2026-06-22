@@ -68,6 +68,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "15mb",
     },
   },
+  turbopack: {},
   webpack: (config, { dev }) => {
     if (dev) {
       // Windows: evita rebuild parcial que deixa chunks órfãos no .next

@@ -14,6 +14,17 @@ export function formatBrDate(date: Date | string | null | undefined): string {
   return `${day}/${month}/${year}`;
 }
 
+/** Formata data e hora no padrão DD/MM/YYYY HH:mm */
+export function formatBrDateTime(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const parsed = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(parsed.getTime())) return "";
+  const datePart = formatBrDate(parsed);
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+  return `${datePart} ${hours}:${minutes}`;
+}
+
 /** Interpreta DD/MM/YYYY (ou yyyy-MM-dd legado) em Date local */
 export function parseBrDate(value: string): Date | null {
   const trimmed = value.trim();

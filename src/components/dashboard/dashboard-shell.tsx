@@ -23,6 +23,13 @@ function getMobileTitle(pathname: string): string {
     return "Tipo de envidraçamento";
   }
   if (pathname.startsWith("/admin/permissions")) return "Visualização de telas";
+  if (pathname.startsWith("/reports/services")) return "Jornada dos serviços";
+  if (pathname.startsWith("/reports/kpis")) return "Indicadores Operacionais";
+  if (pathname.startsWith("/reports/backlog")) return "Pendências e Prazos";
+  if (pathname.startsWith("/reports/team")) return "Produtividade";
+  if (pathname.startsWith("/reports/logistics")) return "Logística";
+  if (pathname.startsWith("/reports/products")) return "Produtos";
+  if (pathname.startsWith("/reports")) return "Relatórios";
   if (pathname.startsWith("/admin")) return "Configurações";
   return "Logística Diógenes";
 }
@@ -34,6 +41,8 @@ export function DashboardShell({
   navItems,
   showNotifications,
   showSettings,
+  showAdministrative,
+  showReports,
 }: {
   children: React.ReactNode;
   mockMode: boolean;
@@ -41,6 +50,8 @@ export function DashboardShell({
   navItems: NavItem[];
   showNotifications: boolean;
   showSettings: boolean;
+  showAdministrative: boolean;
+  showReports: boolean;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -64,7 +75,7 @@ export function DashboardShell({
   }, [menuOpen]);
 
   return (
-    <div className="flex min-h-[100dvh] bg-background">
+    <div className="flex min-h-dvh bg-background">
       {menuOpen && (
         <button
           type="button"
@@ -81,8 +92,10 @@ export function DashboardShell({
         navItems={navItems}
         showNotifications={showNotifications}
         showSettings={showSettings}
+        showAdministrative={showAdministrative}
+        showReports={showReports}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 h-[100dvh] max-h-[100dvh] transition-transform duration-200 md:sticky md:top-0 md:z-auto md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 h-dvh max-h-dvh transition-transform duration-200 md:sticky md:top-0 md:z-auto md:translate-x-0",
           menuOpen ? "translate-x-0" : "-translate-x-full",
         )}
         onNavigate={() => setMenuOpen(false)}
@@ -99,7 +112,7 @@ export function DashboardShell({
           className={cn(
             "flex-1 overflow-x-hidden overflow-y-auto",
             "mobile-header-offset mobile-nav-offset md:pt-0 md:pb-0",
-            isField && "bg-gradient-to-b from-accent/40 to-muted/60",
+            isField && "bg-linear-to-b from-accent/40 to-muted/60",
           )}
         >
           <div className="mobile-page">{children}</div>

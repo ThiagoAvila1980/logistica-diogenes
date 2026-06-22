@@ -2,12 +2,14 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SwRegister } from "@/components/offline/sw-register";
+import { PwaInstallPrompt } from "@/components/offline/pwa-install-prompt";
 import { useMockData } from "@/lib/data/config";
 import { getSession } from "@/lib/auth/session";
 import {
   getRoleScreenMatrix,
   canAccessRouteDynamic,
   getNavItemsForRolesDynamic,
+  canSeeAdministrativeNav,
 } from "@/lib/auth/role-access";
 import { hasAnyRole, hasRole } from "@/lib/auth/permissions";
 import { isAdminOnlyPath } from "@/lib/auth/permissions";
@@ -39,16 +41,21 @@ export default async function DashboardLayout({
   const navItems = getNavItemsForRolesDynamic(session.roles, matrix);
   const showNotifications = hasAnyRole(session.roles, ["admin", "gerente"]);
   const showSettings = hasRole(session.roles, "admin");
+  const showAdministrative = canSeeAdministrativeNav(session.roles, matrix);
+  const showReports = hasRole(session.roles, "admin");
 
   return (
     <>
       <SwRegister />
+      <PwaInstallPrompt />
       <DashboardShell
         mockMode={useMockData()}
         session={session}
         navItems={navItems}
         showNotifications={showNotifications}
         showSettings={showSettings}
+        showAdministrative={showAdministrative}
+        showReports={showReports}
       >
         {children}
       </DashboardShell>

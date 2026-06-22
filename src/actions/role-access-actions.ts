@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { authErrorMessage } from "@/lib/auth/auth-error";
 import { useMockData } from "@/lib/data/config";
 import { saveRoleScreenMatrix, invalidateRoleScreenCache } from "@/lib/auth/role-access";
-import type { ScreenKey } from "@/lib/auth/screens";
+import { SCREEN_KEYS, type ScreenKey } from "@/lib/auth/screens";
 import type { UserRole } from "@/db/schema";
 
 export type RoleAccessActionResult =
@@ -43,13 +43,10 @@ export async function saveRoleAccessMatrix(
 
   for (const role of CONFIGURABLE_ROLES) {
     const enabled: ScreenKey[] = [];
-    for (const [key, value] of formData.entries()) {
-      if (key === `${role}:dashboard`    && value === "on") enabled.push("dashboard");
-      if (key === `${role}:field`        && value === "on") enabled.push("field");
-      if (key === `${role}:production`   && value === "on") enabled.push("production");
-      if (key === `${role}:logistics`    && value === "on") enabled.push("logistics");
-      if (key === `${role}:installation` && value === "on") enabled.push("installation");
-      if (key === `${role}:concluded`    && value === "on") enabled.push("concluded");
+    for (const screenKey of SCREEN_KEYS) {
+      if (formData.get(`${role}:${screenKey}`) === "on") {
+        enabled.push(screenKey);
+      }
     }
     updates[role] = enabled;
   }

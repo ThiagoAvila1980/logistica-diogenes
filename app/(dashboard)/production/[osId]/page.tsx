@@ -3,11 +3,13 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { CuttingDetailView } from "@/components/production/cutting-detail-view";
+import { Scissors } from "lucide-react";
 
 type Props = { params: Promise<{ osId: string }> };
 
@@ -24,9 +26,13 @@ export default async function ProductionOsPage({ params }: Props) {
 
   return (
     <>
-      <ServiceOrderHeader
+      <PageHeading
+        title="Plano de corte"
+        icon={Scissors}
         backHref="/production"
         backAriaLabel="Voltar ao plano de corte"
+      />
+      <ServiceOrderHeader
         displayNumber={getOrderDisplayNumber(order)}
         clientName={order.clientName}
         clientPhone={order.clientPhone}

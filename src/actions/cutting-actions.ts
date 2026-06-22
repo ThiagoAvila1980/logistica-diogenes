@@ -21,6 +21,11 @@ import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
 import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
+import {
+  findActiveCortador,
+  recordWorkEvent,
+  reverseWorkEvent,
+} from "@/lib/performance/scoring";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -104,6 +109,27 @@ export async function updateItemCuttingStepAction(
       const aggregate = aggregateCuttingStepsFromItems(
         selectCuttingLineItems(allItems),
       );
+
+      // Pontuação: corte_vao ao marcar/desmarcar step=corte
+      if (step === "corte") {
+        if (done) {
+          const cortadorId = await findActiveCortador(tx);
+          if (cortadorId) {
+            await recordWorkEvent(tx, {
+              userId: cortadorId,
+              measurementId: osId,
+              itemId,
+              eventType: "corte_vao",
+            });
+          }
+        } else {
+          await reverseWorkEvent(tx, {
+            measurementId: osId,
+            itemId,
+            eventType: "corte_vao",
+          });
+        }
+      }
 
       // Quando o primeiro vão tem corte feito, libera transporte em paralelo
       if (
@@ -274,12 +300,6 @@ export async function updateCuttingNotesAction(
       .limit(1);
 
     if (!meas) return { success: false, message: "OS não encontrada" };
-
-    const allItems = (meas.items as MeasurementLineItem[]) ?? [];
-
-    if (!canOperateCuttingForItems(meas.etapa as OsStatus, allItems)) {
-      return { success: false, message: "OS não está em etapa de corte" };
-    }
 
     const [existingPlan] = await db
       .select({ id: cuttingPlans.id })

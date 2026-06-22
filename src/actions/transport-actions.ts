@@ -19,6 +19,7 @@ import {
 import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { recordWorkEvent, reverseWorkEvent } from "@/lib/performance/scoring";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -271,6 +272,28 @@ export async function updateItemTransportStepAction(
         await tx.update(transportLogs).set(logFields).where(eq(transportLogs.id, existingLog.id));
       } else {
         await tx.insert(transportLogs).values({ idMedicao: osId, ...logFields });
+      }
+
+      // Pontuação: transporte_vao ao marcar/desmarcar step=vidros (último step)
+      if (step === "vidros") {
+        if (done) {
+          const updatedItem = updatedItems.find((i) => i.id === itemId);
+          const driverId = updatedItem?.transportProgress?.driverId;
+          if (driverId) {
+            await recordWorkEvent(tx, {
+              userId: driverId,
+              measurementId: osId,
+              itemId,
+              eventType: "transporte_vao",
+            });
+          }
+        } else {
+          await reverseWorkEvent(tx, {
+            measurementId: osId,
+            itemId,
+            eventType: "transporte_vao",
+          });
+        }
       }
     });
 

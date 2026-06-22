@@ -4,7 +4,6 @@ import { FieldOrderIndex } from "@/components/field/field-order-index";
 import { CreateMeasurementDialog } from "@/components/field/create-measurement-dialog";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { SyncStatusBar } from "@/components/offline/sync-status-bar";
-import { PwaInstallPrompt } from "@/components/offline/pwa-install-prompt";
 import { FieldCacheHydrator } from "@/components/offline/field-cache-hydrator";
 import { Ruler } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
@@ -29,7 +28,6 @@ export default async function FieldIndexPage() {
       <SyncStatusBar />
       <FieldOrderIndex orders={fieldOrders} canDelete={canCreate} />
       <FieldCacheHydrator orders={fieldOrders} lookups={lookups} />
-      <PwaInstallPrompt />
     </div>
   );
 }

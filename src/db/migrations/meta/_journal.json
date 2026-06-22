@@ -218,6 +218,13 @@
       "when": 1750000000000,
       "tag": "0034_role_screen_access",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1750100000000,
+      "tag": "0035_performance_scoring",
+      "breakpoints": true
     }
   ]
 }

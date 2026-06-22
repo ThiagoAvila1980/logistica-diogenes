@@ -10,7 +10,6 @@ import {
   Palette,
   PanelTop,
   Settings2,
-  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,7 +20,6 @@ import {
 } from "@/lib/auth/permissions";
 
 const SETTINGS_ICONS: Record<string, LucideIcon> = {
-  "/admin/permissions": ShieldCheck,
   "/admin/vehicles": Car,
   "/admin/cores": Palette,
   "/admin/ambientes": DoorOpen,
@@ -49,8 +47,8 @@ export function SettingsNavSection({
         className={cn(
           "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-all",
           sectionActive
-            ? "border-l-2 border-brass/60 bg-white/8 text-primary-foreground"
-            : "border-l-2 border-transparent text-primary-foreground/70 hover:bg-white/8 hover:text-primary-foreground",
+            ? "border-l-2 border-brass/60 bg-sidebar-surface text-primary-foreground"
+            : "border-l-2 border-transparent text-primary-foreground/70 hover:bg-sidebar-surface hover:text-primary-foreground",
         )}
         aria-expanded={open}
       >
@@ -65,7 +63,7 @@ export function SettingsNavSection({
       </button>
 
       {open && (
-        <div className="ml-3 mt-1 space-y-0.5 border-l border-white/15 pl-3">
+        <div className="ml-3 mt-1 space-y-0.5 border-l border-sidebar-subtle pl-3">
           {SETTINGS_NAV_ITEMS.map((item: NavItem) => {
             const Icon = SETTINGS_ICONS[item.match] ?? Settings2;
             const active =
@@ -80,8 +78,8 @@ export function SettingsNavSection({
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-all",
                   active
-                    ? "border-l-2 border-brass bg-white/12 font-medium text-primary-foreground"
-                    : "border-l-2 border-transparent text-primary-foreground/65 hover:bg-white/8 hover:text-primary-foreground",
+                    ? "border-l-2 border-brass bg-sidebar-active font-medium text-primary-foreground"
+                    : "border-l-2 border-transparent text-primary-foreground/65 hover:bg-sidebar-surface hover:text-primary-foreground",
                 )}
               >
                 <Icon className={cn("h-4 w-4 shrink-0", active && "text-brass")} />

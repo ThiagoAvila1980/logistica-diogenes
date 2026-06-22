@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, Save, StickyNote } from "lucide-react";
+import { CheckCircle2, Loader2, Save, StickyNote } from "lucide-react";
 import { updateCuttingNotesAction } from "@/actions/cutting-actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,14 @@ export function CuttingNotesField({ osId, initialNotes }: Props) {
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [savedNotes, setSavedNotes] = useState(initialNotes ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const hasChanges = notes.trim() !== savedNotes.trim();
 
   function handleSave() {
     setError(null);
+    setSuccess(null);
     startTransition(async () => {
       const result = await updateCuttingNotesAction({
         osId,
@@ -37,6 +39,7 @@ export function CuttingNotesField({ osId, initialNotes }: Props) {
         const next = notes.trim();
         setSavedNotes(next);
         setNotes(next);
+        setSuccess("Observações salvas com sucesso.");
       } else {
         setError(result.message);
       }
@@ -55,7 +58,11 @@ export function CuttingNotesField({ osId, initialNotes }: Props) {
         <Textarea
           placeholder="Descreva informações importantes sobre o corte, embalagem ou materiais..."
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(e) => {
+            setNotes(e.target.value);
+            setSuccess(null);
+            setError(null);
+          }}
           rows={4}
           maxLength={2000}
           className="text-sm"
@@ -63,6 +70,12 @@ export function CuttingNotesField({ osId, initialNotes }: Props) {
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {success && (
+          <Alert variant="success">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
         <div className="flex items-center justify-between gap-3">
