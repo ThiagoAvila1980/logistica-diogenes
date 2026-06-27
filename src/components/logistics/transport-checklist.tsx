@@ -29,7 +29,9 @@ import {
   formatVaoItemFullLabel,
 } from "@/lib/measurement/vao-item-subtitle";
 import { DriverSelector } from "@/components/logistics/driver-selector";
+import { VehicleSelector } from "@/components/logistics/vehicle-selector";
 import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
+import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
 
 type TransportStep = "perfilEstrutural" | "perfilTotal" | "acessorios" | "vidros";
 
@@ -75,7 +77,7 @@ function getItemTransportGates(
       reason: !corteOk
         ? "Aguardando corte deste vão"
         : !hasVehicle
-          ? "Selecione um veículo primeiro"
+          ? "Selecione um veículo para este vão"
           : null,
     },
     perfilTotal: {
@@ -97,20 +99,22 @@ type Props = {
   osId: string;
   osStatus: string;
   items: MeasurementLineItem[];
-  vehicleId: string | null;
+  vehicles: VehicleOptionForSelection[];
   lookups?: MeasurementLookups;
   drivers?: DriverOption[];
   canAssignDriver?: boolean;
+  canAssignVehicle?: boolean;
 };
 
 export function TransportChecklist({
   osId,
   osStatus,
   items,
-  vehicleId,
+  vehicles,
   lookups,
   drivers = [],
   canAssignDriver = false,
+  canAssignVehicle = true,
 }: Props) {
   const isLatePhase =
     osStatus.startsWith("instalacao") || osStatus === "concluido";
@@ -226,7 +230,15 @@ export function TransportChecklist({
               acessorios: false,
               vidros: false,
             };
-            const gates = getItemTransportGates(item, Boolean(vehicleId), isLatePhase);
+            const itemVehicleId = item.transportProgress?.vehicleId ?? null;
+            const itemVehicle = itemVehicleId
+              ? vehicles.find((v) => v.id === itemVehicleId)
+              : undefined;
+            const gates = getItemTransportGates(
+              item,
+              Boolean(itemVehicleId),
+              isLatePhase,
+            );
             const doneSteps = TRANSPORT_STEPS.filter(({ key }) => itemProgress[key]).length;
             const itemAllDone = doneSteps === 4;
             const subtitle = buildVaoItemSubtitle(item, index, lookups);
@@ -414,6 +426,20 @@ export function TransportChecklist({
                       vaoLabel={`Vão ${index + 1}`}
                       initialNotes={item.transportProgress?.observacoes}
                     />
+
+                    {(canAssignVehicle || itemVehicleId) && (
+                      <div className="mt-2.5">
+                        <VehicleSelector
+                          osId={osId}
+                          itemId={item.id}
+                          vehicleId={itemVehicleId}
+                          vehiclePlate={itemVehicle?.plate ?? null}
+                          vehicleDescription={itemVehicle?.description ?? null}
+                          vehicles={vehicles}
+                          canChange={canAssignVehicle}
+                        />
+                      </div>
+                    )}
 
                     {/* Motorista por vão */}
                     {(canAssignDriver || item.transportProgress?.driverId) && (

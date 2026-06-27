@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, ChevronRight, Truck } from "lucide-react";
+import { CalendarDays, ChevronRight, Truck, User } from "lucide-react";
 import { PriorityBadge } from "@/components/dashboard/priority-badge";
 import {
   TRANSPORT_STEP_LABELS,
@@ -23,14 +23,9 @@ export function LogisticsOrderCard({
   logistics,
   transportSteps,
 }: LogisticsOrderCardProps) {
-  const vehicleLabel =
-    logistics?.vehiclePlate != null
-      ? logistics.vehicleDescription
-        ? `${logistics.vehicleDescription} (${logistics.vehiclePlate})`
-        : logistics.vehiclePlate
-      : order.status.startsWith("transporte_") && order.status !== "transporte_levar_vidro"
-        ? "Veículo não atribuído"
-        : null;
+  const vehicleLabel = logistics?.vehiclePlate ?? "Veículo não atribuído";
+
+  const driverLabel = logistics?.driverName ?? "Sem motorista";
 
   const stepBadges = TRANSPORT_STEP_LABELS.map(({ key, label }) => ({
     label,
@@ -41,8 +36,8 @@ export function LogisticsOrderCard({
     <Link
       href={`/logistics/${order.id}`}
       className={cn(
-        "group flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border border-primary/10 bg-card p-4 shadow-[var(--shadow-card)] transition-all premium-card",
-        "active:scale-[0.98] hover:border-primary/30 hover:shadow-[var(--shadow-brand)]",
+        "group flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border border-primary/10 bg-card p-4 shadow-(--shadow-card) transition-all premium-card",
+        "active:scale-[0.98] hover:border-primary/30 hover:shadow-(--shadow-brand)",
       )}
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
@@ -64,23 +59,41 @@ export function LogisticsOrderCard({
         <ChevronRight className="h-5 w-5 shrink-0 text-primary/30 transition-colors group-hover:text-primary" />
       </div>
       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-        {vehicleLabel && (
+        <span className="inline-flex max-w-full items-center gap-1">
+          <Truck
+            className={cn(
+              "h-3 w-3 shrink-0",
+              logistics?.vehiclePlate ? "text-primary" : "text-destructive",
+            )}
+          />
           <span
             className={cn(
-              "inline-flex max-w-full items-center gap-1",
-              order.status.startsWith("transporte_") &&
-                order.status !== "transporte_levar_vidro" &&
-                !logistics?.vehiclePlate &&
-                "text-warning",
+              "truncate",
+              !logistics?.vehiclePlate && "text-destructive",
             )}
           >
-            <Truck className="h-3 w-3 shrink-0" />
-            <span className="truncate">{vehicleLabel}</span>
+            {vehicleLabel}
           </span>
-        )}
+        </span>
+        <span className="inline-flex max-w-full items-center gap-1">
+          <User
+            className={cn(
+              "h-3 w-3 shrink-0",
+              logistics?.driverName ? "text-info" : "text-destructive",
+            )}
+          />
+          <span
+            className={cn(
+              "truncate",
+              !logistics?.driverName && "text-destructive",
+            )}
+          >
+            {driverLabel}
+          </span>
+        </span>
         {order.scheduledDate && (
           <span className="inline-flex items-center gap-1">
-            <CalendarDays className="h-3 w-3" />
+            <CalendarDays className="h-3 w-3 shrink-0 text-brass" />
             {formatBrDate(order.scheduledDate)}
           </span>
         )}

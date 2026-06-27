@@ -4,16 +4,18 @@ import { getTransportDetailForOs } from "@/lib/data/transport-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { listVehiclesForTransportSelection } from "@/lib/data/vehicles";
 import { listActiveDrivers } from "@/lib/data/drivers";
+import { listActiveInstallers } from "@/lib/data/installers";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canViewAllOrders } from "@/lib/auth/permissions";
+import { canViewAllOrders, canEditMeasurementHeader } from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
+import { MeasurementHeaderEditAction } from "@/components/order/measurement-header-edit-action";
 import { TransportChecklist } from "@/components/logistics/transport-checklist";
-import { VehicleSelector } from "@/components/logistics/vehicle-selector";
+import { SendToInstallationDialog } from "@/components/logistics/send-to-installation-dialog";
 import { Truck } from "lucide-react";
 
 type Props = { params: Promise<{ osId: string }> };
@@ -27,15 +29,16 @@ export default async function LogisticsOsPage({ params }: Props) {
   if (!order) notFound();
 
   const isManager = canViewAllOrders(session?.roles ?? []);
+  const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
   const [detail, lookups] = await Promise.all([
     getTransportDetailForOs(osId, order.status),
     listMeasurementLookups(),
   ]);
   const vehicles = await listVehiclesForTransportSelection(osId);
-  const canChangeVehicle = true;
 
   const drivers = isManager ? await listActiveDrivers() : [];
+  const installers = isManager ? await listActiveInstallers() : [];
 
   const header = (
     <ServiceOrderHeader
@@ -45,6 +48,17 @@ export default async function LogisticsOsPage({ params }: Props) {
       clientAddress={order.clientAddress}
       description={order.description}
       className="mb-4 sm:mb-6"
+      actions={
+        canEditHeader ? (
+          <MeasurementHeaderEditAction
+            osId={order.id}
+            clientName={order.clientName}
+            clientPhone={order.clientPhone}
+            clientAddress={order.clientAddress}
+            budgetReference={order.budgetReference}
+          />
+        ) : undefined
+      }
     >
       <div className="mt-3">
         <MeasurementSpecFields
@@ -87,24 +101,27 @@ export default async function LogisticsOsPage({ params }: Props) {
 
       <MeasurementNotesCard notes={order.notes} collapsible />
 
-      <VehicleSelector
-        osId={osId}
-        vehicleId={detail.vehicleId}
-        vehiclePlate={detail.vehiclePlate}
-        vehicleDescription={detail.vehicleDescription}
-        vehicles={vehicles}
-        canChange={canChangeVehicle}
-      />
-
       <TransportChecklist
         osId={osId}
         osStatus={order.status}
         items={detail.items}
-        vehicleId={detail.vehicleId}
+        vehicles={vehicles}
         lookups={lookups}
         drivers={drivers}
         canAssignDriver={isManager}
+        canAssignVehicle
       />
+
+      {isManager && (
+        <SendToInstallationDialog
+          osId={osId}
+          osNumber={getOrderDisplayNumber(order)}
+          clientName={order.clientName}
+          items={detail.items}
+          installers={installers}
+          lookups={lookups}
+        />
+      )}
     </>
   );
 }

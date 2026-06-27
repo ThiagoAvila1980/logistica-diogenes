@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { MessageCircle, Mail, MapPin, Instagram, Facebook } from "lucide-react";
+import { MessageCircle, Mail, MapPin } from "lucide-react";
+import { COMPANY_ADDRESS, GOOGLE_MAPS_URL } from "@/lib/company-contact";
 
 const navLinks = [
   { label: "Serviços", href: "#servicos" },
@@ -21,7 +22,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-[#040810] border-t border-white/5">
+    <footer className="bg-amber-200/30 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Brand */}
@@ -33,41 +34,15 @@ export default function Footer() {
                 width={674}
                 height={574}
                 className="h-11 w-auto object-contain"
-                unoptimized
               />
               <div>
                 <p className="font-heading text-white font-semibold text-sm">DIOGENES</p>
                 <p className="text-[#c8a96e] text-[10px] tracking-widest">ENVIDRAÇAMENTOS ESPECIAIS</p>
               </div>
             </div>
-            <p className="text-white/50 text-sm leading-relaxed mb-6 italic">
+            <p className="text-white/50 text-sm leading-relaxed italic">
               &ldquo;A sofisticação dos envidraçamentos a seu alcance.&rdquo;
             </p>
-            <div className="flex items-center gap-3">
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full glass flex items-center justify-center text-white/60 hover:text-[#c8a96e] transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram size={16} />
-              </a>
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full glass flex items-center justify-center text-white/60 hover:text-[#c8a96e] transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook size={16} />
-              </a>
-              <a
-                href="https://wa.me/5567999995943"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-center text-[#25D366] hover:bg-[#25D366]/20 transition-colors"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle size={16} />
-              </a>
-            </div>
           </div>
 
           {/* Links */}
@@ -136,16 +111,18 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://maps.google.com/?q=Rua+Júlia+Maksude,+471,+Campo+Grande,+MS"
+                  href={GOOGLE_MAPS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-start gap-3 text-white/50 hover:text-white/80 transition-colors"
                 >
                   <MapPin size={15} className="shrink-0 mt-0.5 text-[#c8a96e]" />
                   <span className="text-sm leading-relaxed">
-                    Rua Júlia Maksude, 471<br />
-                    Monte Castelo, Campo Grande–MS<br />
-                    CEP 79011-100
+                    {COMPANY_ADDRESS.displayLines.map((line) => (
+                      <span key={line} className="block">
+                        {line}
+                      </span>
+                    ))}
                   </span>
                 </a>
               </li>

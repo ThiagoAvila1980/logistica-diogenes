@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Lock, Save, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { saveRoleAccessMatrix } from "@/actions/role-access-actions";
 import type { RoleAccessActionResult } from "@/actions/role-access-actions";
+import { useRunOnceOnActionSuccess } from "@/hooks/use-run-once-on-action-success";
 import { SCREENS, type ScreenKey } from "@/lib/auth/screens";
 import { ROLE_LABELS } from "@/lib/auth/permissions";
 import type { UserRole } from "@/db/schema";
@@ -21,14 +22,23 @@ const CONFIGURABLE_ROLES: Exclude<UserRole, "admin">[] = [
 
 type RoleMatrix = Record<Exclude<UserRole, "admin">, Record<ScreenKey, boolean>>;
 
-function Checkbox({
+function cloneMatrix(source: RoleMatrix): RoleMatrix {
+  return CONFIGURABLE_ROLES.reduce((acc, role) => {
+    acc[role] = { ...source[role] };
+    return acc;
+  }, {} as RoleMatrix);
+}
+
+function MatrixCheckbox({
   name,
-  defaultChecked,
+  checked,
   disabled,
+  onChange,
 }: {
   name: string;
-  defaultChecked: boolean;
+  checked: boolean;
   disabled?: boolean;
+  onChange?: (checked: boolean) => void;
 }) {
   return (
     <label className="flex cursor-pointer items-center justify-center">
@@ -36,8 +46,9 @@ function Checkbox({
         type="checkbox"
         name={name}
         value="on"
-        defaultChecked={defaultChecked}
+        checked={checked}
         disabled={disabled}
+        onChange={(event) => onChange?.(event.target.checked)}
         className="h-4 w-4 rounded border border-input accent-primary disabled:cursor-not-allowed disabled:opacity-40"
       />
     </label>
@@ -45,12 +56,29 @@ function Checkbox({
 }
 
 export function RoleAccessPanel({ initialMatrix }: { initialMatrix: RoleMatrix }) {
+  const [matrix, setMatrix] = useState<RoleMatrix>(() => cloneMatrix(initialMatrix));
   const [result, action, isPending] = useActionState<
     RoleAccessActionResult | null,
     FormData
   >(async (_prev, formData) => {
     return saveRoleAccessMatrix(formData);
   }, null);
+
+  useEffect(() => {
+    setMatrix(cloneMatrix(initialMatrix));
+  }, [initialMatrix]);
+
+  useRunOnceOnActionSuccess(result, () => {});
+
+  function toggleCell(role: Exclude<UserRole, "admin">, screenKey: ScreenKey) {
+    setMatrix((current) => ({
+      ...current,
+      [role]: {
+        ...current[role],
+        [screenKey]: !current[role][screenKey],
+      },
+    }));
+  }
 
   return (
     <div className="space-y-6">
@@ -86,7 +114,6 @@ export function RoleAccessPanel({ initialMatrix }: { initialMatrix: RoleMatrix }
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {/* Linha do admin — travada */}
               <tr className="bg-muted/30">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -101,31 +128,29 @@ export function RoleAccessPanel({ initialMatrix }: { initialMatrix: RoleMatrix }
                 </td>
                 {SCREENS.map((screen) => (
                   <td key={screen.key} className="px-3 py-3 text-center">
-                    <Checkbox
+                    <MatrixCheckbox
                       name={`admin:${screen.key}`}
-                      defaultChecked={true}
+                      checked={true}
                       disabled={true}
                     />
                   </td>
                 ))}
               </tr>
 
-              {/* Linhas dos papéis configuráveis */}
               {CONFIGURABLE_ROLES.map((role) => (
                 <tr
                   key={role}
-                  className={cn(
-                    "transition-colors hover:bg-muted/20",
-                  )}
+                  className={cn("transition-colors hover:bg-muted/20")}
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
                     {ROLE_LABELS[role]}
                   </td>
                   {SCREENS.map((screen) => (
                     <td key={screen.key} className="px-3 py-3 text-center">
-                      <Checkbox
+                      <MatrixCheckbox
                         name={`${role}:${screen.key}`}
-                        defaultChecked={initialMatrix[role]?.[screen.key] ?? false}
+                        checked={matrix[role]?.[screen.key] ?? false}
+                        onChange={() => toggleCell(role, screen.key)}
                       />
                     </td>
                   ))}

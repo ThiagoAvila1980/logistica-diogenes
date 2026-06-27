@@ -30,10 +30,19 @@ const CACHE_TTL_MS = 30_000;
 
 let cachedMatrix: RoleScreenMatrix | null = null;
 let cacheAt = 0;
+/** Matriz persistida em memória no modo mock/demo. */
+let mockRoleScreenMatrix: RoleScreenMatrix | null = null;
 
 export function invalidateRoleScreenCache(): void {
   cachedMatrix = null;
   cacheAt = 0;
+}
+
+function getMockRoleScreenMatrix(): RoleScreenMatrix {
+  if (!mockRoleScreenMatrix) {
+    mockRoleScreenMatrix = buildDefaultMatrix();
+  }
+  return mockRoleScreenMatrix;
 }
 
 // ─── Defaults (espelham ROLE_ROUTE_ACCESS do código) ─────────────────────────
@@ -69,7 +78,7 @@ function buildDefaultMatrix(): RoleScreenMatrix {
  */
 export async function getRoleScreenMatrix(): Promise<RoleScreenMatrix> {
   if (useMockData()) {
-    return buildDefaultMatrix();
+    return getMockRoleScreenMatrix();
   }
 
   const now = Date.now();
@@ -113,6 +122,23 @@ export async function getRoleScreenMatrix(): Promise<RoleScreenMatrix> {
 export async function saveRoleScreenMatrix(
   updates: Partial<Record<Exclude<UserRole, "admin">, ScreenKey[]>>,
 ): Promise<void> {
+  if (useMockData()) {
+    const matrix = getMockRoleScreenMatrix();
+    const roles = Object.keys(updates) as Exclude<UserRole, "admin">[];
+
+    for (const role of roles) {
+      const enabledKeys = new Set(updates[role] ?? []);
+      matrix[role] = new Set(
+        SCREENS.filter((screen) => enabledKeys.has(screen.key)).map(
+          (screen) => screen.key,
+        ),
+      );
+    }
+
+    matrix["admin"] = new Set(SCREENS.map((screen) => screen.key));
+    return;
+  }
+
   const db = getDb();
 
   const roles = Object.keys(updates) as Exclude<UserRole, "admin">[];

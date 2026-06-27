@@ -137,6 +137,10 @@ export function canViewAllOrders(roles: readonly UserRole[]): boolean {
   return hasAnyRole(roles, ["admin", "gerente"]);
 }
 
+export function canEditMeasurementHeader(roles: readonly UserRole[]): boolean {
+  return canViewAllOrders(roles);
+}
+
 /** Concluídos: admin e gerente veem tudo; instalador vê só o que executou. */
 export function canAccessConcludedPage(roles: readonly UserRole[]): boolean {
   return hasAnyRole(roles, ["admin", "gerente", "instalador"]);

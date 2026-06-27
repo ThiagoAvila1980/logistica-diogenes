@@ -103,13 +103,28 @@ export function DrawingBoard({
   useEffect(() => {
     if (!templateImageUrl) return;
     const sig = `${templateKey}:${templateImageUrl}`;
-    if (lastTemplateLoadRef.current === sig) return;
+    if (
+      lastTemplateLoadRef.current === sig ||
+      lastTemplateLoadRef.current === `cleared:${sig}`
+    ) {
+      return;
+    }
     lastTemplateLoadRef.current = sig;
     board.loadBackground(templateImageUrl, () => {
       onDirtyChange?.(true);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateImageUrl, templateKey]);
+
+  function handleClear() {
+    if (templateImageUrl) {
+      lastTemplateLoadRef.current = `cleared:${templateKey}:${templateImageUrl}`;
+    }
+    if (initialImageUrl) {
+      initialLoadedRef.current = true;
+    }
+    board.clearDoc();
+  }
 
   function toggleFullscreen() {
     setFullscreen((cur) => {
@@ -228,7 +243,7 @@ export function DrawingBoard({
 
       <div className="my-0.5 h-px w-full bg-inverse-muted" />
 
-      <ToolbarButton onClick={board.clearDoc} disabled={disabled} title="Limpar">
+      <ToolbarButton onClick={handleClear} disabled={disabled} title="Limpar">
         <Trash2 className="h-4 w-4" />
       </ToolbarButton>
       <ToolbarButton
@@ -275,7 +290,7 @@ export function DrawingBoard({
         "overflow-hidden rounded-lg border bg-muted/20",
         board.dirty && !disabled && "border-warning ring-1 ring-warning/40",
         fill && "flex flex-col h-full rounded-none border-0",
-        fullscreen && "fixed inset-0 z-[300] flex flex-col rounded-none border-0",
+        fullscreen && "fixed inset-0 z-drawing-fullscreen flex flex-col rounded-none border-0",
         disabled && "pointer-events-none opacity-60",
         className,
       )}

@@ -72,26 +72,30 @@ export function ConcludedOrderCard({ order }: Props) {
 
       {/* Vãos individuais */}
       {order.totalVaos > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <ul className="space-y-1 border-t border-border/50 pt-2">
           {order.vaos.map((vao) => {
             const vaoAllDone = vao.estrutural && vao.vidros && vao.acabamento;
             const vaoParcial = vao.estrutural || vao.vidros || vao.acabamento;
 
             return (
-              <div
+              <li
                 key={vao.id}
-                title={`${vao.label}: ${vao.estrutural ? "estrutural ✓" : "estrutural ✗"} · ${vao.vidros ? "vidros ✓" : "vidros ✗"} · ${vao.acabamento ? "acabamento ✓" : "acabamento ✗"}`}
                 className={cn(
-                  "flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium",
-                  vaoAllDone
-                    ? "border-success-border bg-success-muted text-success-foreground"
-                    : vaoParcial
-                      ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
-                      : "border-border bg-muted/40 text-muted-foreground",
+                  "flex items-center justify-between gap-2 rounded-md px-1 py-0.5 text-[11px]",
+                  vaoAllDone && "text-success-foreground",
+                  !vaoAllDone && vaoParcial && "text-amber-700 dark:text-amber-400",
+                  !vaoParcial && "text-muted-foreground",
                 )}
               >
-                <span>{vao.label}</span>
-                <span className="flex gap-0.5">
+                <span className="min-w-0 truncate" title={vao.installerName ?? undefined}>
+                  <span className="font-medium">{vao.label}:</span>{" "}
+                  {vao.installerName ?? "Instalador não informado"}
+                </span>
+                <span
+                  className="flex shrink-0 gap-0.5"
+                  title={`${vao.estrutural ? "estrutural ✓" : "estrutural ✗"} · ${vao.vidros ? "vidros ✓" : "vidros ✗"} · ${vao.acabamento ? "acabamento ✓" : "acabamento ✗"}`}
+                  aria-hidden
+                >
                   {vao.estrutural ? (
                     <CheckCircle2 className="h-3 w-3 text-success" />
                   ) : (
@@ -108,10 +112,10 @@ export function ConcludedOrderCard({ order }: Props) {
                     <Circle className="h-3 w-3 opacity-40" />
                   )}
                 </span>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </Link>
   );

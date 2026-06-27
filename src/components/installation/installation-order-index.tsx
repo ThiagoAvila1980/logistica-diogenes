@@ -4,15 +4,18 @@ import { InstallationOrderCard } from "@/components/installation/installation-or
 import { FilteredOrderList } from "@/components/dashboard/filtered-order-list";
 import { serviceOrderFilterFields } from "@/lib/filters/service-order-fields";
 import type { OrderListItem } from "@/lib/data/types";
+import type { InstallationSummary } from "@/lib/data/installation";
 import type { InstallationSteps } from "@/lib/transport-gates";
 
 type InstallationOrderIndexProps = {
   orders: OrderListItem[];
+  summaries: Record<string, InstallationSummary>;
   installationStepsByOs: Record<string, InstallationSteps>;
 };
 
 export function InstallationOrderIndex({
   orders,
+  summaries,
   installationStepsByOs,
 }: InstallationOrderIndexProps) {
   return (
@@ -25,6 +28,7 @@ export function InstallationOrderIndex({
       renderItem={(order) => (
         <InstallationOrderCard
           order={order}
+          installation={summaries[order.id] ?? null}
           installationSteps={installationStepsByOs[order.id] ?? null}
         />
       )}

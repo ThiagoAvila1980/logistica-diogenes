@@ -1,6 +1,6 @@
 import { desc, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
-import { measurements } from "@/db/schema";
+import { measurements, users } from "@/db/schema";
 import {
   hasMeasurementItems,
   measurementClientName,
@@ -21,6 +21,7 @@ export type VaoInstallationProgress = {
   index: number;
   label: string;
   installerId: string | null;
+  installerName: string | null;
   estrutural: boolean;
   vidros: boolean;
   acabamento: boolean;
@@ -109,6 +110,21 @@ export async function listConcludedOrders(): Promise<ConcludedOrderItem[]> {
   return filterConcludedOrdersForInstaller(orders, session.userId);
 }
 
+async function resolveUserNamesByIds(
+  ids: string[],
+): Promise<Map<string, string>> {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (uniqueIds.length === 0) return new Map();
+
+  const db = getDb();
+  const rows = await db
+    .select({ id: users.id, name: users.name })
+    .from(users)
+    .where(inArray(users.id, uniqueIds));
+
+  return new Map(rows.map((row) => [row.id, row.name]));
+}
+
 export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
   const db = getDb();
 
@@ -130,19 +146,36 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
     .where(inArray(measurements.etapa, CONCLUDED_STATUSES))
     .orderBy(desc(measurements.updatedAt));
 
+  const installerIds = rows.flatMap((r) => {
+    const items = (r.items as MeasurementLineItem[] | null) ?? [];
+    const perVaoIds = items
+      .map((item) => item.installationProgress?.installerId)
+      .filter((id): id is string => Boolean(id));
+    if (perVaoIds.length > 0) return perVaoIds;
+    return r.assignedUserId ? [r.assignedUserId] : [];
+  });
+  const installerNamesById = await resolveUserNamesByIds(installerIds);
+
   return rows
     .map((r) => {
       const items = (r.items as MeasurementLineItem[] | null) ?? [];
 
-      const vaos: VaoInstallationProgress[] = items.map((item, idx) => ({
-        id: item.id,
-        index: idx,
-        label: `Vão ${idx + 1}`,
-        installerId: item.installationProgress?.installerId ?? null,
-        estrutural: item.installationProgress?.estrutural ?? false,
-        vidros: item.installationProgress?.vidros ?? false,
-        acabamento: item.installationProgress?.acabamento ?? false,
-      }));
+      const vaos: VaoInstallationProgress[] = items.map((item, idx) => {
+        const installerId =
+          item.installationProgress?.installerId ?? r.assignedUserId ?? null;
+        return {
+          id: item.id,
+          index: idx,
+          label: `Vão ${idx + 1}`,
+          installerId,
+          installerName: installerId
+            ? (installerNamesById.get(installerId) ?? null)
+            : null,
+          estrutural: item.installationProgress?.estrutural ?? false,
+          vidros: item.installationProgress?.vidros ?? false,
+          acabamento: item.installationProgress?.acabamento ?? false,
+        };
+      });
 
       const estruturalCount = vaos.filter((v) => v.estrutural).length;
       const vidrosCount = vaos.filter((v) => v.vidros).length;

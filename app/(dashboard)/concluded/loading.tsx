@@ -1,4 +1,5 @@
 import { BadgeCheck } from "lucide-react";
+import { ORDER_INDEX_GRID_CLASS } from "@/lib/ui/order-index-grid";
 
 export default function ConcludedLoading() {
   return (
@@ -10,7 +11,7 @@ export default function ConcludedLoading() {
         </div>
         <div className="mt-1 h-4 w-80 animate-pulse rounded bg-muted" />
       </header>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <ul className={ORDER_INDEX_GRID_CLASS}>
         {Array.from({ length: 4 }).map((_, i) => (
           <li key={i}>
             <div className="rounded-xl border bg-card p-4 space-y-3">

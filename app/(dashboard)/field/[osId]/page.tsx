@@ -40,6 +40,7 @@ export default async function FieldOsPage({ params }: Props) {
         orcamento: draftOrcamento,
         final: draftFinal,
       }}
+      canEditHeader={canManage}
       canDelete={canManage}
       canSendToCutting={canManage}
     />

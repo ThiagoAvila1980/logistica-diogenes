@@ -66,6 +66,8 @@
   --mobile-header-total: calc(var(--mobile-bar) + var(--spacing-safe-top));
   --mobile-nav-total: calc(var(--mobile-bar) + var(--spacing-safe-bottom));
 
+  --z-drawing-fullscreen: 300;
+
   /* Tipografia (+1px vs. escala padrão Tailwind em root 16px) */
   --text-xs: 0.8125rem;
   --text-xs--line-height: calc(1 / 0.8125);

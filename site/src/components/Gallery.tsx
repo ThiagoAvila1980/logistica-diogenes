@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ZoomIn } from "lucide-react";
@@ -28,6 +28,29 @@ const images = [
 
 export default function Gallery() {
   const [selected, setSelected] = useState<null | { src: string; alt: string }>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const close = useCallback(() => setSelected(null), []);
+
+  useEffect(() => {
+    if (!selected) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKey);
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    // Move focus to close button when lightbox opens
+    closeButtonRef.current?.focus();
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [selected, close]);
 
   return (
     <section id="galeria" className="py-24 px-4 sm:px-6 bg-[#0a101f]">
@@ -65,7 +88,16 @@ export default function Gallery() {
               viewport={{ once: true, margin: "-30px" }}
               transition={{ delay: (i % 3) * 0.1, duration: 0.5 }}
               className="break-inside-avoid mb-4 group relative overflow-hidden rounded-lg cursor-pointer"
+              role="button"
+              tabIndex={0}
+              aria-label={`Ampliar imagem: ${img.alt}`}
               onClick={() => setSelected(img)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelected(img);
+                }
+              }}
             >
               <div className="relative w-full">
                 <Image
@@ -76,7 +108,7 @@ export default function Gallery() {
                   className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-500"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#060d1a]/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                <div className="absolute inset-0 bg-linear-to-t from-[#060d1a]/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                   <div className="flex items-center gap-2 text-white text-sm">
                     <ZoomIn size={16} />
                     <span>{img.alt}</span>
@@ -93,15 +125,20 @@ export default function Gallery() {
         {selected && (
           <motion.div
             key="lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-label={selected.alt}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-            onClick={() => setSelected(null)}
+            onClick={close}
           >
             <button
-              onClick={() => setSelected(null)}
+              ref={closeButtonRef}
+              onClick={close}
+              aria-label="Fechar imagem"
               className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
             >
               <X size={28} />

@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { assignVehicleToTransportAction } from "@/actions/transport-actions";
+import { assignVehicleToVaoAction } from "@/actions/transport-actions";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,6 @@ function formatVehicleOptionTitle(vehicle: VehicleOptionForSelection): string {
   return `${vehicle.plate} · ${vehicle.description}`;
 }
 
-/** Texto curto nas <option> — o select nativo usa a opção mais longa como largura mínima. */
 function formatVehicleOptionLabel(vehicle: VehicleOptionForSelection): string {
   const desc =
     vehicle.description.length > 28
@@ -32,6 +31,7 @@ function formatVehicleOptionLabel(vehicle: VehicleOptionForSelection): string {
 
 type Props = {
   osId: string;
+  itemId: string;
   vehicleId: string | null;
   vehiclePlate: string | null;
   vehicleDescription: string | null;
@@ -41,6 +41,7 @@ type Props = {
 
 export function VehicleSelector({
   osId,
+  itemId,
   vehicleId,
   vehiclePlate,
   vehicleDescription,
@@ -53,9 +54,14 @@ export function VehicleSelector({
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(!vehicleId);
 
+  const availableVehicles = useMemo(
+    () => vehicles.filter((v) => !v.unavailable || v.id === vehicleId),
+    [vehicles, vehicleId],
+  );
+
   const vehicleIds = useMemo(
-    () => new Set(vehicles.map((v) => v.id)),
-    [vehicles],
+    () => new Set(availableVehicles.map((v) => v.id)),
+    [availableVehicles],
   );
 
   useEffect(() => {
@@ -78,8 +84,9 @@ export function VehicleSelector({
     setLoading(true);
     setError(null);
 
-    const result = await assignVehicleToTransportAction({
+    const result = await assignVehicleToVaoAction({
       osId,
+      itemId,
       vehicleId: selectedId,
     });
 
@@ -93,14 +100,14 @@ export function VehicleSelector({
 
   if (vehicleId && !canChange) {
     return (
-      <Card className="mb-4 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
+      <Card className="mb-2 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
             <Car className="h-4 w-4 text-primary" />
-            Veículo em uso
+            Veículo designado
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-3">
           <div className="flex min-w-0 items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
             <span className="min-w-0 truncate font-medium">{assignedLabel}</span>
@@ -111,16 +118,16 @@ export function VehicleSelector({
   }
 
   return (
-    <Card className="mb-4 min-w-0 overflow-hidden border-info-border bg-info-muted/60">
+    <Card className="mb-2 min-w-0 overflow-hidden border-info-border bg-info-muted/60">
       <CardHeader className="p-0">
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-2 px-6 pt-3 pb-3 text-left"
+          className="flex w-full items-center justify-between gap-2 px-4 pt-3 pb-3 text-left"
           onClick={() => setOpen((current) => !current)}
           aria-expanded={open}
-          aria-controls="vehicle-selector-panel"
+          aria-controls={`vehicle-panel-${itemId}`}
         >
-          <CardTitle className="flex min-w-0 items-center gap-2 text-base">
+          <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
             <Car className="h-4 w-4 shrink-0 text-info" />
             <span className="truncate">
               {vehicleId && assignedLabel ? assignedLabel : "Selecionar Veículo"}
@@ -136,78 +143,78 @@ export function VehicleSelector({
         </button>
       </CardHeader>
       {open && (
-        <CardContent id="vehicle-selector-panel" className="space-y-3">
+        <CardContent id={`vehicle-panel-${itemId}`} className="space-y-3 pt-0">
           <p className="text-sm text-muted-foreground">
-          {vehicleId
-            ? "Você pode alterar o veículo a qualquer momento."
-            : "Escolha o veículo que será usado neste transporte. É obrigatório para iniciar a entrega do perfil estrutural."}
-        </p>
+            {vehicleId
+              ? "Altere o veículo deste vão."
+              : "Escolha o veículo deste vão. É obrigatório para iniciar a entrega do perfil estrutural."}
+          </p>
 
-        {vehicleId && assignedLabel && (
-          <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-            <span className="min-w-0 truncate">
-              Atual: <span className="font-medium">{assignedLabel}</span>
-            </span>
-          </div>
-        )}
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="min-w-0 space-y-2">
-          <Label htmlFor="vehicle-select">Veículo</Label>
-          <div className="min-w-0 w-full max-w-full overflow-hidden">
-            <Select
-              id="vehicle-select"
-              value={selectedId}
-              disabled={loading || vehicles.length === 0}
-              className="h-11 w-full min-w-0 max-w-full truncate"
-              onChange={(e) => setSelectedId(e.target.value)}
-            >
-              <option value="">
-                {vehicles.length === 0
-                  ? "Nenhum veículo disponível"
-                  : "Selecione um veículo..."}
-              </option>
-              {vehicles.map((vehicle) => (
-                <option
-                  key={vehicle.id}
-                  value={vehicle.id}
-                  title={formatVehicleOptionTitle(vehicle)}
-                >
-                  {formatVehicleOptionLabel(vehicle)}
-                </option>
-              ))}
-            </Select>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          disabled={
-            loading ||
-            !selectedId ||
-            selectedId === vehicleId ||
-            vehicles.length === 0
-          }
-          onClick={handleConfirm}
-          className="w-full sm:w-auto"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Confirmando...
-            </>
-          ) : vehicleId ? (
-            "Confirmar alteração"
-          ) : (
-            "Confirmar veículo"
+          {vehicleId && assignedLabel && (
+            <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+              <span className="min-w-0 truncate">
+                Atual: <span className="font-medium">{assignedLabel}</span>
+              </span>
+            </div>
           )}
-        </Button>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor={`vehicle-select-${itemId}`}>Veículo</Label>
+            <div className="min-w-0 w-full max-w-full overflow-hidden">
+              <Select
+                id={`vehicle-select-${itemId}`}
+                value={selectedId}
+                disabled={loading || availableVehicles.length === 0}
+                className="h-11 w-full min-w-0 max-w-full truncate"
+                onChange={(e) => setSelectedId(e.target.value)}
+              >
+                <option value="">
+                  {availableVehicles.length === 0
+                    ? "Nenhum veículo disponível"
+                    : "Selecione um veículo..."}
+                </option>
+                {availableVehicles.map((vehicle) => (
+                  <option
+                    key={vehicle.id}
+                    value={vehicle.id}
+                    title={formatVehicleOptionTitle(vehicle)}
+                  >
+                    {formatVehicleOptionLabel(vehicle)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            disabled={
+              loading ||
+              !selectedId ||
+              selectedId === vehicleId ||
+              availableVehicles.length === 0
+            }
+            onClick={handleConfirm}
+            className="w-full sm:w-auto"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Confirmando...
+              </>
+            ) : vehicleId ? (
+              "Confirmar alteração"
+            ) : (
+              "Confirmar veículo"
+            )}
+          </Button>
         </CardContent>
       )}
     </Card>

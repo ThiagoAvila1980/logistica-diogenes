@@ -308,11 +308,34 @@ export function useDrawingBoard(
   // ---------------------------------------------------------------------------
 
   const clearDoc = useCallback(() => {
-    docRef.current = { ...docRef.current, strokes: [] };
+    const container = containerRef.current;
+    let docW = docRef.current.width;
+    let docH = docRef.current.height;
+
+    if (container && container.clientWidth > 0 && container.clientHeight > 0) {
+      const aspect = container.clientWidth / container.clientHeight;
+      if (aspect >= 1) {
+        docW = DOC_LONG_SIDE;
+        docH = Math.round(DOC_LONG_SIDE / aspect);
+      } else {
+        docH = DOC_LONG_SIDE;
+        docW = Math.round(DOC_LONG_SIDE * aspect);
+      }
+    }
+
+    docRef.current = {
+      width: docW,
+      height: docH,
+      background: null,
+      strokes: [],
+    };
+    zoomRef.current = 1;
+    panRef.current = { x: 0, y: 0 };
+    setZoomState(1);
     saveToHistory();
     markDirty();
-    scheduleRender();
-  }, [saveToHistory, markDirty, scheduleRender]);
+    recalcView();
+  }, [saveToHistory, markDirty, recalcView]);
 
   const rotate90 = useCallback((clockwise: boolean) => {
     docRef.current = rotateDocument(docRef.current, clockwise);

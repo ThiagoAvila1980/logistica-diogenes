@@ -2,6 +2,11 @@
 
 import { motion } from "framer-motion";
 import { MessageCircle, Mail, MapPin, Clock } from "lucide-react";
+import {
+  COMPANY_ADDRESS,
+  GOOGLE_MAPS_EMBED_URL,
+  GOOGLE_MAPS_URL,
+} from "@/lib/company-contact";
 
 const contacts = [
   {
@@ -23,8 +28,8 @@ const contacts = [
   {
     icon: MapPin,
     label: "Endereço",
-    value: "Rua Júlia Maksude, 471\nMonte Castelo, Campo Grande–MS\nCEP 79011-100",
-    href: "https://maps.google.com/?q=Rua+Júlia+Maksude,+471,+Monte+Castelo,+Campo+Grande,+MS",
+    value: COMPANY_ADDRESS.displayLines.join("\n"),
+    href: GOOGLE_MAPS_URL,
     color: "#c8a96e",
     hint: "Venha nos visitar",
   },
@@ -100,14 +105,8 @@ export default function Contact() {
             transition={{ duration: 0.8 }}
             className="rounded-2xl overflow-hidden glass"
           >
-            <div className="p-4 border-b border-white/10">
-              <p className="text-white/80 text-sm font-medium flex items-center gap-2">
-                <MapPin size={14} className="text-[#c8a96e]" />
-                Rua Júlia Maksude, 471 — Monte Castelo, Campo Grande–MS
-              </p>
-            </div>
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3740.0!2d-54.62!3d-20.48!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9486e8e8dc15db6d%3A0x0!2sRua+J%C3%BAlia+Maksude%2C+471%2C+Monte+Castelo%2C+Campo+Grande%2C+MS%2C+79011-100!5e0!3m2!1spt!2sbr!4v1700000000000"
+              src={GOOGLE_MAPS_EMBED_URL}
               width="100%"
               height="380"
               style={{ border: 0 }}
@@ -120,7 +119,7 @@ export default function Contact() {
 
             <div className="p-4">
               <a
-                href="https://maps.google.com/?q=Rua+Júlia+Maksude,+471,+Monte+Castelo,+Campo+Grande,+MS"
+                href={GOOGLE_MAPS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full bg-[#c8a96e]/10 hover:bg-[#c8a96e]/20 text-[#c8a96e] border border-[#c8a96e]/30 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
@@ -131,25 +130,6 @@ export default function Contact() {
             </div>
           </motion.div>
         </div>
-
-        {/* CTA bottom */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="mt-12 text-center"
-        >
-          <a
-            href="https://wa.me/5567999995943?text=Olá!%20Gostaria%20de%20solicitar%20um%20orçamento%20para%20meu%20projeto."
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#20b958] text-white px-10 py-4 rounded-full font-semibold text-base transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 wa-pulse"
-          >
-            <MessageCircle size={22} />
-            Solicitar Orçamento pelo WhatsApp
-          </a>
-        </motion.div>
       </div>
     </section>
   );

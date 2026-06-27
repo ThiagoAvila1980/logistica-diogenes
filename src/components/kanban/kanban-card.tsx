@@ -52,6 +52,22 @@ function kanbanCardTextClasses(variant: "default" | "carousel") {
   };
 }
 
+function KanbanProfessionalNames({
+  names,
+  className,
+}: {
+  names: string | null | undefined;
+  className?: string;
+}) {
+  if (!names) return null;
+
+  return (
+    <p className={cn("truncate text-muted-foreground", className)} title={names}>
+      {names}
+    </p>
+  );
+}
+
 export function KanbanCard({
   os,
   phaseId,
@@ -179,87 +195,108 @@ export function KanbanCard({
                   </span>
                 </div>
               ) : isCuttingColumn ? (
-                <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                  {(
-                    [
-                      { key: "corte", label: "Corte" },
-                      { key: "embalagem", label: "Embal." },
-                      { key: "acessorios", label: "Acess." },
-                      { key: "vidros", label: "Vidr." },
-                    ] as const
-                  ).map(({ key, label }) => {
-                    const done = os.cuttingSteps?.[key] ?? false;
-                    return (
-                      <span
-                        key={key}
-                        className={cn(
-                          "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
-                      text.badge,
-                          done
-                            ? "bg-success-subtle text-success-foreground"
-                            : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {label}
-                      </span>
-                    );
-                  })}
-                </div>
+                <>
+                  <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                    {(
+                      [
+                        { key: "corte", label: "Corte" },
+                        { key: "embalagem", label: "Embal." },
+                        { key: "acessorios", label: "Acess." },
+                        { key: "vidros", label: "Vidr." },
+                      ] as const
+                    ).map(({ key, label }) => {
+                      const done = os.cuttingSteps?.[key] ?? false;
+                      return (
+                        <span
+                          key={key}
+                          className={cn(
+                            "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
+                            text.badge,
+                            done
+                              ? "bg-success-subtle text-success-foreground"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <KanbanProfessionalNames names={os.cutterName} className={text.badge} />
+                </>
               ) : isTransportColumn ? (
-                <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                  {(
-                    [
-                      { key: "levarPerfilEstrutural", label: "Perf." },
-                      { key: "levarPerfilTotal", label: "Total" },
-                      { key: "levarAcessorios", label: "Ac." },
-                      { key: "levarVidros", label: "Vidr." },
-                    ] as const
-                  ).map(({ key, label }) => {
-                    const done = os.transportSteps?.[key] ?? false;
-                    return (
-                      <span
-                        key={key}
-                        className={cn(
-                          "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
-                      text.badge,
-                          done
-                            ? "bg-success-subtle text-success-foreground"
-                            : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {label}
-                      </span>
-                    );
-                  })}
-                </div>
+                <>
+                  <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                    {(
+                      [
+                        { key: "levarPerfilEstrutural", label: "Perf." },
+                        { key: "levarPerfilTotal", label: "Total" },
+                        { key: "levarAcessorios", label: "Ac." },
+                        { key: "levarVidros", label: "Vidr." },
+                      ] as const
+                    ).map(({ key, label }) => {
+                      const done = os.transportSteps?.[key] ?? false;
+                      return (
+                        <span
+                          key={key}
+                          className={cn(
+                            "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
+                            text.badge,
+                            done
+                              ? "bg-success-subtle text-success-foreground"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <KanbanProfessionalNames
+                    names={os.professionalNames}
+                    className={text.badge}
+                  />
+                </>
               ) : isInstallationColumn ? (
-                <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                  {INSTALLATION_STEP_LABELS.map(({ key, label }) => {
-                    const done = os.installationSteps?.[key] ?? false;
-                    return (
-                      <span
-                        key={key}
-                        className={cn(
-                          "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
-                          text.badge,
-                          done
-                            ? "bg-success-subtle text-success-foreground"
-                            : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {label}
-                      </span>
-                    );
-                  })}
-                </div>
+                <>
+                  <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                    {INSTALLATION_STEP_LABELS.map(({ key, label }) => {
+                      const done = os.installationSteps?.[key] ?? false;
+                      return (
+                        <span
+                          key={key}
+                          className={cn(
+                            "inline-flex items-center rounded-full px-1 py-px font-medium sm:px-1.5 sm:py-0.5",
+                            text.badge,
+                            done
+                              ? "bg-success-subtle text-success-foreground"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <KanbanProfessionalNames
+                    names={os.professionalNames}
+                    className={text.badge}
+                  />
+                </>
               ) : isConcludedColumn ? (
-                <span
-                  className="inline-flex items-center text-success"
-                  title="Concluído"
-                  aria-label="Concluído"
-                >
-                  <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
-                </span>
+                <>
+                  <span
+                    className="inline-flex items-center text-success"
+                    title="Concluído"
+                    aria-label="Concluído"
+                  >
+                    <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+                  </span>
+                  <KanbanProfessionalNames
+                    names={os.professionalNames}
+                    className={text.badge}
+                  />
+                </>
               ) : null}
             </div>
           </div>

@@ -26,6 +26,7 @@ import {
   recordWorkEvent,
   reverseWorkEvent,
 } from "@/lib/performance/scoring";
+import { getVaoDificuldadeMultiplier } from "@/lib/performance/vao-difficulty";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -114,12 +115,18 @@ export async function updateItemCuttingStepAction(
       if (step === "corte") {
         if (done) {
           const cortadorId = await findActiveCortador(tx);
+          const updatedItem = updatedItems.find((i) => i.id === itemId);
           if (cortadorId) {
+            const pointsMultiplier = await getVaoDificuldadeMultiplier(
+              tx,
+              updatedItem?.idTipoEnvidracamento,
+            );
             await recordWorkEvent(tx, {
               userId: cortadorId,
               measurementId: osId,
               itemId,
               eventType: "corte_vao",
+              pointsMultiplier,
             });
           }
         } else {

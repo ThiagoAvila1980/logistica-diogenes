@@ -98,6 +98,8 @@ export const tipoEnvidracamento = pgTable("tipo_envidracamento", {
     .primaryKey(),
   descricao: varchar("descricao", { length: 255 }).notNull(),
   imagemUrl: varchar("imagem_url", { length: 2048 }),
+  /** Multiplicador de pontuação por vão (ex.: box=1, sacada=3). */
+  dificuldade: integer("dificuldade").notNull().default(1),
 });
 
 export const ambientes = pgTable("ambientes", {

@@ -91,7 +91,7 @@ export default function Services() {
               whileInView="visible"
               viewport={{ once: true, margin: "-50px" }}
               variants={cardVariants}
-              className="group relative overflow-hidden rounded-[var(--radius-card)] glass hover:border-[#c8a96e]/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#1a4db5]/20"
+              className="group relative overflow-hidden rounded-card glass hover:border-[#c8a96e]/40 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#1a4db5]/20"
             >
               {/* Image */}
               <div className="relative h-52 overflow-hidden">
@@ -102,7 +102,7 @@ export default function Services() {
                   className="object-cover group-hover:scale-105 transition-transform duration-700"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#060d1a] via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-[#060d1a] via-transparent to-transparent" />
 
                 {/* Tag */}
                 <span className="absolute top-3 right-3 bg-[#c8a96e]/90 text-[#060d1a] text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full">
@@ -118,15 +118,6 @@ export default function Services() {
                 <p className="text-white/60 text-sm leading-relaxed">
                   {service.description}
                 </p>
-
-                <a
-                  href="https://wa.me/5567999995943"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-4 text-[#4a8fe8] hover:text-[#c8a96e] text-sm font-medium transition-colors"
-                >
-                  Solicitar orçamento →
-                </a>
               </div>
             </motion.div>
           ))}

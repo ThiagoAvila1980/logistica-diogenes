@@ -1,7 +1,9 @@
-import { eq, and, desc, inArray, ne } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { vehicles, transportLogs, measurements } from "@/db/schema";
 import type { VehicleRow } from "./admin-mock-store";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { collectVehicleIdsFromMeasurementItems } from "@/lib/logistics/transport-vehicle-access";
 
 const ACTIVE_TRANSPORT_STATUSES = [
   "transporte_perfil",
@@ -10,6 +12,33 @@ const ACTIVE_TRANSPORT_STATUSES = [
   "transporte_acessorios",
   "transporte_levar_vidro",
 ] as const;
+
+type VehicleAssignment = { vehicleId: string; osId: string };
+
+async function loadActiveTransportVehicleAssignmentsDb(): Promise<VehicleAssignment[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      osId: measurements.id,
+      items: measurements.items,
+      logVehicleId: transportLogs.vehicleId,
+    })
+    .from(measurements)
+    .leftJoin(transportLogs, eq(transportLogs.idMedicao, measurements.id))
+    .where(inArray(measurements.etapa, [...ACTIVE_TRANSPORT_STATUSES]));
+
+  const assignments: VehicleAssignment[] = [];
+  for (const row of rows) {
+    const items = (row.items as MeasurementLineItem[]) ?? [];
+    for (const vehicleId of collectVehicleIdsFromMeasurementItems(items)) {
+      assignments.push({ vehicleId, osId: row.osId });
+    }
+    if (row.logVehicleId) {
+      assignments.push({ vehicleId: row.logVehicleId, osId: row.osId });
+    }
+  }
+  return assignments;
+}
 
 export async function listVehiclesDb(): Promise<VehicleRow[]> {
   const db = getDb();
@@ -23,15 +52,9 @@ export async function listVehiclesDb(): Promise<VehicleRow[]> {
     .from(vehicles)
     .orderBy(desc(vehicles.createdAt));
 
-  const inUseRows = await db
-    .select({ vehicleId: transportLogs.vehicleId })
-    .from(transportLogs)
-    .innerJoin(measurements, eq(transportLogs.idMedicao, measurements.id))
-    .where(inArray(measurements.etapa, [...ACTIVE_TRANSPORT_STATUSES]));
+  const inUseRows = await loadActiveTransportVehicleAssignmentsDb();
 
-  const inUseSet = new Set(
-    inUseRows.map((r) => r.vehicleId).filter(Boolean) as string[],
-  );
+  const inUseSet = new Set(inUseRows.map((r) => r.vehicleId));
 
   return rows.map((r) => ({
     ...r,
@@ -67,39 +90,18 @@ export async function getVehiclePlateDb(
 }
 
 export async function isVehicleInUseDb(vehicleId: string): Promise<boolean> {
-  const db = getDb();
-  const [row] = await db
-    .select({ id: transportLogs.id })
-    .from(transportLogs)
-    .innerJoin(measurements, eq(transportLogs.idMedicao, measurements.id))
-    .where(
-      and(
-        eq(transportLogs.vehicleId, vehicleId),
-        inArray(measurements.etapa, [...ACTIVE_TRANSPORT_STATUSES]),
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
+  const assignments = await loadActiveTransportVehicleAssignmentsDb();
+  return assignments.some((a) => a.vehicleId === vehicleId);
 }
 
 export async function isVehicleInUseByOtherOsDb(
   vehicleId: string,
   excludeOsId: string,
 ): Promise<boolean> {
-  const db = getDb();
-  const [row] = await db
-    .select({ id: transportLogs.id })
-    .from(transportLogs)
-    .innerJoin(measurements, eq(transportLogs.idMedicao, measurements.id))
-    .where(
-      and(
-        eq(transportLogs.vehicleId, vehicleId),
-        ne(transportLogs.idMedicao, excludeOsId),
-        inArray(measurements.etapa, [...ACTIVE_TRANSPORT_STATUSES]),
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
+  const assignments = await loadActiveTransportVehicleAssignmentsDb();
+  return assignments.some(
+    (a) => a.vehicleId === vehicleId && a.osId !== excludeOsId,
+  );
 }
 
 export type VehicleOptionForSelection = {
@@ -116,7 +118,17 @@ export async function listVehiclesForTransportSelectionDb(
   const active = await listActiveVehiclesDb();
   const byId = new Map(active.map((v) => [v.id, v]));
 
-  const [assigned] = await db
+  const [measRow] = await db
+    .select({ items: measurements.items })
+    .from(measurements)
+    .where(eq(measurements.id, osId))
+    .limit(1);
+
+  const assignedIds = collectVehicleIdsFromMeasurementItems(
+    measRow?.items as MeasurementLineItem[] | null | undefined,
+  );
+
+  const [legacyAssigned] = await db
     .select({
       id: vehicles.id,
       description: vehicles.description,
@@ -127,12 +139,22 @@ export async function listVehiclesForTransportSelectionDb(
     .where(eq(transportLogs.idMedicao, osId))
     .limit(1);
 
-  if (assigned && !byId.has(assigned.id)) {
-    byId.set(assigned.id, {
-      id: assigned.id,
-      description: assigned.description,
-      plate: assigned.plate,
-    });
+  if (legacyAssigned && !assignedIds.includes(legacyAssigned.id)) {
+    assignedIds.push(legacyAssigned.id);
+  }
+
+  for (const vehicleId of assignedIds) {
+    if (byId.has(vehicleId)) continue;
+    const [vehicle] = await db
+      .select({
+        id: vehicles.id,
+        description: vehicles.description,
+        plate: vehicles.plate,
+      })
+      .from(vehicles)
+      .where(eq(vehicles.id, vehicleId))
+      .limit(1);
+    if (vehicle) byId.set(vehicle.id, vehicle);
   }
 
   const rows = await Promise.all(

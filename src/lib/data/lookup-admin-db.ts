@@ -7,6 +7,7 @@ export type LookupAdminRow = {
   descricao: string;
   usageCount: number;
   imagemUrl?: string | null;
+  dificuldade?: number;
 };
 
 function normalizeDescricao(descricao: string): string {
@@ -134,6 +135,7 @@ export async function listTipoEnvidracamentoAdminDb(): Promise<LookupAdminRow[]>
       id: tipoEnvidracamento.idTipoEnvidracamento,
       descricao: tipoEnvidracamento.descricao,
       imagemUrl: tipoEnvidracamento.imagemUrl,
+      dificuldade: tipoEnvidracamento.dificuldade,
       usageCount: sql<number>`(
         select count(*)::int
         from ${measurements} m
@@ -148,8 +150,21 @@ export async function listTipoEnvidracamentoAdminDb(): Promise<LookupAdminRow[]>
     id: r.id,
     descricao: r.descricao,
     imagemUrl: r.imagemUrl,
+    dificuldade: r.dificuldade,
     usageCount: r.usageCount,
   }));
+}
+
+export async function getTipoEnvidracamentoDificuldadeDb(
+  id: string,
+): Promise<number> {
+  const db = getDb();
+  const [row] = await db
+    .select({ dificuldade: tipoEnvidracamento.dificuldade })
+    .from(tipoEnvidracamento)
+    .where(eq(tipoEnvidracamento.idTipoEnvidracamento, id))
+    .limit(1);
+  return row?.dificuldade ?? 1;
 }
 
 export async function getTipoEnvidracamentoImagemUrlDb(
@@ -168,18 +183,20 @@ export async function upsertTipoEnvidracamentoDb(data: {
   id?: string;
   descricao: string;
   imagemUrl?: string | null;
+  dificuldade?: number;
 }): Promise<void> {
   const db = getDb();
   const descricao = data.descricao.trim();
   const imagemUrl = data.imagemUrl ?? null;
+  const dificuldade = data.dificuldade ?? 1;
   if (data.id) {
     await db
       .update(tipoEnvidracamento)
-      .set({ descricao, imagemUrl })
+      .set({ descricao, imagemUrl, dificuldade })
       .where(eq(tipoEnvidracamento.idTipoEnvidracamento, data.id));
     return;
   }
-  await db.insert(tipoEnvidracamento).values({ descricao, imagemUrl });
+  await db.insert(tipoEnvidracamento).values({ descricao, imagemUrl, dificuldade });
 }
 
 export async function deleteTipoEnvidracamentoDb(id: string): Promise<void> {

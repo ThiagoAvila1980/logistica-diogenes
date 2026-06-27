@@ -73,3 +73,26 @@ h1, h2, h3, h4 {
 .wa-pulse {
   animation: wa-pulse 2.5s ease-in-out infinite;
 }
+
+.logo-icon-gold {
+  background-color: var(--color-gold);
+  -webkit-mask-image: url("/logo-icon.png");
+  mask-image: url("/logo-icon.png");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  :root {
+    scroll-behavior: auto;
+  }
+}

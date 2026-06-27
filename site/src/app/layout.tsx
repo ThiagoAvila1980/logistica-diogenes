@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/logo 01.png", type: "image/png" },
+      { url: "/logo-icon.png", type: "image/png", sizes: "192x192" },
     ],
-    apple: "/logo 01.png",
+    apple: "/apple-touch-icon.png",
   },
   keywords: [
     "envidraçamentos",
@@ -37,9 +37,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "pt_BR",
+    url: "https://diogenesenvidracamentos.com.br",
+    siteName: "Diogenes Envidraçamentos Especiais",
     title: "Diogenes Envidraçamentos Especiais",
     description: "A sofisticação dos envidraçamentos a seu alcance.",
-    images: [{ url: "/images/sacada-hd.webp", width: 1200, height: 630 }],
+    // opengraph-image.tsx gera a OG image automaticamente em PNG 1200×630
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Diogenes Envidraçamentos Especiais",
+    description: "A sofisticação dos envidraçamentos a seu alcance.",
   },
 };
 
@@ -47,9 +54,19 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
   name: "Diogenes Envidraçamentos Especiais",
-  description: "A sofisticação dos envidraçamentos a seu alcance.",
-  telephone: "+556799999-5943",
+  description:
+    "A sofisticação dos envidraçamentos a seu alcance. Sacadas de vidro, box de banheiro, espelhos e envidraçamentos especiais em Campo Grande - MS.",
+  url: "https://diogenesenvidracamentos.com.br",
+  telephone: "+5567999995943",
   email: "diogenesenvidracamentos@gmail.com",
+  image: "https://diogenesenvidracamentos.com.br/images/sacada-hd.webp",
+  priceRange: "$$",
+  areaServed: {
+    "@type": "City",
+    name: "Campo Grande",
+    addressRegion: "MS",
+    addressCountry: "BR",
+  },
   address: {
     "@type": "PostalAddress",
     streetAddress: "Rua Júlia Maksude, 471",
@@ -60,15 +77,23 @@ const jsonLd = {
   },
   geo: {
     "@type": "GeoCoordinates",
-    latitude: -20.48,
-    longitude: -54.62,
+    latitude: -20.4697,
+    longitude: -54.6201,
   },
-  openingHoursSpecification: {
-    "@type": "OpeningHoursSpecification",
-    dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-    opens: "08:00",
-    closes: "18:00",
-  },
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      opens: "08:00",
+      closes: "18:00",
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Saturday"],
+      opens: "08:00",
+      closes: "12:00",
+    },
+  ],
 };
 
 export default function RootLayout({

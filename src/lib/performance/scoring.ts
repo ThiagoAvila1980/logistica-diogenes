@@ -58,9 +58,15 @@ export async function recordWorkEvent(
     measurementId: string;
     itemId: string;
     eventType: WorkEventType;
+    /** Multiplicador opcional (ex.: dificuldade do tipo de envidraçamento). */
+    pointsMultiplier?: number;
   },
 ): Promise<void> {
-  const points = await getRulePoints(db, params.eventType);
+  const basePoints = await getRulePoints(db, params.eventType);
+  if (basePoints === 0) return;
+
+  const multiplier = params.pointsMultiplier ?? 1;
+  const points = Math.round(basePoints * multiplier);
   if (points === 0) return;
 
   await db

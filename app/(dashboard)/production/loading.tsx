@@ -1,3 +1,5 @@
+import { ORDER_INDEX_GRID_CLASS } from "@/lib/ui/order-index-grid";
+
 export default function ProductionLoading() {
   return (
     <>
@@ -5,7 +7,7 @@ export default function ProductionLoading() {
         <div className="h-7 w-40 animate-pulse rounded bg-muted" />
         <div className="mt-1 h-4 w-64 animate-pulse rounded bg-muted" />
       </header>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <ul className={ORDER_INDEX_GRID_CLASS}>
         {Array.from({ length: 8 }).map((_, i) => (
           <li key={i}>
             <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">

@@ -45,6 +45,10 @@ export type KanbanOrderItem = {
   transportSteps: TransportKanbanSteps | null;
   /** Presente quando a medição está em fase de instalação */
   installationSteps: InstallationKanbanSteps | null;
+  /** Cortador ativo — coluna plano de corte */
+  cutterName?: string | null;
+  /** Motorista(s) ou instalador(es) — vírgula se houver mais de um */
+  professionalNames?: string | null;
 };
 
 /** Restaura `Date` após serialização de Server Actions. */

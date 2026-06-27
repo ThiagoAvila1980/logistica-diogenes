@@ -29,6 +29,10 @@ const lookupSchema = z.object({
   descricao: z.string().min(1, "Descrição obrigatória").max(255),
 });
 
+const tipoEnvidracamentoSchema = lookupSchema.extend({
+  dificuldade: z.coerce.number().int().min(1, "Mínimo 1").max(99, "Máximo 99"),
+});
+
 const ENTITY_CONFIG: Record<
   LookupEntity,
   {
@@ -38,6 +42,7 @@ const ENTITY_CONFIG: Record<
       id?: string;
       descricao: string;
       imagemUrl?: string | null;
+      dificuldade?: number;
     }) => Promise<void>;
     deleteDb: (id: string) => Promise<void>;
     countDupDb: (descricao: string, excludeId?: string) => Promise<number>;
@@ -119,18 +124,22 @@ const ENTITY_CONFIG: Record<
     },
     mockStore: {
       list: () =>
-        tipoEnvidracamentoAdminMockStore.list().map(({ id, descricao, imagemUrl }) => ({
-          id,
-          descricao,
-          imagemUrl,
-        })),
+        tipoEnvidracamentoAdminMockStore.list().map(
+          ({ id, descricao, imagemUrl, dificuldade }) => ({
+            id,
+            descricao,
+            imagemUrl,
+            dificuldade,
+          }),
+        ),
       create: (descricao: string) =>
-        tipoEnvidracamentoAdminMockStore.create(descricao, null),
+        tipoEnvidracamentoAdminMockStore.create(descricao, null, 1),
       update: (id: string, descricao: string) =>
         tipoEnvidracamentoAdminMockStore.update(
           id,
           descricao,
           tipoEnvidracamentoAdminMockStore.getImagemUrl(id),
+          tipoEnvidracamentoAdminMockStore.getDificuldade(id),
         ),
       delete: (id: string) => tipoEnvidracamentoAdminMockStore.delete(id),
     },
@@ -266,20 +275,23 @@ export async function saveTipoEnvidracamento(
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
   }
 
-  const parsed = lookupSchema.safeParse({
+  const parsed = tipoEnvidracamentoSchema.safeParse({
     id: formData.get("id") || undefined,
     descricao: formData.get("descricao"),
+    dificuldade: formData.get("dificuldade") ?? 1,
   });
 
   if (!parsed.success) {
     return {
       success: false,
       message:
-        parsed.error.flatten().fieldErrors.descricao?.[0] ?? "Dados inválidos",
+        parsed.error.flatten().fieldErrors.descricao?.[0] ??
+        parsed.error.flatten().fieldErrors.dificuldade?.[0] ??
+        "Dados inválidos",
     };
   }
 
-  const { id, descricao } = parsed.data;
+  const { id, descricao, dificuldade } = parsed.data;
   const config = ENTITY_CONFIG.tipo_envidracamento;
   const removeImagem = formData.get("removeImagem") === "1";
   const newFile = parseCatalogImageFile(formData);
@@ -304,9 +316,9 @@ export async function saveTipoEnvidracamento(
       }
 
       if (id) {
-        tipoEnvidracamentoAdminMockStore.update(id, descricao, imagemUrl);
+        tipoEnvidracamentoAdminMockStore.update(id, descricao, imagemUrl, dificuldade);
       } else {
-        tipoEnvidracamentoAdminMockStore.create(descricao, imagemUrl);
+        tipoEnvidracamentoAdminMockStore.create(descricao, imagemUrl, dificuldade);
       }
     } else {
       if (id) {
@@ -336,7 +348,7 @@ export async function saveTipoEnvidracamento(
         return { success: false, message: "Descrição já cadastrada" };
       }
 
-      await config.upsertDb({ id, descricao, imagemUrl });
+      await config.upsertDb({ id, descricao, imagemUrl, dificuldade });
 
       if (
         previousImagemUrl &&

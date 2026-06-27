@@ -20,6 +20,7 @@ import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { recordWorkEvent, reverseWorkEvent } from "@/lib/performance/scoring";
+import { getVaoDificuldadeMultiplier } from "@/lib/performance/vao-difficulty";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,132 @@ const assignVehicleSchema = z.object({
   vehicleId: z.string().uuid(),
 });
 
+// ─── Action: atribuir veículo por vão ──────────────────────────────────────
+
+const assignVehicleToVaoSchema = z.object({
+  osId: z.string().uuid(),
+  itemId: z.string().min(1),
+  vehicleId: z.string().uuid(),
+});
+
+export async function assignVehicleToVaoAction(
+  raw: z.infer<typeof assignVehicleToVaoSchema>,
+): Promise<AssignVehicleToTransportResult> {
+  const parsed = assignVehicleToVaoSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Requisição inválida. Recarregue a página e tente novamente.",
+    };
+  }
+
+  try {
+    await requireRole(["admin", "gerente", "motorista"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const { osId, itemId, vehicleId } = parsed.data;
+
+  try {
+    const order = await getServiceOrderById(osId);
+    if (!order) return { success: false, message: "OS não encontrada" };
+
+    if (useMockData()) {
+      const vehicle = vehicleMockStore.getById(vehicleId);
+      if (!vehicle?.active) {
+        return { success: false, message: "Veículo não encontrado ou inativo" };
+      }
+      try {
+        vehicleMockStore.assignToVao(osId, itemId, vehicleId);
+      } catch (err) {
+        return {
+          success: false,
+          message: err instanceof Error ? err.message : "Veículo indisponível",
+        };
+      }
+      revalidateOSRoutes(osId);
+      return { success: true };
+    }
+
+    const db = getDb();
+    const [vehicle] = await db
+      .select({ id: vehicles.id, active: vehicles.active })
+      .from(vehicles)
+      .where(and(eq(vehicles.id, vehicleId), eq(vehicles.active, true)))
+      .limit(1);
+
+    if (!vehicle) {
+      return { success: false, message: "Veículo não encontrado ou inativo" };
+    }
+
+    const { isVehicleInUseByOtherOsDb } = await import("@/lib/data/vehicles-db");
+    if (await isVehicleInUseByOtherOsDb(vehicleId, osId)) {
+      return { success: false, message: "Veículo já em uso em outra OS" };
+    }
+
+    const isLatePhase = isTransportOrLater(order.status);
+
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
+
+      if (!meas) throw new WorkflowActionError("OS não encontrada");
+
+      const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const cuttingSteps = effectiveCuttingSteps(
+        aggregateCuttingStepsFromItems(items),
+        isLatePhase,
+      );
+
+      if (!canOperateTransportModule(order.status, cuttingSteps)) {
+        throw new WorkflowActionError(
+          "Aguardando conclusão do corte para liberar transporte",
+        );
+      }
+
+      const itemExists = items.some((item) => item.id === itemId);
+      if (!itemExists) throw new WorkflowActionError("Vão não encontrado");
+
+      const updatedItems = items.map((item) => {
+        if (item.id !== itemId) return item;
+        const prev = item.transportProgress ?? {
+          perfilEstrutural: false,
+          perfilTotal: false,
+          acessorios: false,
+          vidros: false,
+        };
+        return {
+          ...item,
+          transportProgress: {
+            ...prev,
+            vehicleId,
+          },
+        };
+      });
+
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
+    });
+
+    revalidateOSRoutes(osId);
+    return { success: true };
+  } catch (err) {
+    if (err instanceof WorkflowActionError) {
+      return { success: false, message: err.message };
+    }
+    console.error("[assignVehicleToVao]", err);
+    return { success: false, message: "Erro ao atribuir veículo" };
+  }
+}
+
+/** @deprecated Use assignVehicleToVaoAction — veículo agora é por vão */
 export async function assignVehicleToTransportAction(
   raw: z.infer<typeof assignVehicleSchema>,
 ): Promise<AssignVehicleToTransportResult> {
@@ -200,18 +327,12 @@ export async function updateItemTransportStepAction(
         );
       }
 
-      // Busca o veículo atribuído
-      const [trans] = await tx
-        .select({ vehicleId: transportLogs.vehicleId })
-        .from(transportLogs)
-        .where(eq(transportLogs.idMedicao, osId))
-        .limit(1);
-
-      const hasVehicle = Boolean(trans?.vehicleId);
-
-      // Verifica gate por vão
       const item = items.find((i) => i.id === itemId);
       if (!item) throw new WorkflowActionError("Vão não encontrado");
+
+      // Verifica veículo atribuído ao vão
+      const itemVehicleId = item.transportProgress?.vehicleId ?? null;
+      const hasVehicle = Boolean(itemVehicleId);
 
       if (done) {
         const cutProg = item.cuttingProgress ?? {
@@ -280,11 +401,16 @@ export async function updateItemTransportStepAction(
           const updatedItem = updatedItems.find((i) => i.id === itemId);
           const driverId = updatedItem?.transportProgress?.driverId;
           if (driverId) {
+            const pointsMultiplier = await getVaoDificuldadeMultiplier(
+              tx,
+              updatedItem.idTipoEnvidracamento,
+            );
             await recordWorkEvent(tx, {
               userId: driverId,
               measurementId: osId,
               itemId,
               eventType: "transporte_vao",
+              pointsMultiplier,
             });
           }
         } else {

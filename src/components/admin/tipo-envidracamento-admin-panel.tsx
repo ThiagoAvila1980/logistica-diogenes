@@ -81,8 +81,8 @@ export function TipoEnvidracamentoAdminPanel({
             Novo registro
           </CardTitle>
           <CardDescription>
-            Informe a descrição e, se desejar, envie uma imagem de referência do
-            sistema.
+            Informe a descrição, a dificuldade e, se desejar, envie uma imagem de
+            referência do sistema.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -111,6 +111,22 @@ export function TipoEnvidracamentoAdminPanel({
                 required
                 disabled={createPending}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-dificuldade">Dificuldade</Label>
+              <Input
+                id="new-dificuldade"
+                name="dificuldade"
+                type="number"
+                min={1}
+                max={99}
+                defaultValue={1}
+                required
+                disabled={createPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                Multiplicador de pontuação por vão (ex.: box=1, sacada=3).
+              </p>
             </div>
             <CatalogImageUpload disabled={createPending} />
             <Button type="submit" disabled={createPending} className="w-full sm:w-auto">
@@ -154,11 +170,16 @@ export function TipoEnvidracamentoAdminPanel({
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{item.descricao}</p>
-                  {item.usageCount > 0 && (
-                    <Badge variant="outline" className="mt-2">
-                      Em uso em {item.usageCount} medição(ões)
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">
+                      Dificuldade {item.dificuldade ?? 1}
                     </Badge>
-                  )}
+                    {item.usageCount > 0 && (
+                      <Badge variant="outline">
+                        Em uso em {item.usageCount} medição(ões)
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -211,6 +232,22 @@ export function TipoEnvidracamentoAdminPanel({
                     required
                     disabled={editPending}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-dificuldade">Dificuldade</Label>
+                  <Input
+                    id="edit-dificuldade"
+                    name="dificuldade"
+                    type="number"
+                    min={1}
+                    max={99}
+                    defaultValue={editing.dificuldade ?? 1}
+                    required
+                    disabled={editPending}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Multiplicador de pontuação por vão (ex.: box=1, sacada=3).
+                  </p>
                 </div>
                 <CatalogImageUpload
                   existingUrl={editing.imagemUrl}

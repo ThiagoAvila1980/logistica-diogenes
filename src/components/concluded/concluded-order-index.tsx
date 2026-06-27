@@ -26,9 +26,10 @@ export function ConcludedOrderIndex({ orders }: ConcludedOrderIndexProps) {
   return (
     <FilteredOrderList
       orders={orders}
-      emptyMessage="Nenhuma instalação em andamento no momento."
+      emptyMessage="Nenhum serviço concluído no momento."
       filterAriaLabel="Filtros de concluídos"
       idPrefix="concluded"
+      paginationItemLabel="serviços"
       getFilterFields={concludedOrderFilterFields}
       renderItem={(order) => <ConcludedOrderCard order={order} />}
     />

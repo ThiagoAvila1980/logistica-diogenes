@@ -99,6 +99,27 @@ export function isKanbanParallelPhase(
   return statusPhaseId !== null && phaseId !== statusPhaseId;
 }
 
+/** Máximo de cards exibidos na coluna Concluídos do Kanban. */
+export const KANBAN_CONCLUDED_COLUMN_LIMIT = 15;
+
+function compareKanbanOrdersByRecency(
+  a: KanbanOrderItem,
+  b: KanbanOrderItem,
+): number {
+  return b.updatedAt.getTime() - a.updatedAt.getTime();
+}
+
+function limitConcludedColumn(
+  grouped: Record<string, KanbanPlacedOrder[]>,
+): void {
+  const concluded = grouped.concluidos;
+  if (!concluded?.length) return;
+
+  grouped.concluidos = [...concluded]
+    .sort((a, b) => compareKanbanOrdersByRecency(a.os, b.os))
+    .slice(0, KANBAN_CONCLUDED_COLUMN_LIMIT);
+}
+
 export function placeKanbanOrders(
   orders: KanbanOrderItem[],
 ): Record<string, KanbanPlacedOrder[]> {
@@ -119,6 +140,8 @@ export function placeKanbanOrders(
       });
     }
   }
+
+  limitConcludedColumn(grouped);
 
   return grouped;
 }

@@ -3,10 +3,13 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { getSession } from "@/lib/auth/session";
+import { canEditMeasurementHeader } from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
+import { MeasurementHeaderEditAction } from "@/components/order/measurement-header-edit-action";
 import { Card, CardContent } from "@/components/ui/card";
 import { CuttingDetailView } from "@/components/production/cutting-detail-view";
 import { Scissors } from "lucide-react";
@@ -15,12 +18,15 @@ type Props = { params: Promise<{ osId: string }> };
 
 export default async function ProductionOsPage({ params }: Props) {
   const { osId } = await params;
-  const [order, detail, lookups] = await Promise.all([
+  const [order, detail, lookups, session] = await Promise.all([
     getServiceOrderById(osId),
     getCuttingDetailForOs(osId),
     listMeasurementLookups(),
+    getSession(),
   ]);
   if (!order) notFound();
+
+  const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
   const { measurement, cutterNotes } = detail;
 
@@ -39,6 +45,17 @@ export default async function ProductionOsPage({ params }: Props) {
         clientAddress={order.clientAddress}
         description={order.description}
         className="mb-4 sm:mb-6"
+        actions={
+          canEditHeader ? (
+            <MeasurementHeaderEditAction
+              osId={order.id}
+              clientName={order.clientName}
+              clientPhone={order.clientPhone}
+              clientAddress={order.clientAddress}
+              budgetReference={order.budgetReference}
+            />
+          ) : undefined
+        }
       >
         <div className="mt-3">
           <MeasurementSpecFields

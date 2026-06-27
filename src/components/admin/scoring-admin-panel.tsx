@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { Loader2, Save } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
+import { Loader2, Save, X } from "lucide-react";
 import { updateScoringRuleAction } from "@/actions/scoring-actions";
 import {
   EVENT_TYPE_LABELS,
@@ -27,6 +27,11 @@ function RuleForm({ rule }: RuleFormProps) {
     updateScoringRuleAction,
     null,
   );
+  const [alertDismissed, setAlertDismissed] = useState(false);
+
+  useEffect(() => {
+    setAlertDismissed(false);
+  }, [state]);
 
   const label = EVENT_TYPE_LABELS[rule.eventType as WorkEventType] ?? rule.eventType;
 
@@ -75,9 +80,20 @@ function RuleForm({ rule }: RuleFormProps) {
           </div>
         </div>
 
-        {state && (
-          <Alert variant={state.success ? "default" : "destructive"} className="py-2">
+        {state && !alertDismissed && (
+          <Alert
+            variant={state.success ? "success" : "destructive"}
+            className="relative py-2 pr-10"
+          >
             <AlertDescription className="text-sm">{state.message}</AlertDescription>
+            <button
+              type="button"
+              onClick={() => setAlertDismissed(true)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label="Fechar mensagem"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </Alert>
         )}
 

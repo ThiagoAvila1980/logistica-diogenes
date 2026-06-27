@@ -55,10 +55,10 @@ import {
   type MeasurementDbType,
 } from "@/lib/workflow/measurement-actions";
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
-import { EditMeasurementHeaderDialog } from "@/components/field/edit-measurement-header-dialog";
 import { SendToCuttingDialog } from "@/components/field/send-to-cutting-dialog";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
+import { MeasurementHeaderEditAction } from "@/components/order/measurement-header-edit-action";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { useScreenOrientationLock } from "@/hooks/use-screen-orientation-lock";
@@ -81,6 +81,7 @@ type FieldMeasurementFormProps = {
     final?: FieldMeasurementDraft;
   };
   lookups: MeasurementLookups;
+  canEditHeader?: boolean;
   canDelete?: boolean;
   canSendToCutting?: boolean;
 };
@@ -135,6 +136,7 @@ export function FieldMeasurementForm({
   order,
   draftsByType,
   lookups,
+  canEditHeader = false,
   canDelete = false,
   canSendToCutting = false,
 }: FieldMeasurementFormProps) {
@@ -474,20 +476,24 @@ export function FieldMeasurementForm({
         clientAddress={displayEndereco ?? null}
         description={order.description}
         actions={
-          canDelete ? (
+          canEditHeader || canDelete ? (
             <>
-              <EditMeasurementHeaderDialog
-                osId={order.id}
-                clientName={displayCliente ?? order.clientName}
-                clientPhone={displayTelefone ?? null}
-                clientAddress={displayEndereco ?? null}
-                budgetReference={displayBudgetReference}
-              />
-              <DeleteMeasurementDialog
-                osId={order.id}
-                displayNumber={displayNumeroOrcamento}
-                clientName={displayCliente ?? order.clientName}
-              />
+              {canEditHeader ? (
+                <MeasurementHeaderEditAction
+                  osId={order.id}
+                  clientName={displayCliente ?? order.clientName}
+                  clientPhone={displayTelefone ?? null}
+                  clientAddress={displayEndereco ?? null}
+                  budgetReference={displayBudgetReference}
+                />
+              ) : null}
+              {canDelete ? (
+                <DeleteMeasurementDialog
+                  osId={order.id}
+                  displayNumber={displayNumeroOrcamento}
+                  clientName={displayCliente ?? order.clientName}
+                />
+              ) : null}
             </>
           ) : undefined
         }

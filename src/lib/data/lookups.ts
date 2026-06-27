@@ -19,7 +19,12 @@ export async function listMeasurementLookups(): Promise<MeasurementLookups> {
       cores: corMockStore.list(),
       tipoVidro: tipoVidroMockStore.list(),
       tipoEnvidracamento: tipoEnvidracamentoAdminMockStore.list().map(
-        ({ id, descricao, imagemUrl }) => ({ id, descricao, imagemUrl }),
+        ({ id, descricao, imagemUrl, dificuldade }) => ({
+          id,
+          descricao,
+          imagemUrl,
+          dificuldade,
+        }),
       ),
       ambientes: ambienteMockStore.list(),
     };
@@ -40,6 +45,7 @@ export async function listMeasurementLookups(): Promise<MeasurementLookups> {
         id: tipoEnvidracamento.idTipoEnvidracamento,
         descricao: tipoEnvidracamento.descricao,
         imagemUrl: tipoEnvidracamento.imagemUrl,
+        dificuldade: tipoEnvidracamento.dificuldade,
       })
       .from(tipoEnvidracamento)
       .orderBy(asc(tipoEnvidracamento.descricao)),
@@ -56,6 +62,7 @@ export async function listMeasurementLookups(): Promise<MeasurementLookups> {
       id: r.id,
       descricao: r.descricao,
       imagemUrl: r.imagemUrl,
+      dificuldade: r.dificuldade,
     })),
     ambientes: ambienteRows.map((r) => ({ id: r.id, descricao: r.descricao })),
   };

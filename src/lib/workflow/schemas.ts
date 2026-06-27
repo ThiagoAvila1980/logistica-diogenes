@@ -60,6 +60,7 @@ export const itemTransportProgressSchema = z.object({
   acessorios: z.boolean().default(false),
   vidros: z.boolean().default(false),
   observacoes: z.string().max(2000).optional(),
+  vehicleId: z.string().uuid().nullable().optional(),
   driverId: z.string().uuid().nullable().optional(),
   scheduledTransportDate: z.string().nullable().optional(),
 });

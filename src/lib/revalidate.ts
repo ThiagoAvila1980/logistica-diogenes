@@ -10,6 +10,7 @@ export function revalidateOSRoutes(osId?: string) {
   revalidatePath("/production");
   revalidatePath("/logistics");
   revalidatePath("/installation");
+  revalidatePath("/concluded");
   if (osId) {
     revalidatePath(`/field/${osId}`);
     revalidatePath(`/production/${osId}`);

@@ -3,6 +3,8 @@ export type LookupOption = {
   descricao: string;
   /** URL persistida no storage (tipos de envidraçamento com foto de referência). */
   imagemUrl?: string | null;
+  /** Multiplicador de pontuação por vão (tipos de envidraçamento). */
+  dificuldade?: number;
 };
 
 export type MeasurementLookups = {

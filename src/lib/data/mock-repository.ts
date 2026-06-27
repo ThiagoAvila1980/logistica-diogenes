@@ -13,6 +13,7 @@ import {
   osStatusFromMeasurementType,
 } from "@/lib/workflow/measurement-actions";
 import { vehicleMockStore } from "@/lib/data/admin-mock-store";
+import { getDemoUser } from "@/lib/auth/demo-users";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
 import {
   aggregateInstallationStepsFromItems,
@@ -23,7 +24,14 @@ import {
   collectDriverIdsFromMeasurementItems,
   mergeDriverIds,
 } from "@/lib/logistics/transport-driver-access";
+import {
+  collectVehicleIdsFromMeasurementItems,
+  mergeVehicleIds,
+} from "@/lib/logistics/transport-vehicle-access";
 import { collectInstallerIdsFromMeasurementItems } from "@/lib/installation/installation-installer-access";
+import {
+  namesFromIds,
+} from "@/lib/workflow/professional-names";
 
 type MockMeasurement = {
   id: string;
@@ -310,6 +318,16 @@ vehicleMockStore.assignToTransport(
   "b1000000-0000-4000-8000-000000000001",
 );
 
+function demoNameMap(ids: Array<string | null | undefined>): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const id of ids) {
+    if (!id) continue;
+    const name = getDemoUser(id)?.name;
+    if (name) map.set(id, name);
+  }
+  return map;
+}
+
 function findMeasurement(id: string): MockMeasurement | undefined {
   return measurements.find((m) => m.id === id);
 }
@@ -356,6 +374,27 @@ export const mockRepository = {
           !cuttingStepsData.acessorios ||
           !cuttingStepsData.vidros);
 
+      const items = (m.items ?? []) as MeasurementLineItem[];
+      const trans = transportStore.find((t) => t.idMedicao === m.id);
+      const showCutting = (isCortePhase || hasPendingCutting) && cuttingStepsData;
+      const showTransport = isTransportPhase;
+      const showInstallationProfessionals =
+        isInstallationPhase || m.etapa === "concluido";
+      const nameById = demoNameMap([
+        DEMO_CORTADOR,
+        ...collectDriverIdsFromMeasurementItems(items),
+        ...collectInstallerIdsFromMeasurementItems(items),
+        trans?.driverId,
+        m.assignedUserId,
+      ]);
+      const installerIdsFromItems = collectInstallerIdsFromMeasurementItems(items);
+      const installerIds =
+        installerIdsFromItems.length > 0
+          ? installerIdsFromItems
+          : m.assignedUserId
+            ? [m.assignedUserId]
+            : [];
+
       return {
         id: m.id,
         number: m.number,
@@ -368,26 +407,22 @@ export const mockRepository = {
         scheduledDate: m.scheduledDate,
         updatedAt: m.updatedAt,
         hasMeasurement: isMeasured(m),
-        cuttingSteps:
-          (isCortePhase || hasPendingCutting) && cuttingStepsData
-            ? cuttingStepsData
-            : null,
+        cuttingSteps: showCutting ? cuttingStepsData : null,
         transportSteps: isTransportPhase
-          ? {
-              levarPerfilEstrutural: false,
-              levarPerfilTotal: false,
-              levarAcessorios: false,
-              levarVidros: false,
-              transporteConcluido: false,
-            }
+          ? aggregateTransportStepsFromItems(items)
           : null,
         installationSteps: isInstallationPhase
-          ? {
-              instalacaoEstruturalFeita: false,
-              instalacaoVidrosFeita: false,
-              instalacaoAcabamentoFeito: false,
-            }
+          ? aggregateInstallationStepsFromItems(items)
           : null,
+        cutterName: showCutting ? (nameById.get(DEMO_CORTADOR) ?? null) : null,
+        professionalNames: showTransport
+          ? namesFromIds(
+              [...collectDriverIdsFromMeasurementItems(items), trans?.driverId],
+              nameById,
+            )
+          : showInstallationProfessionals
+            ? namesFromIds(installerIds, nameById)
+            : null,
       };
     });
   },
@@ -636,14 +671,77 @@ export const mockRepository = {
     return Object.fromEntries(
       osIds.map((osId) => {
         const trans = transportStore.find((t) => t.idMedicao === osId);
-        const vehicle = trans?.vehicleId
-          ? vehicleMockStore.getById(trans.vehicleId)
-          : undefined;
+        const measurement = findMeasurement(osId);
+        const itemVehicles = collectVehicleIdsFromMeasurementItems(
+          measurement?.items,
+        );
+        const vehicleIds = mergeVehicleIds(
+          itemVehicles,
+          trans?.vehicleId ? [trans.vehicleId] : [],
+        );
+        const vehicleLabels = [...new Set(vehicleIds)]
+          .map((id) => {
+            const vehicle = vehicleMockStore.getById(id);
+            return vehicle
+              ? vehicle.description
+                ? `${vehicle.description} (${vehicle.plate})`
+                : vehicle.plate
+              : null;
+          })
+          .filter((label): label is string => !!label);
+        const itemDrivers = collectDriverIdsFromMeasurementItems(
+          measurement?.items,
+        );
+        const driverIds = mergeDriverIds(
+          itemDrivers,
+          trans?.driverId ? [trans.driverId] : [],
+        );
+        const driverNames = [...new Set(driverIds)]
+          .map((id) => getDemoUser(id)?.name)
+          .filter((name): name is string => !!name);
         return [
           osId,
           {
-            vehiclePlate: vehicle?.plate ?? null,
-            vehicleDescription: vehicle?.description ?? null,
+            vehiclePlate:
+              vehicleLabels.length > 0 ? vehicleLabels.join(", ") : null,
+            vehicleDescription: null,
+            driverName:
+              driverNames.length > 0 ? driverNames.join(", ") : null,
+          },
+        ];
+      }),
+    );
+  },
+
+  getInstallationSummaries(osIds: string[]) {
+    return Object.fromEntries(
+      osIds.map((osId) => {
+        const measurement = findMeasurement(osId);
+        const installerIds = collectInstallerIdsFromMeasurementItems(
+          measurement?.items,
+        );
+        const resolvedInstallerIds =
+          installerIds.length > 0
+            ? installerIds
+            : measurement?.assignedUserId
+              ? [measurement.assignedUserId]
+              : [];
+        const installerNames = [...new Set(resolvedInstallerIds)]
+          .map((id) => getDemoUser(id)?.name)
+          .filter((name): name is string => !!name);
+        const dates = (measurement?.items ?? [])
+          .map((item) => item.installationProgress?.scheduledInstallationDate)
+          .filter((date): date is string => !!date);
+
+        return [
+          osId,
+          {
+            installerName:
+              installerNames.length > 0 ? installerNames.join(", ") : null,
+            scheduledDate:
+              dates.length > 0
+                ? new Date([...new Set(dates)].sort()[0])
+                : null,
           },
         ];
       }),
@@ -845,12 +943,6 @@ export const mockRepository = {
     const m = findMeasurement(osId);
     if (!m) {
       return { success: false, message: "Medição não encontrada." };
-    }
-    if (!m.etapa.startsWith("medicao")) {
-      return {
-        success: false,
-        message: "Só é possível editar medições em etapa de medição.",
-      };
     }
 
     m.cliente = input.clientName;

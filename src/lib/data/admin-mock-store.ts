@@ -27,18 +27,33 @@ let mockVehicles: MockVehicle[] = [
   },
 ];
 
-/** OS em transporte com vehicleId atribuído (mock). */
+/** Vão em transporte com vehicleId atribuído (mock). Chave: `${osId}:${itemId}` */
 const mockVehicleInUse = new Map<string, string>();
+
+function vaoKey(osId: string, itemId: string): string {
+  return `${osId}:${itemId}`;
+}
+
+function refreshInUseFlags() {
+  const inUseIds = new Set(mockVehicleInUse.values());
+  mockVehicles = mockVehicles.map((v) => ({
+    ...v,
+    inUse: inUseIds.has(v.id),
+  }));
+}
 
 function normalizePlate(plate: string): string {
   return plate.trim().toUpperCase();
 }
 
-function refreshInUseFlags() {
-  mockVehicles = mockVehicles.map((v) => ({
-    ...v,
-    inUse: [...mockVehicleInUse.values()].includes(v.id),
-  }));
+function isVehicleUsedOnOtherOs(osId: string, vehicleId: string): boolean {
+  for (const [key, assignedVehicleId] of mockVehicleInUse.entries()) {
+    const assignedOsId = key.split(":")[0];
+    if (assignedVehicleId === vehicleId && assignedOsId !== osId) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export const vehicleMockStore = {
@@ -103,22 +118,38 @@ export const vehicleMockStore = {
     mockVehicles = mockVehicles.filter((v) => v.id !== id);
   },
 
+  assignToVao(osId: string, itemId: string, vehicleId: string | null) {
+    const key = vaoKey(osId, itemId);
+    if (vehicleId) {
+      if (isVehicleUsedOnOtherOs(osId, vehicleId)) {
+        throw new Error("Veículo já em uso em outra OS");
+      }
+      mockVehicleInUse.set(key, vehicleId);
+    } else {
+      mockVehicleInUse.delete(key);
+    }
+    refreshInUseFlags();
+  },
+
+  /** @deprecated Use assignToVao */
   assignToTransport(osId: string, vehicleId: string | null) {
     if (vehicleId) {
-      for (const [os, vid] of mockVehicleInUse.entries()) {
-        if (vid === vehicleId && os !== osId) {
-          throw new Error("Veículo já em uso em outra OS");
-        }
+      if (isVehicleUsedOnOtherOs(osId, vehicleId)) {
+        throw new Error("Veículo já em uso em outra OS");
       }
-      mockVehicleInUse.set(osId, vehicleId);
+      mockVehicleInUse.set(`${osId}:__legacy__`, vehicleId);
     } else {
-      mockVehicleInUse.delete(osId);
+      for (const key of mockVehicleInUse.keys()) {
+        if (key.startsWith(`${osId}:`)) mockVehicleInUse.delete(key);
+      }
     }
     refreshInUseFlags();
   },
 
   releaseFromTransport(osId: string) {
-    mockVehicleInUse.delete(osId);
+    for (const key of mockVehicleInUse.keys()) {
+      if (key.startsWith(`${osId}:`)) mockVehicleInUse.delete(key);
+    }
     refreshInUseFlags();
   },
 
@@ -128,12 +159,7 @@ export const vehicleMockStore = {
   },
 
   isInUseByOtherOs(osId: string, vehicleId: string): boolean {
-    for (const [assignedOsId, assignedVehicleId] of mockVehicleInUse.entries()) {
-      if (assignedVehicleId === vehicleId && assignedOsId !== osId) {
-        return true;
-      }
-    }
-    return false;
+    return isVehicleUsedOnOtherOs(osId, vehicleId);
   },
 };
 
@@ -225,35 +251,49 @@ export const tipoEnvidracamentoMockStore = createLookupMockStore([
 ]);
 
 const tipoEnvidracamentoImagemById = new Map<string, string | null>();
+const tipoEnvidracamentoDificuldadeById = new Map<string, number>();
 
 export const tipoEnvidracamentoAdminMockStore = {
   list() {
     return tipoEnvidracamentoMockStore.list().map((item) => ({
       ...item,
       imagemUrl: tipoEnvidracamentoImagemById.get(item.id) ?? null,
+      dificuldade: tipoEnvidracamentoDificuldadeById.get(item.id) ?? 1,
       usageCount: 0,
     }));
   },
 
-  create(descricao: string, imagemUrl: string | null) {
+  create(descricao: string, imagemUrl: string | null, dificuldade = 1) {
     const row = tipoEnvidracamentoMockStore.create(descricao);
     tipoEnvidracamentoImagemById.set(row.id, imagemUrl);
+    tipoEnvidracamentoDificuldadeById.set(row.id, dificuldade);
     return row;
   },
 
-  update(id: string, descricao: string, imagemUrl: string | null) {
+  update(
+    id: string,
+    descricao: string,
+    imagemUrl: string | null,
+    dificuldade = 1,
+  ) {
     const row = tipoEnvidracamentoMockStore.update(id, descricao);
     tipoEnvidracamentoImagemById.set(id, imagemUrl);
+    tipoEnvidracamentoDificuldadeById.set(id, dificuldade);
     return row;
   },
 
   delete(id: string) {
     tipoEnvidracamentoMockStore.delete(id);
     tipoEnvidracamentoImagemById.delete(id);
+    tipoEnvidracamentoDificuldadeById.delete(id);
   },
 
   getImagemUrl(id: string): string | null {
     return tipoEnvidracamentoImagemById.get(id) ?? null;
+  },
+
+  getDificuldade(id: string): number {
+    return tipoEnvidracamentoDificuldadeById.get(id) ?? 1;
   },
 };
 

@@ -5,12 +5,13 @@ import { listMeasurementLookups } from "@/lib/data/lookups";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canViewAllOrders } from "@/lib/auth/permissions";
+import { canViewAllOrders, canEditMeasurementHeader } from "@/lib/auth/permissions";
 import { listActiveInstallers } from "@/lib/data/installers";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
+import { MeasurementHeaderEditAction } from "@/components/order/measurement-header-edit-action";
 import { InstallationChecklist } from "@/components/installation/installation-checklist";
 import { InstallationServicePhotos } from "@/components/installation/installation-service-photos";
 import { Hammer } from "lucide-react";
@@ -26,6 +27,7 @@ export default async function InstallationOsPage({ params }: Props) {
   if (!order) notFound();
 
   const isManager = canViewAllOrders(session?.roles ?? []);
+  const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
   const [detail, lookups] = await Promise.all([
     getInstallationDetailForOs(osId, order.status),
@@ -40,10 +42,9 @@ export default async function InstallationOsPage({ params }: Props) {
   const visibleItems = isManager
     ? detail.items
     : detail.items.filter((item) => {
-        const assignedInstallerIds = detail.items
-          .map((i) => i.installationProgress?.installerId)
-          .filter((id): id is string => !!id);
-        const hasPerVaoAssignment = assignedInstallerIds.length > 0;
+        const hasPerVaoAssignment = detail.items.some(
+          (i) => i.installationProgress?.installerId,
+        );
         if (!hasPerVaoAssignment) {
           return order.assignedUserId === session?.userId;
         }
@@ -58,6 +59,17 @@ export default async function InstallationOsPage({ params }: Props) {
       clientAddress={order.clientAddress}
       description={order.description}
       className="mb-4 sm:mb-6"
+      actions={
+        canEditHeader ? (
+          <MeasurementHeaderEditAction
+            osId={order.id}
+            clientName={order.clientName}
+            clientPhone={order.clientPhone}
+            clientAddress={order.clientAddress}
+            budgetReference={order.budgetReference}
+          />
+        ) : undefined
+      }
     >
       <div className="mt-3">
         <MeasurementSpecFields
@@ -106,7 +118,7 @@ export default async function InstallationOsPage({ params }: Props) {
           dailyNotes={detail.dailyNotes}
           lookups={lookups}
           installers={installers}
-          canAssignInstaller={isManager}
+          canAssignInstaller={false}
         />
 
         <InstallationServicePhotos

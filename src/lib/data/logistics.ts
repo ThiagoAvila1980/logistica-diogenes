@@ -4,6 +4,7 @@ import { mockRepository } from "./mock-repository";
 export type LogisticsSummary = {
   vehiclePlate: string | null;
   vehicleDescription: string | null;
+  driverName: string | null;
 };
 
 export async function getLogisticsSummaries(

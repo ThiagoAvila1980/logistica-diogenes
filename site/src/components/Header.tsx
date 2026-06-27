@@ -30,8 +30,8 @@ export default function Header() {
         className={clsx(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
           scrolled
-            ? "glass shadow-lg shadow-black/40"
-            : "bg-transparent"
+            ? "glass shadow-lg shadow-black/90"
+            : ""
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">

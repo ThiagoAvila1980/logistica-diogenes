@@ -343,13 +343,6 @@ export async function updateMeasurementHeader(
     return { success: false, message: "Medição não encontrada." };
   }
 
-  if (!order.status.startsWith("medicao")) {
-    return {
-      success: false,
-      message: "Só é possível editar medições em etapa de medição.",
-    };
-  }
-
   const budgetRef = budgetReference?.trim() || null;
 
   if (useMockData()) {
@@ -361,8 +354,8 @@ export async function updateMeasurementHeader(
     });
     if (!result.success) return result;
 
-    revalidatePath("/field");
-    revalidatePath(`/field/${osId}`);
+    const { revalidateOSRoutes } = await import("@/lib/revalidate");
+    revalidateOSRoutes(osId);
     return { success: true };
   }
 
@@ -380,8 +373,8 @@ export async function updateMeasurementHeader(
       })
       .where(eq(measurements.id, osId));
 
-    revalidatePath("/field");
-    revalidatePath(`/field/${osId}`);
+    const { revalidateOSRoutes } = await import("@/lib/revalidate");
+    revalidateOSRoutes(osId);
     return { success: true };
   } catch (error) {
     console.error("[updateMeasurementHeader]", error);

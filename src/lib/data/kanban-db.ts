@@ -1,11 +1,18 @@
-import { desc } from "drizzle-orm";
+import { desc, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
-import { measurements } from "@/db/schema";
+import { measurements, transportLogs } from "@/db/schema";
 import {
   hasMeasurementItems,
   measurementClientName,
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
+import { findActiveCortador } from "@/lib/performance/scoring";
+import { collectDriverIdsFromMeasurementItems } from "@/lib/logistics/transport-driver-access";
+import { collectInstallerIdsFromMeasurementItems } from "@/lib/installation/installation-installer-access";
+import {
+  namesFromIds,
+  resolveUserNamesByIds,
+} from "@/lib/workflow/professional-names";
 import {
   aggregateCuttingStepsFromItems,
   aggregateTransportStepsFromItems,
@@ -48,11 +55,46 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       priority: measurements.priority,
       scheduledDate: measurements.scheduledDate,
       updatedAt: measurements.updatedAt,
+      assignedUserId: measurements.assignedUserId,
       hasMeasurement: hasMeasurementItems,
       items: measurements.items,
     })
     .from(measurements)
     .orderBy(desc(measurements.updatedAt));
+
+  const osIds = rows.map((row) => row.id);
+  const transportRows =
+    osIds.length > 0
+      ? await db
+          .select({
+            idMedicao: transportLogs.idMedicao,
+            driverId: transportLogs.driverId,
+          })
+          .from(transportLogs)
+          .where(inArray(transportLogs.idMedicao, osIds))
+      : [];
+  const logDriverByOs = Object.fromEntries(
+    transportRows.map((row) => [row.idMedicao, row.driverId]),
+  );
+
+  const cutterId = await findActiveCortador(db);
+  const userIds = new Set<string>();
+  if (cutterId) userIds.add(cutterId);
+
+  for (const row of rows) {
+    const items = (row.items as MeasurementLineItem[] | null) ?? [];
+    for (const id of collectDriverIdsFromMeasurementItems(items)) {
+      userIds.add(id);
+    }
+    for (const id of collectInstallerIdsFromMeasurementItems(items)) {
+      userIds.add(id);
+    }
+    if (row.assignedUserId) userIds.add(row.assignedUserId);
+    const logDriverId = logDriverByOs[row.id];
+    if (logDriverId) userIds.add(logDriverId);
+  }
+
+  const nameById = await resolveUserNamesByIds([...userIds]);
 
   return rows.map((r) => {
     const isCortePhase =
@@ -87,6 +129,23 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
 
     const installationStepsData = aggregateInstallationStepsFromItems(items);
 
+    const showCutting = isCortePhase || hasPendingCutting;
+    const showTransport = isTransportPhase;
+    const showInstallationProfessionals =
+      isInstallationPhase || r.status === "concluido";
+
+    const driverIds = [
+      ...collectDriverIdsFromMeasurementItems(items),
+      logDriverByOs[r.id],
+    ];
+    const installerIdsFromItems = collectInstallerIdsFromMeasurementItems(items);
+    const installerIds =
+      installerIdsFromItems.length > 0
+        ? installerIdsFromItems
+        : r.assignedUserId
+          ? [r.assignedUserId]
+          : [];
+
     return {
       id: r.id,
       number: r.number,
@@ -99,12 +158,21 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       scheduledDate: r.scheduledDate,
       updatedAt: r.updatedAt,
       hasMeasurement: Boolean(r.hasMeasurement),
-      cuttingSteps:
-        isCortePhase || hasPendingCutting ? cuttingStepsData : null,
+      cuttingSteps: showCutting ? cuttingStepsData : null,
       transportSteps: isTransportPhase ? transportStepsData : null,
       installationSteps:
         isInstallationPhase || hasFirstTransportDelivery
           ? installationStepsData
+          : null,
+      cutterName: showCutting
+        ? cutterId
+          ? (nameById.get(cutterId) ?? null)
+          : null
+        : null,
+      professionalNames: showTransport
+        ? namesFromIds(driverIds, nameById)
+        : showInstallationProfessionals
+          ? namesFromIds(installerIds, nameById)
           : null,
     };
   });
