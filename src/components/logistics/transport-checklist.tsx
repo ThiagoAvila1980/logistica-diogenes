@@ -32,8 +32,10 @@ import { DriverSelector } from "@/components/logistics/driver-selector";
 import { VehicleSelector } from "@/components/logistics/vehicle-selector";
 import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
-
-type TransportStep = "perfilEstrutural" | "perfilTotal" | "acessorios" | "vidros";
+import {
+  getItemTransportGates,
+  type TransportStep,
+} from "@/lib/logistics/transport-item-gates";
 
 const TRANSPORT_STEPS: { key: TransportStep; label: string; shortLabel: string }[] = [
   { key: "perfilEstrutural", label: "Perf. Est.", shortLabel: "P.Est." },
@@ -50,48 +52,6 @@ function getItemTransportProgress(item: MeasurementLineItem): ItemTransportProgr
     perfilTotal: item.transportProgress?.perfilTotal ?? false,
     acessorios: item.transportProgress?.acessorios ?? false,
     vidros: item.transportProgress?.vidros ?? false,
-  };
-}
-
-/**
- * Retorna quais etapas de transporte estão desbloqueadas para um vão,
- * baseado no progresso de corte daquele vão e na fase atual da OS.
- */
-function getItemTransportGates(
-  item: MeasurementLineItem,
-  hasVehicle: boolean,
-  isLatePhase: boolean,
-): Record<TransportStep, { unlocked: boolean; reason: string | null }> {
-  const cut = item.cuttingProgress ?? {
-    corte: false, embalagem: false, acessorios: false, vidros: false,
-  };
-
-  const corteOk = cut.corte || isLatePhase;
-  const embalagemOk = cut.embalagem || isLatePhase;
-  const acessoriosOk = cut.acessorios || isLatePhase;
-  const vidrosOk = cut.vidros || isLatePhase;
-
-  return {
-    perfilEstrutural: {
-      unlocked: corteOk && hasVehicle,
-      reason: !corteOk
-        ? "Aguardando corte deste vão"
-        : !hasVehicle
-          ? "Selecione um veículo para este vão"
-          : null,
-    },
-    perfilTotal: {
-      unlocked: embalagemOk,
-      reason: embalagemOk ? null : "Aguardando embalagem deste vão",
-    },
-    acessorios: {
-      unlocked: acessoriosOk,
-      reason: acessoriosOk ? null : "Aguardando acessórios deste vão",
-    },
-    vidros: {
-      unlocked: vidrosOk,
-      reason: vidrosOk ? null : "Aguardando vidros deste vão",
-    },
   };
 }
 
@@ -116,9 +76,6 @@ export function TransportChecklist({
   canAssignDriver = false,
   canAssignVehicle = true,
 }: Props) {
-  const isLatePhase =
-    osStatus.startsWith("instalacao") || osStatus === "concluido";
-
   const [progress, setProgress] = useState<Record<string, ItemTransportProgress>>(
     () =>
       Object.fromEntries(
@@ -236,8 +193,8 @@ export function TransportChecklist({
               : undefined;
             const gates = getItemTransportGates(
               item,
+              osStatus,
               Boolean(itemVehicleId),
-              isLatePhase,
             );
             const doneSteps = TRANSPORT_STEPS.filter(({ key }) => itemProgress[key]).length;
             const itemAllDone = doneSteps === 4;
@@ -356,6 +313,7 @@ export function TransportChecklist({
                                   done && "border-success bg-success",
                                 )}
                                 aria-label={`${key} — Vão ${index + 1}`}
+                                title={gate.reason ?? undefined}
                               />
                             )}
                           </div>
@@ -401,6 +359,7 @@ export function TransportChecklist({
                                   done && "border-success bg-success",
                                 )}
                                 aria-label={`${stepLabel} — Vão ${index + 1}`}
+                                title={gate.reason ?? undefined}
                               />
                             )}
                             <span
