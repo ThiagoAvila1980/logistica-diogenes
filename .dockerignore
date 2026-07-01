@@ -1,0 +1,27 @@
+# Artefatos locais / scripts temporários
+.tmp-favicon
+.git
+.github
+.vscode
+.idea
+
+# Dependências e builds locais (reinstalados no container)
+node_modules
+.next
+out
+
+# Landing separada — não entra no build do app principal
+site/node_modules
+site/.next
+
+# Env e uploads locais
+.env
+.env.*
+!.env.example
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Testes e docs de dev
+**/*.test.ts
+**/*.spec.ts
+coverage

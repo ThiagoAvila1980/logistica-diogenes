@@ -1,3 +1,6 @@
+# temp scripts (ex.: geração de favicon — nunca commitar node_modules)
+.tmp-favicon/
+
 # dependencies
 /node_modules
 /.pnp

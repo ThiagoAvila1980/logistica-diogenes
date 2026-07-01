@@ -9,8 +9,13 @@
 # build anterior. start = `next start` (build de produção real).
 providers = ["node"]
 
+# Coolify/Nixpacks define NODE_ENV=production no install — sem isso o npm
+# omite devDependencies e o `next build` quebra ao carregar @tailwindcss/postcss.
+[phases.install]
+cmds = ["npm install --include=dev"]
+
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["npm run build:clean"]
 
 [start]
 cmd = "npm run start"

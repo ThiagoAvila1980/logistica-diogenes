@@ -1,6 +1,9 @@
 # Coolify/Nixpacks — landing Next.js em /site
 providers = ["node"]
 
+[phases.install]
+cmds = ["npm install --include=dev"]
+
 [phases.build]
 cmds = ["npm run build"]
 
