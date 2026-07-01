@@ -17,8 +17,7 @@ import {
 import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { recordWorkEvent, reverseWorkEvent } from "@/lib/performance/scoring";
-import { getVaoDificuldadeMultiplier } from "@/lib/performance/vao-difficulty";
+import { recordVaoStepCompletion } from "@/lib/performance/scoring";
 
 export type UpdateInstallationStepResult =
   | { success: true }
@@ -156,29 +155,15 @@ export async function updateItemInstallationStepAction(
 
       // Pontuação: instalacao_vao ao marcar/desmarcar step=acabamento (último step)
       if (step === "acabamento") {
-        if (done) {
-          const updatedItem = updatedItems.find((i) => i.id === itemId);
-          const installerId = updatedItem?.installationProgress?.installerId;
-          if (installerId) {
-            const pointsMultiplier = await getVaoDificuldadeMultiplier(
-              tx,
-              updatedItem?.idTipoEnvidracamento,
-            );
-            await recordWorkEvent(tx, {
-              userId: installerId,
-              measurementId: osId,
-              itemId,
-              eventType: "instalacao_vao",
-              pointsMultiplier,
-            });
-          }
-        } else {
-          await reverseWorkEvent(tx, {
-            measurementId: osId,
-            itemId,
-            eventType: "instalacao_vao",
-          });
-        }
+        const updatedItem = updatedItems.find((i) => i.id === itemId);
+        await recordVaoStepCompletion(tx, {
+          userId: updatedItem?.installationProgress?.installerId,
+          measurementId: osId,
+          itemId,
+          eventType: "instalacao_vao",
+          idTipoEnvidracamento: updatedItem?.idTipoEnvidracamento,
+          done,
+        });
       }
     });
 

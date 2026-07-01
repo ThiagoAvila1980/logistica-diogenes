@@ -1,35 +1,12 @@
 import { asc } from "drizzle-orm";
 import { getDb } from "@/db";
 import { cores, tipoEnvidracamento, tipoVidro, ambientes } from "@/db/schema";
-import { useMockData } from "./config";
 import type { LookupOption, MeasurementLookups } from "./lookup-types";
 
 export type { LookupOption, MeasurementLookups } from "./lookup-types";
 export { resolveLookupLabel } from "./lookup-types";
 
 export async function listMeasurementLookups(): Promise<MeasurementLookups> {
-  if (useMockData()) {
-    const {
-      corMockStore,
-      tipoVidroMockStore,
-      tipoEnvidracamentoAdminMockStore,
-      ambienteMockStore,
-    } = await import("./admin-mock-store");
-    return {
-      cores: corMockStore.list(),
-      tipoVidro: tipoVidroMockStore.list(),
-      tipoEnvidracamento: tipoEnvidracamentoAdminMockStore.list().map(
-        ({ id, descricao, imagemUrl, dificuldade }) => ({
-          id,
-          descricao,
-          imagemUrl,
-          dificuldade,
-        }),
-      ),
-      ambientes: ambienteMockStore.list(),
-    };
-  }
-
   const db = getDb();
   const [coresRows, vidroRows, envRows, ambienteRows] = await Promise.all([
     db

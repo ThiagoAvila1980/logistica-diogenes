@@ -28,7 +28,6 @@ const NAV_ICONS: Record<string, LucideIcon> = {
 
 export function AppSidebar({
   pathname,
-  mockMode,
   session,
   navItems,
   showNotifications,
@@ -39,7 +38,6 @@ export function AppSidebar({
   onNavigate,
 }: {
   pathname: string;
-  mockMode?: boolean;
   session?: SessionUser;
   navItems: NavItem[];
   showNotifications: boolean;
@@ -130,12 +128,6 @@ export function AppSidebar({
             </p>
           </div>
           <LogoutButton className="w-full border-white/20 bg-white/5 text-primary-foreground hover:bg-white/10 hover:text-primary-foreground" />
-        </div>
-      )}
-
-      {mockMode && (
-        <div className="shrink-0 border-t border-white/10 p-3 text-xs text-primary-foreground/50">
-          Modo demo (dados mock)
         </div>
       )}
     </aside>

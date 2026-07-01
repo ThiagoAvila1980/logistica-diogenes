@@ -2,7 +2,6 @@ import "server-only";
 
 import { eq } from "drizzle-orm";
 import { tipoEnvidracamento } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
 import type { getDb } from "@/db";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,13 +16,6 @@ export async function getVaoDificuldadeMultiplier(
   idTipoEnvidracamento: string | null | undefined,
 ): Promise<number> {
   if (!idTipoEnvidracamento) return 1;
-
-  if (useMockData()) {
-    const { tipoEnvidracamentoAdminMockStore } = await import(
-      "@/lib/data/admin-mock-store"
-    );
-    return tipoEnvidracamentoAdminMockStore.getDificuldade(idTipoEnvidracamento);
-  }
 
   const [row] = await db
     .select({ dificuldade: tipoEnvidracamento.dificuldade })

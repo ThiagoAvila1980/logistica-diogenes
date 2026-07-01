@@ -1,9 +1,0 @@
--- Novos status do pipeline em 4 fases (Kanban)
-ALTER TYPE "os_status" ADD VALUE IF NOT EXISTS 'cortes';
-ALTER TYPE "os_status" ADD VALUE IF NOT EXISTS 'embalagem';
-ALTER TYPE "os_status" ADD VALUE IF NOT EXISTS 'acessorios_plano';
-ALTER TYPE "os_status" ADD VALUE IF NOT EXISTS 'transporte_perfil';
-ALTER TYPE "os_status" ADD VALUE IF NOT EXISTS 'transporte_estrutural';
-ALTER TYPE "os_status" ADD VALUE IF NOT EXISTS 'transporte_perfis_total';
-ALTER TYPE "os_status" ADD VALUE IF NOT EXISTS 'transporte_acessorios';
-ALTER TYPE "os_status" ADD VALUE IF NOT EXISTS 'transporte_levar_vidro';

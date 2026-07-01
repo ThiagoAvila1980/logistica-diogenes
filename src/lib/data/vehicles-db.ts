@@ -1,9 +1,16 @@
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { vehicles, transportLogs, measurements } from "@/db/schema";
-import type { VehicleRow } from "./admin-mock-store";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { collectVehicleIdsFromMeasurementItems } from "@/lib/logistics/transport-vehicle-access";
+
+export type VehicleRow = {
+  id: string;
+  description: string;
+  plate: string;
+  active: boolean;
+  inUse: boolean;
+};
 
 const ACTIVE_TRANSPORT_STATUSES = [
   "transporte_perfil",

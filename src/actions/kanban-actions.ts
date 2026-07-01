@@ -20,8 +20,6 @@ import {
   aggregateInstallationStepsFromItems,
 } from "@/lib/workflow/aggregates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { useMockData } from "@/lib/data/config";
-import { mockRepository } from "@/lib/data/mock-repository";
 import { loadClientNotificationContext } from "@/lib/notifications/order-context";
 import {
   formatNotificationSummary,
@@ -145,12 +143,6 @@ export async function moveOSCard(
     const target = parseOsStatus(targetStatus);
     if (!target) {
       return { success: false, message: "Status inválido." };
-    }
-
-    if (useMockData()) {
-      const mockResult = mockRepository.moveCard(osId, target);
-      if (!mockResult.success) return mockResult;
-      return finishKanbanMove(osId, target);
     }
 
     const db = getDb();

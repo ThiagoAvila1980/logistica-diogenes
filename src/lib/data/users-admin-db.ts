@@ -1,7 +1,15 @@
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { users } from "@/db/schema";
-import type { AdminUserRow } from "./admin-mock-store";
+import { users, type User } from "@/db/schema";
+
+export type AdminUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  roles: User["roles"];
+  phone: string | null;
+  active: boolean;
+};
 
 export async function listAdminUsersDb(): Promise<AdminUserRow[]> {
   const db = getDb();

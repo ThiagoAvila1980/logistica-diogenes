@@ -4,13 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/require-role";
 import { authErrorMessage } from "@/lib/auth/auth-error";
-import { useMockData } from "@/lib/data/config";
-import {
-  corMockStore,
-  tipoEnvidracamentoAdminMockStore,
-  tipoVidroMockStore,
-  ambienteMockStore,
-} from "@/lib/data/admin-mock-store";
 import {
   deleteTipoEnvidracamentoImage,
   parseCatalogImageFile,
@@ -46,12 +39,6 @@ const ENTITY_CONFIG: Record<
     }) => Promise<void>;
     deleteDb: (id: string) => Promise<void>;
     countDupDb: (descricao: string, excludeId?: string) => Promise<number>;
-    mockStore: {
-      list: () => { id: string; descricao: string }[];
-      create: (descricao: string) => { id: string; descricao: string };
-      update: (id: string, descricao: string) => { id: string; descricao: string };
-      delete: (id: string) => void;
-    };
   }
 > = {
   cores: {
@@ -72,7 +59,6 @@ const ENTITY_CONFIG: Record<
       const { countCorByDescricaoDb } = await import("@/lib/data/lookup-admin-db");
       return countCorByDescricaoDb(descricao, excludeId);
     },
-    mockStore: corMockStore,
   },
   tipo_vidro: {
     adminPath: "/admin/tipo-vidro",
@@ -94,7 +80,6 @@ const ENTITY_CONFIG: Record<
       );
       return countTipoVidroByDescricaoDb(descricao, excludeId);
     },
-    mockStore: tipoVidroMockStore,
   },
   tipo_envidracamento: {
     adminPath: "/admin/tipo-envidracamento",
@@ -122,27 +107,6 @@ const ENTITY_CONFIG: Record<
       );
       return countTipoEnvidracamentoByDescricaoDb(descricao, excludeId);
     },
-    mockStore: {
-      list: () =>
-        tipoEnvidracamentoAdminMockStore.list().map(
-          ({ id, descricao, imagemUrl, dificuldade }) => ({
-            id,
-            descricao,
-            imagemUrl,
-            dificuldade,
-          }),
-        ),
-      create: (descricao: string) =>
-        tipoEnvidracamentoAdminMockStore.create(descricao, null, 1),
-      update: (id: string, descricao: string) =>
-        tipoEnvidracamentoAdminMockStore.update(
-          id,
-          descricao,
-          tipoEnvidracamentoAdminMockStore.getImagemUrl(id),
-          tipoEnvidracamentoAdminMockStore.getDificuldade(id),
-        ),
-      delete: (id: string) => tipoEnvidracamentoAdminMockStore.delete(id),
-    },
   },
   ambientes: {
     adminPath: "/admin/ambientes",
@@ -164,7 +128,6 @@ const ENTITY_CONFIG: Record<
       );
       return countAmbienteByDescricaoDb(descricao, excludeId);
     },
-    mockStore: ambienteMockStore,
   },
 };
 
@@ -176,23 +139,11 @@ function revalidateLookupPaths(adminPath: string) {
   revalidatePath("/installation");
 }
 
-function toAdminRows(
-  items: { id: string; descricao: string }[],
-): LookupAdminRow[] {
-  return items.map((item) => ({
-    ...item,
-    usageCount: 0,
-  }));
-}
-
 export async function getLookupItemsForAdmin(
   entity: LookupEntity,
 ): Promise<LookupAdminRow[]> {
   await requireRole(["admin"]);
   const config = ENTITY_CONFIG[entity];
-  if (useMockData()) {
-    return toAdminRows(config.mockStore.list());
-  }
   return config.listDb();
 }
 
@@ -224,19 +175,11 @@ async function saveLookupInternal(
   const config = ENTITY_CONFIG[entity];
 
   try {
-    if (useMockData()) {
-      if (id) {
-        config.mockStore.update(id, descricao);
-      } else {
-        config.mockStore.create(descricao);
-      }
-    } else {
-      const dup = await config.countDupDb(descricao, id);
-      if (dup > 0) {
-        return { success: false, message: "Descrição já cadastrada" };
-      }
-      await config.upsertDb({ id, descricao });
+    const dup = await config.countDupDb(descricao, id);
+    if (dup > 0) {
+      return { success: false, message: "Descrição já cadastrada" };
     }
+    await config.upsertDb({ id, descricao });
 
     revalidateLookupPaths(config.adminPath);
     return {
@@ -301,62 +244,41 @@ export async function saveTipoEnvidracamento(
     let imagemUrl: string | null = null;
     let previousImagemUrl: string | null = null;
 
-    if (useMockData()) {
-      if (id) {
-        previousImagemUrl = tipoEnvidracamentoAdminMockStore.getImagemUrl(id);
-      }
-      if (newFile) {
-        imagemUrl = `mock://tipo-envidracamento/${newFile.name}`;
-      } else if (removeImagem) {
-        imagemUrl = null;
-      } else if (existingRaw) {
-        imagemUrl = existingRaw;
-      } else if (id) {
-        imagemUrl = previousImagemUrl;
-      }
+    if (id) {
+      const { getTipoEnvidracamentoImagemUrlDb } = await import(
+        "@/lib/data/lookup-admin-db"
+      );
+      previousImagemUrl = await getTipoEnvidracamentoImagemUrlDb(id);
+    }
 
-      if (id) {
-        tipoEnvidracamentoAdminMockStore.update(id, descricao, imagemUrl, dificuldade);
-      } else {
-        tipoEnvidracamentoAdminMockStore.create(descricao, imagemUrl, dificuldade);
-      }
-    } else {
-      if (id) {
-        const { getTipoEnvidracamentoImagemUrlDb } = await import(
-          "@/lib/data/lookup-admin-db"
-        );
-        previousImagemUrl = await getTipoEnvidracamentoImagemUrlDb(id);
-      }
+    if (newFile) {
+      imagemUrl = normalizePersistedUploadUrl(
+        await saveTipoEnvidracamentoImage(newFile),
+      );
+    } else if (removeImagem) {
+      imagemUrl = null;
+    } else if (existingRaw && isPersistedUploadUrl(existingRaw)) {
+      imagemUrl = normalizePersistedUploadUrl(existingRaw);
+    } else if (id) {
+      imagemUrl = previousImagemUrl;
+    }
 
-      if (newFile) {
-        imagemUrl = normalizePersistedUploadUrl(
-          await saveTipoEnvidracamentoImage(newFile),
-        );
-      } else if (removeImagem) {
-        imagemUrl = null;
-      } else if (existingRaw && isPersistedUploadUrl(existingRaw)) {
-        imagemUrl = normalizePersistedUploadUrl(existingRaw);
-      } else if (id) {
-        imagemUrl = previousImagemUrl;
+    const dup = await config.countDupDb(descricao, id);
+    if (dup > 0) {
+      if (newFile && imagemUrl) {
+        await deleteTipoEnvidracamentoImage(imagemUrl);
       }
+      return { success: false, message: "Descrição já cadastrada" };
+    }
 
-      const dup = await config.countDupDb(descricao, id);
-      if (dup > 0) {
-        if (newFile && imagemUrl) {
-          await deleteTipoEnvidracamentoImage(imagemUrl);
-        }
-        return { success: false, message: "Descrição já cadastrada" };
-      }
+    await config.upsertDb({ id, descricao, imagemUrl, dificuldade });
 
-      await config.upsertDb({ id, descricao, imagemUrl, dificuldade });
-
-      if (
-        previousImagemUrl &&
-        previousImagemUrl !== imagemUrl &&
-        isPersistedUploadUrl(previousImagemUrl)
-      ) {
-        await deleteTipoEnvidracamentoImage(previousImagemUrl);
-      }
+    if (
+      previousImagemUrl &&
+      previousImagemUrl !== imagemUrl &&
+      isPersistedUploadUrl(previousImagemUrl)
+    ) {
+      await deleteTipoEnvidracamentoImage(previousImagemUrl);
     }
 
     revalidateLookupPaths(config.adminPath);
@@ -385,29 +307,25 @@ export async function deleteLookupItem(
   const config = ENTITY_CONFIG[entity];
 
   try {
-    if (useMockData()) {
-      config.mockStore.delete(id);
+    const rows = await config.listDb();
+    const row = rows.find((item) => item.id === id);
+    if (row && row.usageCount > 0) {
+      return {
+        success: false,
+        message: "Registro em uso em medições — não pode ser removido",
+      };
+    }
+    if (entity === "tipo_envidracamento") {
+      const { getTipoEnvidracamentoImagemUrlDb } = await import(
+        "@/lib/data/lookup-admin-db"
+      );
+      const imagemUrl = await getTipoEnvidracamentoImagemUrlDb(id);
+      await config.deleteDb(id);
+      if (imagemUrl && isPersistedUploadUrl(imagemUrl)) {
+        await deleteTipoEnvidracamentoImage(imagemUrl);
+      }
     } else {
-      const rows = await config.listDb();
-      const row = rows.find((item) => item.id === id);
-      if (row && row.usageCount > 0) {
-        return {
-          success: false,
-          message: "Registro em uso em medições — não pode ser removido",
-        };
-      }
-      if (entity === "tipo_envidracamento") {
-        const { getTipoEnvidracamentoImagemUrlDb } = await import(
-          "@/lib/data/lookup-admin-db"
-        );
-        const imagemUrl = await getTipoEnvidracamentoImagemUrlDb(id);
-        await config.deleteDb(id);
-        if (imagemUrl && isPersistedUploadUrl(imagemUrl)) {
-          await deleteTipoEnvidracamentoImage(imagemUrl);
-        }
-      } else {
-        await config.deleteDb(id);
-      }
+      await config.deleteDb(id);
     }
 
     revalidateLookupPaths(config.adminPath);

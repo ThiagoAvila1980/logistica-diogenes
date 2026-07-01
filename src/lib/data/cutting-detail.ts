@@ -2,8 +2,6 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { measurements, cuttingPlans } from "@/db/schema";
 import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
-import { useMockData } from "./config";
-import { mockRepository } from "./mock-repository";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { CuttingSteps } from "@/lib/transport-gates";
 import { aggregateCuttingStepsFromItems, selectCuttingLineItems } from "@/lib/workflow/aggregates";
@@ -54,10 +52,6 @@ export type CuttingDetail = {
 };
 
 export async function getCuttingDetailForOs(osId: string): Promise<CuttingDetail> {
-  if (useMockData()) {
-    return mockRepository.getCuttingDetail(osId);
-  }
-
   const db = getDb();
 
   const [meas] = await db

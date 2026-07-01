@@ -8,7 +8,6 @@ import {
   transportLogs,
   users,
 } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
 import { mockNotificationStore } from "@/lib/data/mock-notifications";
 import {
   getStageAlertMeta,
@@ -19,7 +18,7 @@ import type {
   NotificationListResult,
 } from "@/lib/notifications/types";
 function useInMemoryNotifications() {
-  return useMockData() && !isSupabaseConfigured();
+  return !isSupabaseConfigured();
 }
 
 function mapRow(row: {
@@ -253,14 +252,6 @@ export async function resolveStageRecordIds(
   transportLogId: string | null;
   installationLogId: string | null;
 }> {
-  if (useMockData()) {
-    return {
-      cuttingPlanId: null,
-      transportLogId: null,
-      installationLogId: null,
-    };
-  }
-
   const db = getDb();
 
   if (stage === "cutting") {

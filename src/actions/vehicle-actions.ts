@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/require-role";
 import { authErrorMessage } from "@/lib/auth/auth-error";
-import { useMockData } from "@/lib/data/config";
-import { vehicleMockStore } from "@/lib/data/admin-mock-store";
 import { listVehicles } from "@/lib/data/vehicles";
 
 const vehicleSchema = z.object({
@@ -58,33 +56,25 @@ export async function saveVehicle(
   const { id, description, plate, active } = parsed.data;
 
   try {
-    if (useMockData()) {
-      if (id) {
-        vehicleMockStore.update(id, { description, plate, active });
-      } else {
-        vehicleMockStore.create({ description, plate });
-      }
-    } else {
-      const {
-        upsertVehicleDb,
-        countVehiclesByPlateDb,
-        isVehicleInUseDb,
-      } = await import("@/lib/data/vehicles-db");
-      const dup = await countVehiclesByPlateDb(plate, id);
-      if (dup > 0) {
-        return { success: false, message: "Placa já cadastrada" };
-      }
-      if (id && active === false) {
-        const inUse = await isVehicleInUseDb(id);
-        if (inUse) {
-          return {
-            success: false,
-            message: "Veículo em uso — não pode ser desativado",
-          };
-        }
-      }
-      await upsertVehicleDb({ id, description, plate, active });
+    const {
+      upsertVehicleDb,
+      countVehiclesByPlateDb,
+      isVehicleInUseDb,
+    } = await import("@/lib/data/vehicles-db");
+    const dup = await countVehiclesByPlateDb(plate, id);
+    if (dup > 0) {
+      return { success: false, message: "Placa já cadastrada" };
     }
+    if (id && active === false) {
+      const inUse = await isVehicleInUseDb(id);
+      if (inUse) {
+        return {
+          success: false,
+          message: "Veículo em uso — não pode ser desativado",
+        };
+      }
+    }
+    await upsertVehicleDb({ id, description, plate, active });
 
     revalidatePath("/admin/vehicles");
     revalidatePath("/logistics");
@@ -108,17 +98,13 @@ export async function deleteVehicle(vehicleId: string): Promise<AdminActionResul
   }
 
   try {
-    if (useMockData()) {
-      vehicleMockStore.delete(vehicleId);
-    } else {
-      const { deleteVehicleDb, isVehicleInUseDb } = await import(
-        "@/lib/data/vehicles-db"
-      );
-      if (await isVehicleInUseDb(vehicleId)) {
-        return { success: false, message: "Veículo em uso no transporte" };
-      }
-      await deleteVehicleDb(vehicleId);
+    const { deleteVehicleDb, isVehicleInUseDb } = await import(
+      "@/lib/data/vehicles-db"
+    );
+    if (await isVehicleInUseDb(vehicleId)) {
+      return { success: false, message: "Veículo em uso no transporte" };
     }
+    await deleteVehicleDb(vehicleId);
     revalidatePath("/admin/vehicles");
     revalidatePath("/logistics");
     return { success: true, message: "Veículo removido" };

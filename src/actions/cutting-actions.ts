@@ -8,8 +8,6 @@ import { cuttingPlans, measurements, statusHistory } from "@/db/schema";
 import type { OsStatus } from "@/db/schema";
 import { isCuttingPhaseStatus } from "@/lib/transport-gates";
 import { requireRole } from "@/lib/auth/require-role";
-import { useMockData } from "@/lib/data/config";
-import { mockRepository } from "@/lib/data/mock-repository";
 import { getServiceOrderById } from "@/lib/data/orders";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import {
@@ -23,10 +21,8 @@ import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
 import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
 import {
   findActiveCortador,
-  recordWorkEvent,
-  reverseWorkEvent,
+  recordVaoStepCompletion,
 } from "@/lib/performance/scoring";
-import { getVaoDificuldadeMultiplier } from "@/lib/performance/vao-difficulty";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -59,12 +55,6 @@ export async function updateItemCuttingStepAction(
   }
 
   const { osId, itemId, step, done } = parsed.data;
-
-  if (useMockData()) {
-    const result = mockRepository.updateCuttingStep(osId, step, done);
-    if (result.success) revalidateOSRoutes(osId);
-    return result;
-  }
 
   try {
     const order = await getServiceOrderById(osId);
@@ -113,29 +103,16 @@ export async function updateItemCuttingStepAction(
 
       // Pontuação: corte_vao ao marcar/desmarcar step=corte
       if (step === "corte") {
-        if (done) {
-          const cortadorId = await findActiveCortador(tx);
-          const updatedItem = updatedItems.find((i) => i.id === itemId);
-          if (cortadorId) {
-            const pointsMultiplier = await getVaoDificuldadeMultiplier(
-              tx,
-              updatedItem?.idTipoEnvidracamento,
-            );
-            await recordWorkEvent(tx, {
-              userId: cortadorId,
-              measurementId: osId,
-              itemId,
-              eventType: "corte_vao",
-              pointsMultiplier,
-            });
-          }
-        } else {
-          await reverseWorkEvent(tx, {
-            measurementId: osId,
-            itemId,
-            eventType: "corte_vao",
-          });
-        }
+        const cortadorId = done ? await findActiveCortador(tx) : null;
+        const updatedItem = updatedItems.find((i) => i.id === itemId);
+        await recordVaoStepCompletion(tx, {
+          userId: cortadorId,
+          measurementId: osId,
+          itemId,
+          eventType: "corte_vao",
+          idTipoEnvidracamento: updatedItem?.idTipoEnvidracamento,
+          done,
+        });
       }
 
       // Quando o primeiro vão tem corte feito, libera transporte em paralelo
@@ -194,10 +171,6 @@ export async function advanceCuttingToTransportAction(
   }
 
   const { osId } = parsed.data;
-
-  if (useMockData()) {
-    return { success: true };
-  }
 
   try {
     const order = await getServiceOrderById(osId);
@@ -288,12 +261,6 @@ export async function updateCuttingNotesAction(
   const { osId, notes } = parsed.data;
   const trimmedNotes = notes?.trim() || null;
 
-  if (useMockData()) {
-    const result = mockRepository.updateCuttingNotes(osId, trimmedNotes);
-    if (result.success) revalidateOSRoutes(osId);
-    return result;
-  }
-
   try {
     const order = await getServiceOrderById(osId);
     if (!order) return { success: false, message: "OS não encontrada" };
@@ -362,13 +329,6 @@ export async function sendItemsToCuttingAction(
 
   const { osId, selectedItemIds } = parsed.data;
   const selectedSet = new Set(selectedItemIds);
-
-  if (useMockData()) {
-    const result = mockRepository.moveCard(osId, "cortes");
-    if (!result.success) return result;
-    revalidateOSRoutes(osId);
-    return { success: true, notificationSummary: "Vãos enviados para o plano de corte (modo demo)." };
-  }
 
   try {
     const db = getDb();

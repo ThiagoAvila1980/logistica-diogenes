@@ -8,8 +8,6 @@ import { getSession } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { rolesEqual } from "@/lib/auth/permissions";
 import type { UserRole } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
-import { userMockStore } from "@/lib/data/admin-mock-store";
 import { listAdminUsers } from "@/lib/data/users-admin";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
 
@@ -89,18 +87,14 @@ export async function createUser(
   const { name, email, roles, phone, password } = parsed.data;
 
   try {
-    if (useMockData()) {
-      userMockStore.create({ name, email, roles, phone });
-    } else {
-      const { createUserDb, countUsersByEmailDb } = await import(
-        "@/lib/data/users-admin-db"
-      );
-      if ((await countUsersByEmailDb(email)) > 0) {
-        return { success: false, message: "E-mail já cadastrado" };
-      }
-      const passwordHash = await hashPassword(password);
-      await createUserDb({ name, email, roles, phone, passwordHash });
+    const { createUserDb, countUsersByEmailDb } = await import(
+      "@/lib/data/users-admin-db"
+    );
+    if ((await countUsersByEmailDb(email)) > 0) {
+      return { success: false, message: "E-mail já cadastrado" };
     }
+    const passwordHash = await hashPassword(password);
+    await createUserDb({ name, email, roles, phone, passwordHash });
 
     revalidatePath("/admin/users");
     return { success: true, message: "Usuário criado" };
@@ -156,33 +150,23 @@ export async function updateUser(
   }
 
   try {
-    if (useMockData()) {
-      userMockStore.update(id, {
-        name,
-        email,
-        roles,
-        phone: phone ?? null,
-        active,
-      });
-    } else {
-      const { updateUserDb, countUsersByEmailDb } = await import(
-        "@/lib/data/users-admin-db"
-      );
-      if ((await countUsersByEmailDb(email, id)) > 0) {
-        return { success: false, message: "E-mail já cadastrado" };
-      }
-      const patch: Parameters<typeof updateUserDb>[1] = {
-        name,
-        email,
-        roles,
-        phone: phone ?? null,
-        active,
-      };
-      if (password && password.length >= 6) {
-        patch.passwordHash = await hashPassword(password);
-      }
-      await updateUserDb(id, patch);
+    const { updateUserDb, countUsersByEmailDb } = await import(
+      "@/lib/data/users-admin-db"
+    );
+    if ((await countUsersByEmailDb(email, id)) > 0) {
+      return { success: false, message: "E-mail já cadastrado" };
     }
+    const patch: Parameters<typeof updateUserDb>[1] = {
+      name,
+      email,
+      roles,
+      phone: phone ?? null,
+      active,
+    };
+    if (password && password.length >= 6) {
+      patch.passwordHash = await hashPassword(password);
+    }
+    await updateUserDb(id, patch);
 
     revalidatePath("/admin/users");
     return { success: true, message: "Usuário atualizado" };
@@ -212,41 +196,24 @@ export async function deleteUser(userId: string): Promise<AdminActionResult> {
   }
 
   try {
-    if (useMockData()) {
-      const target = userMockStore.list().find((u) => u.id === id.data);
-      if (!target) {
-        return { success: false, message: "Usuário não encontrado" };
-      }
-      if (
-        target.roles.includes("admin") &&
-        userMockStore.countAdmins(id.data) === 0
-      ) {
-        return {
-          success: false,
-          message: "Não é possível remover o último administrador do sistema",
-        };
-      }
-      userMockStore.delete(id.data);
-    } else {
-      const { deleteUserDb, countAdminUsersDb, listAdminUsersDb } = await import(
-        "@/lib/data/users-admin-db"
-      );
-      const all = await listAdminUsersDb();
-      const target = all.find((u) => u.id === id.data);
-      if (!target) {
-        return { success: false, message: "Usuário não encontrado" };
-      }
-      if (
-        target.roles.includes("admin") &&
-        (await countAdminUsersDb(id.data)) === 0
-      ) {
-        return {
-          success: false,
-          message: "Não é possível remover o último administrador do sistema",
-        };
-      }
-      await deleteUserDb(id.data);
+    const { deleteUserDb, countAdminUsersDb, listAdminUsersDb } = await import(
+      "@/lib/data/users-admin-db"
+    );
+    const all = await listAdminUsersDb();
+    const target = all.find((u) => u.id === id.data);
+    if (!target) {
+      return { success: false, message: "Usuário não encontrado" };
     }
+    if (
+      target.roles.includes("admin") &&
+      (await countAdminUsersDb(id.data)) === 0
+    ) {
+      return {
+        success: false,
+        message: "Não é possível remover o último administrador do sistema",
+      };
+    }
+    await deleteUserDb(id.data);
 
     revalidatePath("/admin/users");
     return { success: true, message: "Usuário excluído permanentemente" };

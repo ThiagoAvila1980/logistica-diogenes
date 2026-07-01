@@ -16,13 +16,8 @@ export async function requireSession(): Promise<SessionUser> {
  * Revogação server-side: garante que o usuário da sessão ainda existe e está
  * ativo. Como roles e status vivem no cookie assinado, sem esta checagem um
  * usuário desativado continuaria operando até a sessão expirar.
- *
- * Roda apenas com banco real (em modo mock não há tabela de usuários).
  */
 async function assertUserActive(userId: string): Promise<void> {
-  const { useMockData } = await import("@/lib/data/config");
-  if (useMockData()) return;
-
   const { getDb } = await import("@/db");
   const { users } = await import("@/db/schema");
   const { eq } = await import("drizzle-orm");

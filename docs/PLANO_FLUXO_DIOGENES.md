@@ -220,10 +220,7 @@ import Button from "@/components/ui/Button";
 
 ### Modos de execução
 
-| Modo | Condição | Comportamento |
-|------|----------|---------------|
-| **Demo** | Sem `DATABASE_URL` ou `USE_MOCK_DATA=true` | - |
-| **Produção** | `DATABASE_URL` (Supabase pooler) configurada | Drizzle + Supabase PostgreSQL |
+O app sempre roda com Postgres configurado via `DATABASE_URL` (Supabase pooler ou PostgreSQL local) — Drizzle + Supabase PostgreSQL. O modo demo/mock em memória foi removido.
 
 ---
 

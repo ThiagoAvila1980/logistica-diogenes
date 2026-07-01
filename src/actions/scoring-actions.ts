@@ -7,21 +7,11 @@ import { getDb } from "@/db";
 import { scoringRules } from "@/db/schema";
 import type { WorkEventType, ScoringRule } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
-import { useMockData } from "@/lib/data/config";
 import type { ScoringActionResult } from "@/lib/performance/scoring-actions-types";
 
 // ─── Action: ler regras ───────────────────────────────────────────────────────
 
 export async function getScoringRules(): Promise<ScoringRule[]> {
-  if (useMockData()) {
-    return [
-      { eventType: "corte_vao", points: 10, active: true, updatedAt: new Date() },
-      { eventType: "transporte_vao", points: 15, active: true, updatedAt: new Date() },
-      { eventType: "instalacao_vao", points: 20, active: true, updatedAt: new Date() },
-      { eventType: "medicao", points: 10, active: true, updatedAt: new Date() },
-    ];
-  }
-
   const db = getDb();
   return db.select().from(scoringRules);
 }
@@ -52,10 +42,6 @@ export async function updateScoringRuleAction(
 
   if (!parsed.success) {
     return { success: false, message: "Dados inválidos. Verifique os campos." };
-  }
-
-  if (useMockData()) {
-    return { success: true, message: "Regra atualizada (modo demo)." };
   }
 
   try {

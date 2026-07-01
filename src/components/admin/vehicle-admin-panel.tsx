@@ -9,7 +9,7 @@ import {
   type AdminActionResult,
 } from "@/actions/vehicle-actions";
 import { DeleteRecordDialog } from "@/components/admin/delete-record-dialog";
-import type { VehicleRow } from "@/lib/data/admin-mock-store";
+import type { VehicleRow } from "@/lib/data/vehicles-db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

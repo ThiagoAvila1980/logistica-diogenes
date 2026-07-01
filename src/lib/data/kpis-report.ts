@@ -3,7 +3,6 @@ import "server-only";
 import { gte } from "drizzle-orm";
 import { getDb } from "@/db";
 import { measurements, statusHistory } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
 import { listKanbanOrders } from "@/lib/data/kanban";
 import {
   computeKpiSummary,
@@ -59,19 +58,6 @@ async function getKpiReportPayloadDb(): Promise<KpiReportPayload> {
 }
 
 export async function getKpiReportPayload(): Promise<KpiReportPayload> {
-  if (useMockData()) {
-    const orders = await listKanbanOrders();
-    const now = new Date();
-    return {
-      orders,
-      orderMeta: orders.map((o, i) => ({
-        id: o.id,
-        createdAt: new Date(now.getTime() - (i + 1) * 86_400_000 * 3),
-        updatedAt: o.updatedAt,
-      })),
-      history: [],
-    };
-  }
   return getKpiReportPayloadDb();
 }
 

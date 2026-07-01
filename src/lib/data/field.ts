@@ -1,5 +1,3 @@
-import { useMockData } from "./config";
-import { mockRepository } from "./mock-repository";
 import type { OsStatus } from "@/db/schema";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { getDraftMeasurementType } from "@/lib/workflow/measurement-actions";
@@ -31,23 +29,6 @@ export async function getFieldMeasurementDraft(
     typeOverride ??
     getDraftMeasurementType({ etapa: order.status });
   if (!type) return undefined;
-
-  if (useMockData()) {
-    const data = mockRepository.getFieldMeasurement(osId, type);
-    if (!data) return undefined;
-
-    return {
-      cliente: data.cliente,
-      telefone: data.telefone,
-      endereco: data.endereco,
-      numeroOrcamento: data.numeroOrcamento,
-      items: data.items,
-      largura: data.dimensions?.largura,
-      altura: data.dimensions?.altura,
-      notes: data.notes,
-      photos: data.photos,
-    };
-  }
 
   const { getFieldMeasurementDb } = await import("./field-db");
   return getFieldMeasurementDb(osId, type);

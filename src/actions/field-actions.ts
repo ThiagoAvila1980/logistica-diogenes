@@ -7,8 +7,6 @@ import { getDb } from "@/lib/db";
 import { measurements } from "@/db/schema";
 import { measurementItemsSchema } from "@/lib/workflow/schemas";
 import { notifyMedidorsOnMeasurementCreated } from "@/lib/notifications/notify-measurer";
-import { useMockData } from "@/lib/data/config";
-import { mockRepository } from "@/lib/data/mock-repository";
 import { parseBrDate } from "@/lib/date-format";
 import { aggregateMeasurementPhotos } from "@/lib/measurement/item-photos";
 import { sortMeasurementItemsOldestFirst } from "@/lib/measurement/item-order";
@@ -150,41 +148,6 @@ export async function createMeasurementFromPdf(
   } = parsed.data;
   const etapa = osStatusFromMeasurementType(measurementType);
   const scheduled = scheduledDate ? parseBrDate(scheduledDate) : null;
-
-  if (useMockData()) {
-    const result = mockRepository.createMeasurementFromPdf({
-      clientName,
-      clientPhone: clientPhone ?? null,
-      clientAddress: clientAddress ?? null,
-      budgetReference: budgetReference ?? null,
-      description: description ?? null,
-      scheduledDate: scheduled,
-      assignedUserId: null,
-      measurementType,
-      priority,
-    });
-    if (!result.success) return result;
-
-    void notifyMedidorsOnMeasurementCreated({
-      osId: result.osId,
-      osNumber: getOrderDisplayNumber({
-        number: result.number,
-        budgetReference: budgetReference ?? null,
-      }),
-      clientName,
-      clientPhone: clientPhone ?? null,
-      budgetReference: budgetReference ?? null,
-      description: description ?? null,
-      scheduledDate: scheduled,
-    }).catch((err) => console.error("[createMeasurementFromPdf:notify]", err));
-
-    revalidatePath("/field");
-    return {
-      success: true,
-      osId: result.osId,
-      number: result.number,
-    };
-  }
 
   try {
     const db = getDb();
@@ -345,20 +308,6 @@ export async function updateMeasurementHeader(
 
   const budgetRef = budgetReference?.trim() || null;
 
-  if (useMockData()) {
-    const result = mockRepository.updateMeasurementHeader(osId, {
-      clientName: clientName.trim(),
-      clientPhone: clientPhone?.trim() || null,
-      clientAddress: clientAddress?.trim() || null,
-      budgetReference: budgetRef,
-    });
-    if (!result.success) return result;
-
-    const { revalidateOSRoutes } = await import("@/lib/revalidate");
-    revalidateOSRoutes(osId);
-    return { success: true };
-  }
-
   try {
     const db = getDb();
     await db
@@ -418,13 +367,6 @@ export async function deleteMeasurement(
       message:
         "Só é possível excluir medições ainda em etapa de medição (antes do orçamento enviado).",
     };
-  }
-
-  if (useMockData()) {
-    const result = mockRepository.deleteMeasurementOs(osId);
-    if (!result.success) return result;
-    revalidatePath("/field");
-    return { success: true };
   }
 
   try {
@@ -556,23 +498,6 @@ export async function saveFieldMeasurement(
   }
 
   const photos = aggregateMeasurementPhotos(itemsToSave);
-
-  if (useMockData()) {
-    const result = mockRepository.saveFieldMeasurement(osId, measurementType, {
-      items: itemsToSave,
-      notes: notes ?? null,
-      photos,
-      priority: priorityField.priority,
-    });
-    if (!result.success) return result;
-    revalidatePath("/field");
-    revalidatePath(`/field/${osId}`);
-    revalidatePath("/dashboard");
-    return {
-      success: true,
-      message: `${typeLabel} registrada (modo demo) — ${items.length} item(ns).${photos.length ? ` ${photos.length} foto(s).` : ""}`,
-    };
-  }
 
   try {
     const db = getDb();

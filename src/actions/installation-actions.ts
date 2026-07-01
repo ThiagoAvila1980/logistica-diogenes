@@ -3,8 +3,6 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { useMockData } from "@/lib/data/config";
-import { mockRepository } from "@/lib/data/mock-repository";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { requireRole } from "@/lib/auth/require-role";
 import { getDb } from "@/lib/db";
@@ -104,18 +102,6 @@ export async function saveInstallationServicePhotos(
     };
   }
 
-  if (useMockData()) {
-    const result = mockRepository.saveInstallationServicePhotos(
-      osId,
-      photos,
-    );
-    if (!result.success) return result;
-    revalidatePath("/installation");
-    revalidatePath(`/installation/${osId}`);
-    revalidatePath("/dashboard");
-    return { success: true, message: "Fotos salvas." };
-  }
-
   try {
     await upsertInstallationServicePhotosDb(osId, photos);
     revalidatePath("/installation");
@@ -205,20 +191,6 @@ export async function saveInstallationDailyNote(input: {
   }
 
   const { osId, date, text } = parsed.data;
-
-  if (useMockData()) {
-    const result = mockRepository.saveInstallationDailyNote(osId, date, text);
-    if (!result.success) return result;
-
-    revalidatePath("/installation");
-    revalidatePath(`/installation/${osId}`);
-    revalidatePath("/dashboard");
-    return {
-      success: true,
-      message: "Observação salva.",
-      note: result.note,
-    };
-  }
 
   const gate = await assertCanSaveInstallationData(osId);
   if (!gate.ok) return { success: false, message: gate.message };

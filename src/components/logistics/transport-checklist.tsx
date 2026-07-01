@@ -291,7 +291,8 @@ export function TransportChecklist({
                         const gate = gates[key];
                         const lKey = `${item.id}-${key}`;
                         const isLoading = loadingKey === lKey;
-                        const isLocked = !gate.unlocked;
+                        const needsVehicle = key === "perfilEstrutural" && !itemVehicleId;
+                        const isLocked = !gate.unlocked || needsVehicle;
 
                         return (
                           <div key={key} className="flex justify-center">
@@ -328,7 +329,8 @@ export function TransportChecklist({
                         const gate = gates[key];
                         const lKey = `${item.id}-${key}`;
                         const isLoading = loadingKey === lKey;
-                        const isLocked = !gate.unlocked && !done;
+                        const needsVehicle = key === "perfilEstrutural" && !itemVehicleId;
+                        const isLocked = (!gate.unlocked || needsVehicle) && !done;
 
                         return (
                           <label

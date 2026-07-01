@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SwRegister } from "@/components/offline/sw-register";
 import { PwaInstallPrompt } from "@/components/offline/pwa-install-prompt";
-import { useMockData } from "@/lib/data/config";
 import { getSession } from "@/lib/auth/session";
 import {
   getRoleScreenMatrix,
@@ -49,7 +48,6 @@ export default async function DashboardLayout({
       <SwRegister />
       <PwaInstallPrompt />
       <DashboardShell
-        mockMode={useMockData()}
         session={session}
         navItems={navItems}
         showNotifications={showNotifications}

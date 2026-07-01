@@ -4,10 +4,6 @@ import { getDb } from "@/lib/db";
 
 import { measurements } from "@/db/schema";
 
-import { useMockData } from "@/lib/data/config";
-
-import { mockRepository } from "@/lib/data/mock-repository";
-
 import { getOrderDisplayNumber } from "@/lib/order-display";
 
 import {
@@ -26,20 +22,6 @@ export async function loadClientNotificationContext(
   osId: string,
   newStatus: OsStatus,
 ): Promise<ClientNotificationContext | null> {
-  if (useMockData()) {
-    const order = mockRepository.getById(osId);
-    if (!order) return null;
-
-    return {
-      measurementId: osId,
-      osNumber: getOrderDisplayNumber(order),
-      clientName: order.clientName,
-      clientEmail: null,
-      clientPhone: order.clientPhone,
-      newStatus,
-    };
-  }
-
   const db = getDb();
 
   const [row] = await db

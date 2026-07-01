@@ -11,14 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DEMO_DEFAULT_PASSWORD } from "@/lib/auth/demo-password";
 
 type LoginFormProps = {
   nextPath?: string;
-  showDemoHint?: boolean;
 };
 
-export function LoginForm({ nextPath, showDemoHint }: LoginFormProps) {
+export function LoginForm({ nextPath }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   const [state, formAction, isPending] = useActionState<
@@ -93,13 +91,6 @@ export function LoginForm({ nextPath, showDemoHint }: LoginFormProps) {
           </>
         )}
       </Button>
-
-      {showDemoHint && (
-        <p className="text-center text-xs text-muted-foreground">
-          Modo demo: senha padrão{" "}
-          <code className="rounded bg-muted px-1 py-0.5">{DEMO_DEFAULT_PASSWORD}</code>
-        </p>
-      )}
     </form>
   );
 }

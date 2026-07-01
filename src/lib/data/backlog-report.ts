@@ -3,7 +3,6 @@ import "server-only";
 import { asc, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { statusHistory } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
 import { listKanbanOrders } from "@/lib/data/kanban";
 import type { OsStatus, MeasurementPriority } from "@/db/schema";
 import { KANBAN_PHASES } from "@/lib/kanban/column-groups";
@@ -231,6 +230,5 @@ function getMockBacklogSummary(): BacklogSummary {
 }
 
 export async function getBacklogSummary(): Promise<BacklogSummary> {
-  if (useMockData()) return getMockBacklogSummary();
   return getBacklogSummaryDb();
 }

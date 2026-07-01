@@ -36,7 +36,6 @@ function getMobileTitle(pathname: string): string {
 
 export function DashboardShell({
   children,
-  mockMode,
   session,
   navItems,
   showNotifications,
@@ -45,7 +44,6 @@ export function DashboardShell({
   showReports,
 }: {
   children: React.ReactNode;
-  mockMode: boolean;
   session?: import("@/lib/auth/session-types").SessionUser;
   navItems: NavItem[];
   showNotifications: boolean;
@@ -87,7 +85,6 @@ export function DashboardShell({
 
       <AppSidebar
         pathname={pathname}
-        mockMode={mockMode}
         session={session}
         navItems={navItems}
         showNotifications={showNotifications}

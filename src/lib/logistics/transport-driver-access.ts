@@ -1,8 +1,6 @@
 import { inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { measurements, transportLogs } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
-import { mockRepository } from "@/lib/data/mock-repository";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 
 export function collectDriverIdsFromMeasurementItems(
@@ -32,10 +30,6 @@ export async function getDriverIdsByOsIds(
   osIds: string[],
 ): Promise<Record<string, string[]>> {
   if (osIds.length === 0) return {};
-
-  if (useMockData()) {
-    return mockRepository.getDriverIdsByOsIds(osIds);
-  }
 
   const db = getDb();
   const uniqueIds = [...new Set(osIds)];

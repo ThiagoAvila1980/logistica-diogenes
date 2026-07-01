@@ -4,8 +4,6 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/require-role";
-import { useMockData } from "@/lib/data/config";
-import { mockRepository } from "@/lib/data/mock-repository";
 import { getServiceOrderById } from "@/lib/data/orders";
 import {
   createStageProblemNotifications,
@@ -45,13 +43,6 @@ export async function sendStageProblemAlertAction(
   const session = await getSession();
   const order = await getServiceOrderById(osId);
   if (!order) return { success: false, message: "Medição não encontrada" };
-
-  if (useMockData()) {
-    const result = mockRepository.sendStageAlert(osId, stage, message);
-    if (!result.success) return result;
-    revalidatePathsForStage(osId, stage);
-    return { success: true };
-  }
 
   try {
     const recordIds = await resolveStageRecordIds(osId, stage);

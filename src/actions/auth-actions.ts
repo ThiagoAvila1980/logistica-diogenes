@@ -3,16 +3,10 @@
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { useMockData } from "@/lib/data/config";
-import {
-  DEMO_USERS,
-  getDemoUserByEmail,
-} from "@/lib/auth/demo-users";
 import { clearSession, getSession, setSession } from "@/lib/auth/session";
 import type { SessionUser } from "@/lib/auth/session-types";
 import { resolvePostLoginPathDynamic } from "@/lib/auth/login-redirect";
 import { setPwaPromptPendingCookie } from "@/lib/pwa/pwa-prompt-cookie";
-import { DEMO_DEFAULT_PASSWORD } from "@/lib/auth/demo-password";
 import { verifyPassword } from "@/lib/auth/password";
 import { users } from "@/db/schema";
 
@@ -35,15 +29,6 @@ export type LoginUserOption = {
 
 /** Lista usuários. Em produção exige sessão de admin/gerente. */
 export async function listLoginUsers(): Promise<LoginUserOption[]> {
-  if (useMockData()) {
-    return DEMO_USERS.map(({ id, name, email, roles }) => ({
-      id,
-      name,
-      email,
-      roles,
-    }));
-  }
-
   // Em produção apenas admins e gerentes podem enumerar usuários
   const { requireRole } = await import("@/lib/auth/require-role");
   try {
@@ -85,21 +70,6 @@ export async function loginWithCredentials(
   }
 
   const { email, password, next } = parsed.data;
-
-  if (useMockData()) {
-    const user = getDemoUserByEmail(email);
-    if (!user || password !== DEMO_DEFAULT_PASSWORD) {
-      return { success: false, message: "E-mail ou senha incorretos" };
-    }
-    await setSession({
-      userId: user.id,
-      name: user.name,
-      email: user.email,
-      roles: user.roles,
-    });
-    await setPwaPromptPendingCookie();
-    redirect(await resolvePostLoginPathDynamic(next, user.roles));
-  }
 
   const { getDb } = await import("@/db");
   const db = getDb();

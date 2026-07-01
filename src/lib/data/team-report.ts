@@ -3,7 +3,6 @@ import "server-only";
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { workEvents, users } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -173,91 +172,8 @@ async function getTeamReportDb(from: Date, to: Date): Promise<TeamReportData> {
   };
 }
 
-// ─── Mock ──────────────────────────────────────────────────────────────────────
-
-function getMockTeamReport(from: Date, to: Date): TeamReportData {
-  return {
-    generatedAt: new Date().toISOString(),
-    totalPoints: 185,
-    period: { from: from.toISOString(), to: to.toISOString() },
-    members: [
-      {
-        userId: "u2",
-        name: "Roberto Cortador",
-        roles: ["cortador"],
-        totalPoints: 80,
-        corteVaoPoints: 80,
-        transporteVaoPoints: 0,
-        instalacaoVaoPoints: 0,
-        medicaoPoints: 0,
-        corteVaoCount: 8,
-        transporteVaoCount: 0,
-        instalacaoVaoCount: 0,
-        medicaoCount: 0,
-      },
-      {
-        userId: "u4",
-        name: "Paulo Instalador",
-        roles: ["instalador"],
-        totalPoints: 60,
-        corteVaoPoints: 0,
-        transporteVaoPoints: 0,
-        instalacaoVaoPoints: 60,
-        medicaoPoints: 0,
-        corteVaoCount: 0,
-        transporteVaoCount: 0,
-        instalacaoVaoCount: 3,
-        medicaoCount: 0,
-      },
-      {
-        userId: "u3",
-        name: "Fábio Motorista",
-        roles: ["motorista"],
-        totalPoints: 30,
-        corteVaoPoints: 0,
-        transporteVaoPoints: 30,
-        instalacaoVaoPoints: 0,
-        medicaoPoints: 0,
-        corteVaoCount: 0,
-        transporteVaoCount: 2,
-        instalacaoVaoCount: 0,
-        medicaoCount: 0,
-      },
-      {
-        userId: "u1",
-        name: "Carlos Medidor",
-        roles: ["medidor"],
-        totalPoints: 15,
-        corteVaoPoints: 0,
-        transporteVaoPoints: 0,
-        instalacaoVaoPoints: 0,
-        medicaoPoints: 15,
-        corteVaoCount: 0,
-        transporteVaoCount: 0,
-        instalacaoVaoCount: 0,
-        medicaoCount: 2,
-      },
-      {
-        userId: "u5",
-        name: "Gerente Geral",
-        roles: ["gerente"],
-        totalPoints: 0,
-        corteVaoPoints: 0,
-        transporteVaoPoints: 0,
-        instalacaoVaoPoints: 0,
-        medicaoPoints: 0,
-        corteVaoCount: 0,
-        transporteVaoCount: 0,
-        instalacaoVaoCount: 0,
-        medicaoCount: 0,
-      },
-    ],
-  };
-}
-
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function getTeamReport(from: Date, to: Date): Promise<TeamReportData> {
-  if (useMockData()) return getMockTeamReport(from, to);
   return getTeamReportDb(from, to);
 }

@@ -7,8 +7,6 @@ import { getDb } from "@/lib/db";
 import { transportLogs, vehicles, measurements, users } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
 import { getServiceOrderById } from "@/lib/data/orders";
-import { useMockData } from "@/lib/data/config";
-import { vehicleMockStore } from "@/lib/data/admin-mock-store";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import {
   aggregateCuttingStepsFromItems,
@@ -19,8 +17,7 @@ import {
 import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
-import { recordWorkEvent, reverseWorkEvent } from "@/lib/performance/scoring";
-import { getVaoDificuldadeMultiplier } from "@/lib/performance/vao-difficulty";
+import { recordVaoStepCompletion } from "@/lib/performance/scoring";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,23 +90,6 @@ export async function assignVehicleToVaoAction(
   try {
     const order = await getServiceOrderById(osId);
     if (!order) return { success: false, message: "OS não encontrada" };
-
-    if (useMockData()) {
-      const vehicle = vehicleMockStore.getById(vehicleId);
-      if (!vehicle?.active) {
-        return { success: false, message: "Veículo não encontrado ou inativo" };
-      }
-      try {
-        vehicleMockStore.assignToVao(osId, itemId, vehicleId);
-      } catch (err) {
-        return {
-          success: false,
-          message: err instanceof Error ? err.message : "Veículo indisponível",
-        };
-      }
-      revalidateOSRoutes(osId);
-      return { success: true };
-    }
 
     const db = getDb();
     const [vehicle] = await db
@@ -221,23 +201,6 @@ export async function assignVehicleToTransportAction(
       };
     }
 
-    if (useMockData()) {
-      const vehicle = vehicleMockStore.getById(vehicleId);
-      if (!vehicle?.active) {
-        return { success: false, message: "Veículo não encontrado ou inativo" };
-      }
-      try {
-        vehicleMockStore.assignToTransport(osId, vehicleId);
-      } catch (err) {
-        return {
-          success: false,
-          message: err instanceof Error ? err.message : "Veículo indisponível",
-        };
-      }
-      revalidateOSRoutes(osId);
-      return { success: true };
-    }
-
     const db = getDb();
     const [vehicle] = await db
       .select({ id: vehicles.id, active: vehicles.active })
@@ -284,12 +247,6 @@ export async function updateItemTransportStepAction(
   }
 
   const { osId, itemId, step, done } = parsed.data;
-
-  if (useMockData()) {
-    // mock simplificado
-    revalidateOSRoutes(osId);
-    return { success: true };
-  }
 
   try {
     const order = await getServiceOrderById(osId);
@@ -392,29 +349,15 @@ export async function updateItemTransportStepAction(
 
       // Pontuação: transporte_vao ao marcar/desmarcar step=vidros (último step)
       if (step === "vidros") {
-        if (done) {
-          const updatedItem = updatedItems.find((i) => i.id === itemId);
-          const driverId = updatedItem?.transportProgress?.driverId;
-          if (driverId) {
-            const pointsMultiplier = await getVaoDificuldadeMultiplier(
-              tx,
-              updatedItem.idTipoEnvidracamento,
-            );
-            await recordWorkEvent(tx, {
-              userId: driverId,
-              measurementId: osId,
-              itemId,
-              eventType: "transporte_vao",
-              pointsMultiplier,
-            });
-          }
-        } else {
-          await reverseWorkEvent(tx, {
-            measurementId: osId,
-            itemId,
-            eventType: "transporte_vao",
-          });
-        }
+        const updatedItem = updatedItems.find((i) => i.id === itemId);
+        await recordVaoStepCompletion(tx, {
+          userId: updatedItem?.transportProgress?.driverId,
+          measurementId: osId,
+          itemId,
+          eventType: "transporte_vao",
+          idTipoEnvidracamento: updatedItem?.idTipoEnvidracamento,
+          done,
+        });
       }
     });
 
@@ -456,18 +399,6 @@ export async function updateItemTransportNotesAction(
 
   const { osId, itemId, observacoes } = parsed.data;
   const trimmedNotes = observacoes?.trim() || null;
-
-  if (useMockData()) {
-    const { mockRepository } = await import("@/lib/data/mock-repository");
-    const result = mockRepository.updateItemTransportNotes(
-      osId,
-      itemId,
-      trimmedNotes,
-    );
-    if (!result.success) return result;
-    revalidateOSRoutes(osId);
-    return { success: true };
-  }
 
   try {
     const order = await getServiceOrderById(osId);

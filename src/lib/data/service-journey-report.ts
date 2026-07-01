@@ -3,7 +3,6 @@ import "server-only";
 import { asc, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { statusHistory } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
 import { listKanbanOrders } from "@/lib/data/kanban";
 import {
   buildServiceJourneyRows,
@@ -45,10 +44,6 @@ async function listStatusHistoryByOrderIdsDb(
 /** Relatório de jornada dos serviços — visão admin (todas as OS). */
 export async function listServiceJourneyReportRows(): Promise<ServiceJourneyRow[]> {
   const orders = await listKanbanOrders();
-  if (useMockData()) {
-    return buildServiceJourneyRows(orders, new Map());
-  }
-
   const historyByOrderId = await listStatusHistoryByOrderIdsDb(
     orders.map((order) => order.id),
   );

@@ -10,7 +10,6 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { roleScreenAccess } from "@/db/schema";
 import type { UserRole } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
 import {
   ROLE_ROUTE_ACCESS,
   isAdminOnlyPath,
@@ -30,19 +29,10 @@ const CACHE_TTL_MS = 30_000;
 
 let cachedMatrix: RoleScreenMatrix | null = null;
 let cacheAt = 0;
-/** Matriz persistida em memória no modo mock/demo. */
-let mockRoleScreenMatrix: RoleScreenMatrix | null = null;
 
 export function invalidateRoleScreenCache(): void {
   cachedMatrix = null;
   cacheAt = 0;
-}
-
-function getMockRoleScreenMatrix(): RoleScreenMatrix {
-  if (!mockRoleScreenMatrix) {
-    mockRoleScreenMatrix = buildDefaultMatrix();
-  }
-  return mockRoleScreenMatrix;
 }
 
 // ─── Defaults (espelham ROLE_ROUTE_ACCESS do código) ─────────────────────────
@@ -73,14 +63,9 @@ function buildDefaultMatrix(): RoleScreenMatrix {
 
 /**
  * Retorna a matriz papel→telas habilitadas.
- * - Mock mode: retorna defaults estáticos (sem banco).
- * - Prod: lê `role_screen_access`, cacheia por `CACHE_TTL_MS`.
+ * Lê `role_screen_access`, cacheia por `CACHE_TTL_MS`.
  */
 export async function getRoleScreenMatrix(): Promise<RoleScreenMatrix> {
-  if (useMockData()) {
-    return getMockRoleScreenMatrix();
-  }
-
   const now = Date.now();
   if (cachedMatrix && now - cacheAt < CACHE_TTL_MS) {
     return cachedMatrix;
@@ -122,23 +107,6 @@ export async function getRoleScreenMatrix(): Promise<RoleScreenMatrix> {
 export async function saveRoleScreenMatrix(
   updates: Partial<Record<Exclude<UserRole, "admin">, ScreenKey[]>>,
 ): Promise<void> {
-  if (useMockData()) {
-    const matrix = getMockRoleScreenMatrix();
-    const roles = Object.keys(updates) as Exclude<UserRole, "admin">[];
-
-    for (const role of roles) {
-      const enabledKeys = new Set(updates[role] ?? []);
-      matrix[role] = new Set(
-        SCREENS.filter((screen) => enabledKeys.has(screen.key)).map(
-          (screen) => screen.key,
-        ),
-      );
-    }
-
-    matrix["admin"] = new Set(SCREENS.map((screen) => screen.key));
-    return;
-  }
-
   const db = getDb();
 
   const roles = Object.keys(updates) as Exclude<UserRole, "admin">[];

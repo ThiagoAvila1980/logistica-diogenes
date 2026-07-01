@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { scoringRules, workEvents, users } from "@/db/schema";
 import type { WorkEventType } from "@/db/schema";
 import type { getDb } from "@/db";
+import { getVaoDificuldadeMultiplier } from "@/lib/performance/vao-difficulty";
 
 /**
  * Tipo compatível com o db Drizzle e com objetos de transação.
@@ -102,4 +103,40 @@ export async function reverseWorkEvent(
         eq(workEvents.eventType, params.eventType),
       ),
     );
+}
+
+/**
+ * Pontua (ou reverte) a conclusão do último passo de um vão numa etapa
+ * (corte/transporte/instalação), aplicando o multiplicador de dificuldade
+ * do tipo de envidraçamento. `userId` já deve vir resolvido pelo chamador
+ * (cada etapa tem sua própria forma de identificar o responsável).
+ */
+export async function recordVaoStepCompletion(
+  db: AnyDb,
+  params: {
+    userId: string | null | undefined;
+    measurementId: string;
+    itemId: string;
+    eventType: WorkEventType;
+    idTipoEnvidracamento: string | null | undefined;
+    done: boolean;
+  },
+): Promise<void> {
+  const { userId, measurementId, itemId, eventType, idTipoEnvidracamento, done } = params;
+
+  if (!done) {
+    await reverseWorkEvent(db, { measurementId, itemId, eventType });
+    return;
+  }
+
+  if (!userId) return;
+
+  const pointsMultiplier = await getVaoDificuldadeMultiplier(db, idTipoEnvidracamento);
+  await recordWorkEvent(db, {
+    userId,
+    measurementId,
+    itemId,
+    eventType,
+    pointsMultiplier,
+  });
 }

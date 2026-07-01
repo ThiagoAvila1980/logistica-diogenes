@@ -1,8 +1,6 @@
 import { inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { measurements } from "@/db/schema";
-import { useMockData } from "./config";
-import { mockRepository } from "./mock-repository";
 import type { InstallationSteps } from "@/lib/transport-gates";
 import { aggregateInstallationStepsFromItems } from "@/lib/workflow/aggregates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
@@ -11,10 +9,6 @@ export async function getInstallationStepsForOrders(
   osIds: string[],
 ): Promise<Record<string, InstallationSteps>> {
   if (osIds.length === 0) return {};
-
-  if (useMockData()) {
-    return mockRepository.getInstallationStepsForOrders(osIds);
-  }
 
   const db = getDb();
   const rows = await db

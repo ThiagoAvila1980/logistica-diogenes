@@ -3,7 +3,6 @@ import "server-only";
 import { and, count, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { transportLogs, vehicles, users, measurements } from "@/db/schema";
-import { useMockData } from "@/lib/data/config";
 import {
   computeLogisticsReport,
   type LogisticsReportPayload,
@@ -114,46 +113,7 @@ async function getLogisticsReportPayloadDb(): Promise<LogisticsReportPayload> {
   };
 }
 
-function getMockLogisticsPayload(): LogisticsReportPayload {
-  return {
-    pendingTransport: 3,
-    vehicles: [
-      {
-        vehicleId: "v1",
-        description: "Fiorino branca",
-        plate: "ABC-1234",
-        totalDeliveries: 0,
-        completedDeliveries: 0,
-      },
-      {
-        vehicleId: "v2",
-        description: "Sprinter prata",
-        plate: "DEF-5678",
-        totalDeliveries: 0,
-        completedDeliveries: 0,
-      },
-    ],
-    deliveries: [
-      {
-        id: "t1",
-        driverId: "d1",
-        driverName: "Fábio Motorista",
-        vehicleId: "v1",
-        vehicleDescription: "Fiorino branca",
-        vehiclePlate: "ABC-1234",
-        createdAt: new Date(),
-        transporteConcluido: true,
-        levarPerfilEstrutural: true,
-        levarPerfilTotal: true,
-        levarAcessorios: true,
-        levarVidros: true,
-      },
-    ],
-  };
-}
-
 export async function getLogisticsReportPayload(): Promise<LogisticsReportPayload> {
-  if (useMockData()) return getMockLogisticsPayload();
   return getLogisticsReportPayloadDb();
 }
 

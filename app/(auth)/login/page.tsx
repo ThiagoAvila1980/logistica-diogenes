@@ -6,7 +6,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoginForm } from "@/components/auth/login-form";
-import { useMockData } from "@/lib/data/config";
 
 type Props = {
   searchParams: Promise<{ next?: string }>;
@@ -30,7 +29,7 @@ export default async function LoginPage({ searchParams }: Props) {
         <p className="mb-4 text-center text-sm text-muted-foreground lg:hidden">
           Entre com e-mail e senha para continuar.
         </p>
-        <LoginForm nextPath={next} showDemoHint={useMockData()} />
+        <LoginForm nextPath={next} />
       </CardContent>
     </Card>
   );
