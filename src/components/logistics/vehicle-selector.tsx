@@ -26,7 +26,8 @@ function formatVehicleOptionLabel(vehicle: VehicleOptionForSelection): string {
     vehicle.description.length > 28
       ? `${vehicle.description.slice(0, 27)}…`
       : vehicle.description;
-  return `${vehicle.plate} · ${desc}`;
+  const inTransport = vehicle.unavailable ? " · em transporte" : "";
+  return `${vehicle.plate} · ${desc}${inTransport}`;
 }
 
 type Props = {
@@ -54,14 +55,9 @@ export function VehicleSelector({
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(!vehicleId);
 
-  const availableVehicles = useMemo(
-    () => vehicles.filter((v) => !v.unavailable || v.id === vehicleId),
-    [vehicles, vehicleId],
-  );
-
   const vehicleIds = useMemo(
-    () => new Set(availableVehicles.map((v) => v.id)),
-    [availableVehicles],
+    () => new Set(vehicles.map((v) => v.id)),
+    [vehicles],
   );
 
   useEffect(() => {
@@ -171,16 +167,16 @@ export function VehicleSelector({
               <Select
                 id={`vehicle-select-${itemId}`}
                 value={selectedId}
-                disabled={loading || availableVehicles.length === 0}
+                disabled={loading || vehicles.length === 0}
                 className="h-11 w-full min-w-0 max-w-full truncate"
                 onChange={(e) => setSelectedId(e.target.value)}
               >
                 <option value="">
-                  {availableVehicles.length === 0
-                    ? "Nenhum veículo disponível"
+                  {vehicles.length === 0
+                    ? "Nenhum veículo cadastrado"
                     : "Selecione um veículo..."}
                 </option>
-                {availableVehicles.map((vehicle) => (
+                {vehicles.map((vehicle) => (
                   <option
                     key={vehicle.id}
                     value={vehicle.id}
@@ -199,7 +195,7 @@ export function VehicleSelector({
               loading ||
               !selectedId ||
               selectedId === vehicleId ||
-              availableVehicles.length === 0
+              vehicles.length === 0
             }
             onClick={handleConfirm}
             className="w-full sm:w-auto"

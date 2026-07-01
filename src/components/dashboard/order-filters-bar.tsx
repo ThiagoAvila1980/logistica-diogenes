@@ -60,11 +60,11 @@ export function OrderFiltersBar({
             aria-hidden
           />
           <span className="text-xs font-medium">Filtros</span>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {filteredCount}/{totalCount}
           </span>
           {hasActive && (
-            <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+            <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary">
               {activeCount}
             </span>
           )}
@@ -86,7 +86,7 @@ export function OrderFiltersBar({
           <div className="min-w-[12rem] flex-1 basis-full sm:basis-[14rem]">
             <label
               htmlFor={`${idPrefix}-search`}
-              className="mb-0.5 block text-[11px] text-muted-foreground"
+              className="mb-0.5 block text-xs text-muted-foreground"
             >
               Busca
             </label>
@@ -111,7 +111,7 @@ export function OrderFiltersBar({
           <div className="min-w-[7rem] flex-1 basis-[7rem]">
             <label
               htmlFor={`${idPrefix}-priority`}
-              className="mb-0.5 block text-[11px] text-muted-foreground"
+              className="mb-0.5 block text-xs text-muted-foreground"
             >
               Prioridade
             </label>
@@ -137,7 +137,7 @@ export function OrderFiltersBar({
           <div className="min-w-[7rem] flex-1 basis-[7rem]">
             <label
               htmlFor={`${idPrefix}-date-from`}
-              className="mb-0.5 block text-[11px] text-muted-foreground"
+              className="mb-0.5 block text-xs text-muted-foreground"
             >
               De
             </label>
@@ -152,7 +152,7 @@ export function OrderFiltersBar({
           <div className="min-w-[7rem] flex-1 basis-[7rem]">
             <label
               htmlFor={`${idPrefix}-date-to`}
-              className="mb-0.5 block text-[11px] text-muted-foreground"
+              className="mb-0.5 block text-xs text-muted-foreground"
             >
               Até
             </label>
@@ -169,7 +169,7 @@ export function OrderFiltersBar({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 shrink-0 px-2 text-[11px]"
+              className="h-7 shrink-0 px-2 text-xs"
               onClick={() => onChange(DEFAULT_ORDER_FILTERS)}
             >
               <X className="mr-1 h-3 w-3" />

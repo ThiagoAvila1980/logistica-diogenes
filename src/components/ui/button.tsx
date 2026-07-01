@@ -22,10 +22,11 @@ const buttonVariants = cva(
           "bg-brass text-primary-foreground shadow-md shadow-brass/25 hover:bg-brass/90",
       },
       size: {
-        default: "h-9 px-4 py-2",
+        default: "h-10 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+        touch: "h-11 px-4 py-2",
       },
     },
     defaultVariants: {

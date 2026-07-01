@@ -81,7 +81,7 @@ export function KanbanMobileCarousel({
             type="button"
             variant="outline"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="shrink-0"
             onClick={() => scrollToIndex(index - 1)}
             disabled={index === 0}
             aria-label="Coluna anterior"
@@ -89,21 +89,25 @@ export function KanbanMobileCarousel({
             <ChevronLeft className="h-4 w-4" />
           </Button>
 
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5">
             {phases.map((phase, i) => (
               <button
                 key={phase.id}
                 type="button"
                 onClick={() => scrollToIndex(i)}
-                className={cn(
-                  "h-1.5 rounded-full transition-all",
-                  i === index
-                    ? "w-4 bg-primary"
-                    : "w-1.5 bg-muted-foreground/35 hover:bg-muted-foreground/55",
-                )}
+                className="flex h-8 w-8 items-center justify-center"
                 aria-label={`Ir para ${phase.title}`}
                 aria-current={i === index ? "true" : undefined}
-              />
+              >
+                <span
+                  className={cn(
+                    "block h-1.5 rounded-full transition-all",
+                    i === index
+                      ? "w-4 bg-primary"
+                      : "w-1.5 bg-muted-foreground/35 hover:bg-muted-foreground/55",
+                  )}
+                />
+              </button>
             ))}
           </div>
 
@@ -111,7 +115,7 @@ export function KanbanMobileCarousel({
             type="button"
             variant="outline"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="shrink-0"
             onClick={() => scrollToIndex(index + 1)}
             disabled={index === count - 1}
             aria-label="Próxima coluna"

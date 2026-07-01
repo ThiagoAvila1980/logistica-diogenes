@@ -121,9 +121,6 @@ export const vehicleMockStore = {
   assignToVao(osId: string, itemId: string, vehicleId: string | null) {
     const key = vaoKey(osId, itemId);
     if (vehicleId) {
-      if (isVehicleUsedOnOtherOs(osId, vehicleId)) {
-        throw new Error("Veículo já em uso em outra OS");
-      }
       mockVehicleInUse.set(key, vehicleId);
     } else {
       mockVehicleInUse.delete(key);

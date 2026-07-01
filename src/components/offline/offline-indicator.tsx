@@ -48,17 +48,17 @@ export function OfflineIndicator() {
             aria-label={label}
           >
             {isSyncing ? (
-              <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+              <Loader2 className="h-4 w-4 animate-spin text-warning" />
             ) : isOffline ? (
-              <CloudOff className="h-4 w-4 text-red-500" />
+              <CloudOff className="h-4 w-4 text-destructive" />
             ) : (
               <>
-                <Cloud className="h-4 w-4 text-amber-500" />
+                <Cloud className="h-4 w-4 text-warning" />
                 {hasPending && (
                   <span
                     className={cn(
                       "absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center",
-                      "rounded-full bg-amber-500 text-[9px] font-bold text-white",
+                      "rounded-full bg-warning text-[9px] font-bold text-white",
                     )}
                   >
                     {pendingCount > 9 ? "9+" : pendingCount}

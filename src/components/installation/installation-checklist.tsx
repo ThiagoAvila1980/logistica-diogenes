@@ -120,7 +120,7 @@ function VaoMediaPanel({
       {/* Desenhos */}
       {allDrawings.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {allDrawings.length === 1 ? "Desenho" : `Desenhos (${allDrawings.length})`}
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -140,7 +140,7 @@ function VaoMediaPanel({
       {/* Fotos */}
       {photos.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {photos.length === 1 ? "Foto" : `Fotos (${photos.length})`}
           </p>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -159,7 +159,7 @@ function VaoMediaPanel({
 
       {/* Sem mídia */}
       {!hasMedia && (
-        <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <ImageOff className="h-3.5 w-3.5 shrink-0" />
           Nenhum desenho ou foto registrado neste vão.
         </div>
@@ -167,7 +167,7 @@ function VaoMediaPanel({
 
       {/* Observação */}
       {item.observacao && (
-        <p className="text-[12px] italic text-muted-foreground">
+        <p className="text-xs italic text-muted-foreground">
           <span className="not-italic font-medium">Obs:</span> {item.observacao}
         </p>
       )}
@@ -335,14 +335,14 @@ export function InstallationChecklist({
                       Vão {index + 1}
                     </p>
                     <p
-                      className="mt-0.5 truncate text-[11px] text-muted-foreground"
+                      className="mt-0.5 truncate text-xs text-muted-foreground"
                       title={fullLabel}
                     >
                       {subtitle.spec}
                     </p>
                     {subtitle.dims ? (
                       <p
-                        className="mt-0.5 truncate text-[11px] text-muted-foreground tabular-nums"
+                        className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums"
                         title={subtitle.dims}
                       >
                         {subtitle.dims}
@@ -361,7 +361,7 @@ export function InstallationChecklist({
 
                       return (
                         <div key={key} className="flex items-center gap-1.5">
-                          <span className="text-[11px] text-muted-foreground">{shortLabel}</span>
+                          <span className="text-xs text-muted-foreground">{shortLabel}</span>
                           {isLoading ? (
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                           ) : isLocked ? (
@@ -392,7 +392,7 @@ export function InstallationChecklist({
                     {itemAllDone ? (
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                     ) : (
-                      <Badge variant="outline" className="shrink-0 text-[11px]">
+                      <Badge variant="outline" className="shrink-0 text-xs">
                         {doneSteps}/3
                       </Badge>
                     )}
@@ -458,7 +458,7 @@ export function InstallationChecklist({
                             {stepLabel}
                           </span>
                           {isLocked && (
-                            <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground/60">
+                            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground/60">
                               {gate.reason}
                             </p>
                           )}

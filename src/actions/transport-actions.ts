@@ -122,11 +122,6 @@ export async function assignVehicleToVaoAction(
       return { success: false, message: "Veículo não encontrado ou inativo" };
     }
 
-    const { isVehicleInUseByOtherOsDb } = await import("@/lib/data/vehicles-db");
-    if (await isVehicleInUseByOtherOsDb(vehicleId, osId)) {
-      return { success: false, message: "Veículo já em uso em outra OS" };
-    }
-
     const isLatePhase = isTransportOrLater(order.status);
 
     await db.transaction(async (tx) => {

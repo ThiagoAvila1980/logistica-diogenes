@@ -23,20 +23,20 @@ export function SyncStatusBar() {
       className={cn(
         "flex items-center justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm",
         isOffline &&
-          "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400",
+          "border-destructive/30 bg-destructive/8 text-destructive",
         !isOffline &&
           phase === "syncing" &&
-          "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400",
+          "border-info-border bg-info-muted text-info-foreground",
         !isOffline &&
           phase === "success" &&
-          "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400",
+          "border-success-border bg-success-muted text-success-foreground",
         !isOffline &&
           phase === "error" &&
-          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400",
+          "border-warning-border bg-warning-muted text-warning-foreground",
         !isOffline &&
           phase === "idle" &&
           pendingCount > 0 &&
-          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400",
+          "border-warning-border bg-warning-muted text-warning-foreground",
       )}
     >
       <div className="flex items-center gap-2">

@@ -46,9 +46,9 @@ function kanbanCardTextClasses(variant: "default" | "carousel") {
 
   return {
     card: "text-xs",
-    orderNumber: "text-[11px] sm:text-[12px]",
-    clientName: "text-[10px] sm:text-[12px]",
-    badge: "text-[9px] sm:text-[11px]",
+    orderNumber: "text-xs sm:text-[12px]",
+    clientName: "text-[11px] sm:text-[12px]",
+    badge: "text-[10px] sm:text-xs",
   };
 }
 

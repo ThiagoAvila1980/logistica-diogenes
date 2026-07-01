@@ -273,14 +273,14 @@ export function TransportChecklist({
                       Vão {index + 1}
                     </p>
                     <p
-                      className="mt-0.5 truncate text-[11px] text-muted-foreground"
+                      className="mt-0.5 truncate text-xs text-muted-foreground"
                       title={fullLabel}
                     >
                       {subtitle.spec}
                     </p>
                     {subtitle.dims ? (
                       <p
-                        className="mt-0.5 truncate text-[11px] text-muted-foreground tabular-nums"
+                        className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums"
                         title={subtitle.dims}
                       >
                         {subtitle.dims}
@@ -293,7 +293,7 @@ export function TransportChecklist({
                     {itemAllDone ? (
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                     ) : (
-                      <Badge variant="outline" className="shrink-0 text-[11px]">
+                      <Badge variant="outline" className="shrink-0 text-xs">
                         {doneSteps}/4
                       </Badge>
                     )}
@@ -323,7 +323,7 @@ export function TransportChecklist({
                       {TRANSPORT_STEPS.map(({ key, label }) => (
                         <span
                           key={key}
-                          className="text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                          className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                         >
                           {label}
                         </span>
@@ -405,7 +405,7 @@ export function TransportChecklist({
                             )}
                             <span
                               className={cn(
-                                "text-[10px] font-medium leading-tight",
+                                "text-[11px] font-medium leading-tight",
                                 done
                                   ? "text-success-foreground"
                                   : isLocked

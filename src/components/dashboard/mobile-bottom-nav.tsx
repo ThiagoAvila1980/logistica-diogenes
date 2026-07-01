@@ -42,7 +42,7 @@ export function MobileBottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/10 bg-card/95 shadow-[0_-4px_24px_-8px_rgba(14,87,148,0.12)] backdrop-blur supports-[backdrop-filter]:bg-card/90 safe-bottom md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/10 bg-card/95 shadow-[0_-4px_24px_-8px_rgba(14,87,148,0.12)] backdrop-blur supports-backdrop-filter:bg-card/90 safe-bottom md:hidden"
       aria-label="Navegação principal"
     >
       <ul
@@ -59,7 +59,6 @@ export function MobileBottomNav({
             <li key={href} className="min-w-0">
               <Link
                 href={href}
-                prefetch={false}
                 className={cn(
                   "relative flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium leading-none transition-colors",
                   active ? "text-primary" : "text-muted-foreground",
@@ -73,7 +72,7 @@ export function MobileBottomNav({
                 )}
                 <Icon
                   className={cn(
-                    "h-[1.375rem] w-[1.375rem] shrink-0",
+                    "h-5.5 w-5.5 shrink-0",
                     active && "stroke-[2.5]",
                   )}
                   aria-hidden

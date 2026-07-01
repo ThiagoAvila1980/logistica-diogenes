@@ -35,7 +35,7 @@ export function PageHeading({
                 asChild
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0"
+                className="shrink-0"
               >
                 <Link href={backHref} aria-label={backAriaLabel}>
                   <ArrowLeft className="h-4 w-4" />
