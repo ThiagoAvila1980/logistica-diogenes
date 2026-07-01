@@ -5,17 +5,17 @@
 # CSS no mobile (o dev server troca os nomes dos chunks a cada recompile, então
 # navegadores com a aba em cache pedem URLs de CSS/JS que já não existem -> 404).
 #
-# build:clean apaga o .next antes de buildar, evitando misturar saída de um
-# build anterior. start = `next start` (build de produção real).
+# build:clean é só para uso local — no Coolify o cache Docker monta em
+# .next/cache e o rmSync falha com EBUSY. Aqui usamos `next build` direto.
 providers = ["node"]
 
-# Coolify/Nixpacks define NODE_ENV=production no install — sem isso o npm
-# omite devDependencies e o `next build` quebra ao carregar @tailwindcss/postcss.
+# Coolify/Nixpacks define NODE_ENV=production — sem isso o npm omite
+# devDependencies e o build quebra ao carregar @tailwindcss/postcss.
 [phases.install]
 cmds = ["npm install --include=dev"]
 
 [phases.build]
-cmds = ["npm run build:clean"]
+cmds = ["npm run build"]
 
 [start]
 cmd = "npm run start"
@@ -23,3 +23,4 @@ cmd = "npm run start"
 [variables]
 NEXT_TELEMETRY_DISABLED = "1"
 NODE_OPTIONS = "--max-old-space-size=4096"
+NPM_CONFIG_PRODUCTION = "false"
