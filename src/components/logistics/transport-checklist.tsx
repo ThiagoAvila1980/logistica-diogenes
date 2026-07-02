@@ -27,6 +27,7 @@ import type { DriverOption } from "@/lib/data/drivers-db";
 import {
   buildVaoItemSubtitle,
   formatVaoItemFullLabel,
+  getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
 import { DriverSelector } from "@/components/logistics/driver-selector";
 import { VehicleSelector } from "@/components/logistics/vehicle-selector";
@@ -200,6 +201,7 @@ export function TransportChecklist({
             const itemAllDone = doneSteps === 4;
             const subtitle = buildVaoItemSubtitle(item, index, lookups);
             const fullLabel = formatVaoItemFullLabel(subtitle);
+            const vaoNumber = getVaoNumber(item, index);
 
             const isExpanded = expandedId === item.id;
 
@@ -227,7 +229,7 @@ export function TransportChecklist({
                         itemAllDone ? "text-success-foreground" : "text-foreground",
                       )}
                     >
-                      Vão {index + 1}
+                      Vão {vaoNumber}
                     </p>
                     <p
                       className="mt-0.5 truncate text-xs text-muted-foreground"
@@ -261,7 +263,7 @@ export function TransportChecklist({
                     className="ml-1 shrink-0 text-muted-foreground"
                     onClick={() => toggleExpand(item.id)}
                     aria-expanded={isExpanded}
-                    aria-label={`${isExpanded ? "Recolher" : "Expandir"} vão ${index + 1}`}
+                    aria-label={`${isExpanded ? "Recolher" : "Expandir"} vão ${vaoNumber}`}
                   >
                     {isExpanded ? (
                       <ChevronUp className="h-4 w-4" />
@@ -313,7 +315,7 @@ export function TransportChecklist({
                                   "shrink-0",
                                   done && "border-success bg-success",
                                 )}
-                                aria-label={`${key} — Vão ${index + 1}`}
+                                aria-label={`${key} — Vão ${vaoNumber}`}
                                 title={gate.reason ?? undefined}
                               />
                             )}
@@ -360,7 +362,7 @@ export function TransportChecklist({
                                   "shrink-0",
                                   done && "border-success bg-success",
                                 )}
-                                aria-label={`${stepLabel} — Vão ${index + 1}`}
+                                aria-label={`${stepLabel} — Vão ${vaoNumber}`}
                                 title={gate.reason ?? undefined}
                               />
                             )}
@@ -384,7 +386,7 @@ export function TransportChecklist({
                     <TransportVaoNotesField
                       osId={osId}
                       itemId={item.id}
-                      vaoLabel={`Vão ${index + 1}`}
+                      vaoLabel={`Vão ${vaoNumber}`}
                       initialNotes={item.transportProgress?.observacoes}
                     />
 

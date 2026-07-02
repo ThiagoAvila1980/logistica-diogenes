@@ -9,6 +9,7 @@ import {
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { OsStatus } from "@/db/schema";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { getVaoNumber } from "@/lib/measurement/vao-item-subtitle";
 import { getSession } from "@/lib/auth/session";
 import {
   canAccessConcludedPage,
@@ -166,7 +167,7 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
         return {
           id: item.id,
           index: idx,
-          label: `Vão ${idx + 1}`,
+          label: `Vão ${getVaoNumber(item, idx)}`,
           installerId,
           installerName: installerId
             ? (installerNamesById.get(installerId) ?? null)

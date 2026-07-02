@@ -32,6 +32,7 @@ import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import {
   buildVaoItemSubtitle,
   formatVaoItemFullLabel,
+  getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
 import { InstallationDailyNotes } from "@/components/installation/installation-daily-notes";
 import { InstallerSelector } from "@/components/logistics/installer-selector";
@@ -91,11 +92,11 @@ function getItemInstGates(
 /** Painel inline de mídia de um vão — desenhos e fotos */
 function VaoMediaPanel({
   item,
-  index,
+  vaoNumber,
   lookups,
 }: {
   item: MeasurementLineItem;
-  index: number;
+  vaoNumber: number;
   lookups?: MeasurementLookups;
 }) {
   const allDrawings =
@@ -128,7 +129,7 @@ function VaoMediaPanel({
               <div key={d.id} className="overflow-hidden rounded-lg border bg-muted/30">
                 <DrawingPreview
                   src={d.url}
-                  alt={`Desenho ${dIdx + 1} — Vão ${index + 1}`}
+                  alt={`Desenho ${dIdx + 1} — Vão ${vaoNumber}`}
                   variant="thumbnail"
                 />
               </div>
@@ -148,7 +149,7 @@ function VaoMediaPanel({
               <div key={url} className="overflow-hidden rounded-lg border bg-muted/30">
                 <DrawingPreview
                   src={url}
-                  alt={`Foto ${pIdx + 1} — Vão ${index + 1}`}
+                  alt={`Foto ${pIdx + 1} — Vão ${vaoNumber}`}
                   variant="thumbnail"
                 />
               </div>
@@ -306,6 +307,7 @@ export function InstallationChecklist({
             const itemAllDone = doneSteps === 3;
             const subtitle = buildVaoItemSubtitle(item, index, lookups);
             const fullLabel = formatVaoItemFullLabel(subtitle);
+            const vaoNumber = getVaoNumber(item, index);
             const isExpanded = expandedId === item.id;
 
             return (
@@ -332,7 +334,7 @@ export function InstallationChecklist({
                         itemAllDone ? "text-success-foreground" : "text-foreground",
                       )}
                     >
-                      Vão {index + 1}
+                      Vão {vaoNumber}
                     </p>
                     <p
                       className="mt-0.5 truncate text-xs text-muted-foreground"
@@ -379,7 +381,7 @@ export function InstallationChecklist({
                                 "shrink-0",
                                 done && "border-success bg-success",
                               )}
-                              aria-label={`${key} — Vão ${index + 1}`}
+                              aria-label={`${key} — Vão ${vaoNumber}`}
                             />
                           )}
                         </div>
@@ -403,7 +405,7 @@ export function InstallationChecklist({
                     className="ml-1 shrink-0 text-muted-foreground"
                     onClick={() => toggleExpand(item.id)}
                     aria-expanded={isExpanded}
-                    aria-label={`${isExpanded ? "Recolher" : "Expandir"} vão ${index + 1}`}
+                    aria-label={`${isExpanded ? "Recolher" : "Expandir"} vão ${vaoNumber}`}
                   >
                     {isExpanded ? (
                       <ChevronUp className="h-4 w-4" />
@@ -474,7 +476,7 @@ export function InstallationChecklist({
                               "ml-auto shrink-0",
                               done && "border-success bg-success",
                             )}
-                            aria-label={`${stepLabel} — Vão ${index + 1}`}
+                            aria-label={`${stepLabel} — Vão ${vaoNumber}`}
                           />
                         )}
                       </label>
@@ -511,7 +513,7 @@ export function InstallationChecklist({
                         />
                       </div>
                     )}
-                    <VaoMediaPanel item={item} index={index} lookups={lookups} />
+                    <VaoMediaPanel item={item} vaoNumber={vaoNumber} lookups={lookups} />
                   </div>
                 )}
               </div>

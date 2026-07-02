@@ -2,6 +2,8 @@ import { inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { measurements, transportLogs } from "@/db/schema";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import type { SessionUser } from "@/lib/auth/session-types";
+import { canViewAllOrders, hasAnyRole } from "@/lib/auth/permissions";
 
 export function collectDriverIdsFromMeasurementItems(
   items: MeasurementLineItem[] | null | undefined,
@@ -72,4 +74,30 @@ export function isAssignedTransportDriver(
   driverIds: readonly string[] | undefined,
 ): boolean {
   return !!driverIds?.includes(userId);
+}
+
+/**
+ * Motorista só enxerga/opera os vãos em que está designado.
+ * Admin/gerente (ou outros papéis) enxergam todos os vãos da OS.
+ * Usada tanto para filtrar a listagem quanto para validar as actions de escrita.
+ */
+export function canAccessVaoAsSession(
+  session: SessionUser,
+  item: Pick<MeasurementLineItem, "transportProgress">,
+): boolean {
+  if (canViewAllOrders(session.roles)) return true;
+  if (!hasAnyRole(session.roles, ["motorista"])) return true;
+
+  return item.transportProgress?.driverId === session.userId;
+}
+
+/** Filtra os vãos de uma OS para o que a sessão do motorista pode ver/operar. */
+export function filterVaoItemsForSession<
+  T extends { transportProgress?: MeasurementLineItem["transportProgress"] },
+>(items: T[], session: SessionUser | null): T[] {
+  if (!session) return [];
+  if (canViewAllOrders(session.roles)) return items;
+  if (!hasAnyRole(session.roles, ["motorista"])) return items;
+
+  return items.filter((item) => item.transportProgress?.driverId === session.userId);
 }

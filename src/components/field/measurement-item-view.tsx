@@ -18,6 +18,7 @@ import {
   hasAnyDimensionValue,
   hasValidItemDimensions,
 } from "@/lib/measurement/dimensions";
+import { getVaoNumber } from "@/lib/measurement/vao-item-subtitle";
 
 type MeasurementItemViewProps = {
   item: MeasurementLineItem;
@@ -55,6 +56,7 @@ export function MeasurementItemView({
   const hasDimensions =
     Boolean(item.idAmbiente) || item.qty > 0 || hasAnyDimensionValue(item);
   const dimensionsSummary = formatDimensionsSummary(item);
+  const vaoNumber = getVaoNumber(item, index);
 
   return (
     <article
@@ -62,7 +64,7 @@ export function MeasurementItemView({
       className="rounded-xl border bg-card p-4 shadow-sm"
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">Medição {index + 1}</h3>
+        <h3 className="text-sm font-medium">Medição {vaoNumber}</h3>
         <Button
           type="button"
           variant="ghost"
@@ -73,8 +75,8 @@ export function MeasurementItemView({
           aria-controls={`measurement-item-body-${item.id}`}
           aria-label={
             expanded
-              ? `Recolher medição ${index + 1}`
-              : `Expandir medição ${index + 1}`
+              ? `Recolher medição ${vaoNumber}`
+              : `Expandir medição ${vaoNumber}`
           }
         >
           {expanded ? (
@@ -127,11 +129,11 @@ export function MeasurementItemView({
                       type="button"
                       className="block w-full cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => onDrawingClick(drawing.id)}
-                      aria-label={`Editar desenho ${dIdx + 1} da medição ${index + 1}`}
+                      aria-label={`Editar desenho ${dIdx + 1} da medição ${vaoNumber}`}
                     >
                       <ResolvedImage
                         src={drawing.url}
-                        alt={`Desenho ${dIdx + 1} da medição ${index + 1}`}
+                        alt={`Desenho ${dIdx + 1} da medição ${vaoNumber}`}
                         className="mx-auto max-h-[min(70vh,480px)] w-full object-contain"
                         fallbackClassName="min-h-[120px]"
                       />
@@ -142,7 +144,7 @@ export function MeasurementItemView({
                   ) : (
                     <ResolvedImage
                       src={drawing.url}
-                      alt={`Desenho ${dIdx + 1} da medição ${index + 1}`}
+                      alt={`Desenho ${dIdx + 1} da medição ${vaoNumber}`}
                       className="mx-auto max-h-[min(70vh,480px)] w-full object-contain"
                       fallbackClassName="min-h-[120px]"
                     />

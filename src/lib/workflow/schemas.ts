@@ -70,6 +70,15 @@ export type ItemTransportProgress = z.infer<typeof itemTransportProgressSchema>;
 /** Item de medição em campo (desenho + ambiente + dimensões por peça) */
 export const measurementLineItemSchema = z.object({
   id: z.string().min(1),
+  /**
+   * Número estável do vão, definido uma única vez na criação e nunca
+   * recalculado. Existe para que "Vão N" seja o mesmo em todas as telas
+   * (transporte, instalação, concluídos), mesmo quando uma tela recebe só
+   * um subconjunto filtrado dos vãos (ex.: motorista vendo só seu vão).
+   * Opcional para compatibilidade com dados salvos antes desta migração —
+   * nesse caso a posição no array original é usada como fallback.
+   */
+  vaoNumber: z.number().int().positive().optional(),
   idAmbiente: z.string().uuid().nullish(),
   qty: z.coerce.number().int().positive(),
   largura: positiveDimension,

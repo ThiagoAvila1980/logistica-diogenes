@@ -29,6 +29,7 @@ import type { InstallerOption } from "@/lib/data/installers-db";
 import {
   buildVaoItemSubtitle,
   formatVaoItemFullLabel,
+  getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
 
 type SendToInstallationDialogProps = {
@@ -189,6 +190,7 @@ export function SendToInstallationDialog({
               {items.map((item, index) => {
                 const subtitle = buildVaoItemSubtitle(item, index, lookups);
                 const fullLabel = formatVaoItemFullLabel(subtitle);
+                const vaoNumber = getVaoNumber(item, index);
                 const checked = selectedIds.has(item.id);
                 const hasInstaller = Boolean(item.installationProgress?.installerId);
 
@@ -204,7 +206,7 @@ export function SendToInstallationDialog({
                     />
                     <span className="min-w-0 flex-1 overflow-hidden">
                       <span className="block text-xs font-semibold leading-snug">
-                        Vão {index + 1}
+                        Vão {vaoNumber}
                         {hasInstaller ? (
                           <span className="ml-1.5 font-normal text-muted-foreground">
                             (já designado)

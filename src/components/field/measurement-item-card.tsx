@@ -17,6 +17,7 @@ import {
   formatDimensionsSummary,
   hasAnyDimensionValue,
 } from "@/lib/measurement/dimensions";
+import { getVaoNumber } from "@/lib/measurement/vao-item-subtitle";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -136,6 +137,7 @@ export function MeasurementItemCard({
   const dimensionsSummary = formatDimensionsSummary(item);
   const savedPhotoUrls = filterDisplayableUploadUrls(item.photos ?? []);
   const photoCount = countItemPhotos(item, pendingFiles.length);
+  const vaoNumber = getVaoNumber(item, index);
 
   return (
     <article
@@ -143,7 +145,7 @@ export function MeasurementItemCard({
       className="rounded-xl border bg-card p-4 shadow-sm"
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">Medição {index + 1}</h3>
+        <h3 className="text-sm font-medium">Medição {vaoNumber}</h3>
         <div className="flex shrink-0 items-center gap-1">
           {canRemove && (
             <Button
@@ -153,7 +155,7 @@ export function MeasurementItemCard({
               className="h-9 w-9 text-destructive hover:text-destructive"
               onClick={onRemove}
               disabled={disabled}
-              aria-label={`Remover medição ${index + 1}`}
+              aria-label={`Remover medição ${vaoNumber}`}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -169,8 +171,8 @@ export function MeasurementItemCard({
             aria-controls={`measurement-item-body-${item.id}`}
             aria-label={
               expanded
-                ? `Recolher medição ${index + 1}`
-                : `Expandir medição ${index + 1}`
+                ? `Recolher medição ${vaoNumber}`
+                : `Expandir medição ${vaoNumber}`
             }
           >
             {expanded ? (

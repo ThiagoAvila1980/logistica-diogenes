@@ -24,6 +24,7 @@ import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import {
   buildVaoItemSubtitle,
   formatVaoItemFullLabel,
+  getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
 
 type Step = "corte" | "embalagem" | "acessorios" | "vidros";
@@ -208,6 +209,7 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
             const itemAllDone = doneSteps === 4;
             const subtitle = buildVaoItemSubtitle(item, index, lookups);
             const fullLabel = formatVaoItemFullLabel(subtitle);
+            const vaoNumber = getVaoNumber(item, index);
             const isSelected = selectedItemId === item.id;
 
             return (
@@ -234,7 +236,7 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
                           : "text-foreground",
                       )}
                     >
-                      Vão {index + 1}
+                      Vão {vaoNumber}
                     </p>
                     <p
                       className="mt-0.5 truncate text-xs text-muted-foreground"
@@ -271,7 +273,7 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
                               "shrink-0",
                               done && "border-success bg-success",
                             )}
-                            aria-label={`${key} — Vão ${index + 1}`}
+                            aria-label={`${key} — Vão ${vaoNumber}`}
                           />
                         )}
                       </div>
@@ -291,7 +293,7 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
                             : "text-foreground",
                         )}
                       >
-                        Vão {index + 1}
+                        Vão {vaoNumber}
                       </p>
                       <p
                         className="mt-0.5 truncate text-xs text-muted-foreground"
@@ -346,7 +348,7 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
                                 "shrink-0",
                                 done && "border-success bg-success",
                               )}
-                              aria-label={`${stepLabel} — Vão ${index + 1}`}
+                              aria-label={`${stepLabel} — Vão ${vaoNumber}`}
                             />
                           )}
                           <span

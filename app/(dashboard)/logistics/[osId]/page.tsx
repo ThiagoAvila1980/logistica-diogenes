@@ -5,6 +5,7 @@ import { listMeasurementLookups } from "@/lib/data/lookups";
 import { listVehiclesForTransportSelection } from "@/lib/data/vehicles";
 import { listActiveDrivers } from "@/lib/data/drivers";
 import { listActiveInstallers } from "@/lib/data/installers";
+import { filterVaoItemsForSession } from "@/lib/logistics/transport-driver-access";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
@@ -39,6 +40,7 @@ export default async function LogisticsOsPage({ params }: Props) {
 
   const drivers = isManager ? await listActiveDrivers() : [];
   const installers = isManager ? await listActiveInstallers() : [];
+  const visibleItems = filterVaoItemsForSession(detail.items, session);
 
   const header = (
     <ServiceOrderHeader
@@ -104,7 +106,7 @@ export default async function LogisticsOsPage({ params }: Props) {
       <TransportChecklist
         osId={osId}
         osStatus={order.status}
-        items={detail.items}
+        items={visibleItems}
         vehicles={vehicles}
         lookups={lookups}
         drivers={drivers}

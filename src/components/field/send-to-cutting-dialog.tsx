@@ -22,6 +22,7 @@ import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import { formatDimensionsSummary } from "@/lib/measurement/dimensions";
+import { getVaoNumber } from "@/lib/measurement/vao-item-subtitle";
 
 const SOURCE_STATUS: OsStatus = "medicao_final";
 const DEST_STATUS: OsStatus = "cortes";
@@ -39,7 +40,7 @@ function buildItemLabel(
   if (ambiente && dims) return `${ambiente} — ${dims}`;
   if (ambiente) return ambiente;
   if (dims) return dims;
-  return `Vão ${index + 1}`;
+  return `Vão ${getVaoNumber(item, index)}`;
 }
 
 type SendToCuttingDialogProps = {
@@ -194,7 +195,7 @@ export function SendToCuttingDialog({
                     />
                     <span className="min-w-0">
                       <span className="block text-xs font-semibold">
-                        Vão {index + 1}
+                        Vão {getVaoNumber(item, index)}
                       </span>
                       <span className="block truncate text-xs text-muted-foreground">
                         {label}

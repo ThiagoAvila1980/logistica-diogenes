@@ -73,6 +73,7 @@ import {
   sanitizeMeasurementItem,
 } from "@/lib/measurement/dimensions";
 import { sortMeasurementItemsOldestFirst } from "@/lib/measurement/item-order";
+import { getVaoNumber } from "@/lib/measurement/vao-item-subtitle";
 
 type FieldMeasurementFormProps = {
   order: OrderDetail;
@@ -86,6 +87,15 @@ type FieldMeasurementFormProps = {
   canSendToCutting?: boolean;
 };
 
+/** Preenche vaoNumber para itens antigos (rascunhos locais salvos antes desta migração). */
+function backfillVaoNumbers(items: MeasurementLineItem[]): MeasurementLineItem[] {
+  let nextVaoNumber = Math.max(0, ...items.map((item) => item.vaoNumber ?? 0)) + 1;
+  return items.map((item) => {
+    if (item.vaoNumber) return item;
+    return { ...item, vaoNumber: nextVaoNumber++ };
+  });
+}
+
 function resolveInitialItems(
   osId: string,
   draft?: FieldMeasurementDraft,
@@ -97,6 +107,7 @@ function resolveInitialItems(
     items = [
       {
         id: `${osId}-item-0`,
+        vaoNumber: 1,
         idAmbiente: null,
         qty: 0,
         largura: draft.largura ?? 0,
@@ -105,10 +116,12 @@ function resolveInitialItems(
       },
     ];
   } else {
-    items = [createEmptyMeasurementItem(`${osId}-item-0`)];
+    items = [{ ...createEmptyMeasurementItem(`${osId}-item-0`), vaoNumber: 1 }];
   }
-  return sortMeasurementItemsOldestFirst(
-    mergeLegacyDraftPhotos(items, draft?.photos ?? []),
+  return backfillVaoNumbers(
+    sortMeasurementItemsOldestFirst(
+      mergeLegacyDraftPhotos(items, draft?.photos ?? []),
+    ),
   );
 }
 
@@ -351,11 +364,16 @@ export function FieldMeasurementForm({
   }
 
   function addItem() {
-    const newItem = createEmptyMeasurementItem(
-      `${order.id}-item-${Date.now()}`,
-    );
-    setItems((prev) => [...prev, newItem]);
-    setExpandedItemId(newItem.id);
+    setItems((prev) => {
+      const nextVaoNumber =
+        Math.max(0, ...prev.map((item) => item.vaoNumber ?? 0)) + 1;
+      const newItem: MeasurementLineItem = {
+        ...createEmptyMeasurementItem(`${order.id}-item-${Date.now()}`),
+        vaoNumber: nextVaoNumber,
+      };
+      setExpandedItemId(newItem.id);
+      return [...prev, newItem];
+    });
   }
 
   function updateItem(index: number, next: MeasurementLineItem) {
@@ -727,7 +745,7 @@ export function FieldMeasurementForm({
                   >
                     <span className="text-muted-foreground">
                       {resolveLookupLabel(lookups.ambientes, item.idAmbiente ?? null) ||
-                        `Medição ${index + 1}`}
+                        `Medição ${getVaoNumber(item, index)}`}
                     </span>
                     <span className="font-mono tabular-nums">
                       {formatDimensionsSummary(item)}

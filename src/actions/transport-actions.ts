@@ -18,6 +18,8 @@ import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { recordVaoStepCompletion } from "@/lib/performance/scoring";
+import { canAccessVaoAsSession } from "@/lib/logistics/transport-driver-access";
+import type { SessionUser } from "@/lib/auth/session-types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,8 +81,9 @@ export async function assignVehicleToVaoAction(
     };
   }
 
+  let session: SessionUser;
   try {
-    await requireRole(["admin", "gerente", "motorista"]);
+    session = await requireRole(["admin", "gerente", "motorista"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -126,8 +129,11 @@ export async function assignVehicleToVaoAction(
         );
       }
 
-      const itemExists = items.some((item) => item.id === itemId);
-      if (!itemExists) throw new WorkflowActionError("Vão não encontrado");
+      const targetItem = items.find((item) => item.id === itemId);
+      if (!targetItem) throw new WorkflowActionError("Vão não encontrado");
+      if (!canAccessVaoAsSession(session, targetItem)) {
+        throw new WorkflowActionError("Vão não encontrado");
+      }
 
       const updatedItems = items.map((item) => {
         if (item.id !== itemId) return item;
@@ -240,8 +246,9 @@ export async function updateItemTransportStepAction(
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
+  let session: SessionUser;
   try {
-    await requireRole(["admin", "gerente", "motorista"]);
+    session = await requireRole(["admin", "gerente", "motorista"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -281,6 +288,9 @@ export async function updateItemTransportStepAction(
 
       const item = items.find((i) => i.id === itemId);
       if (!item) throw new WorkflowActionError("Vão não encontrado");
+      if (!canAccessVaoAsSession(session, item)) {
+        throw new WorkflowActionError("Vão não encontrado");
+      }
 
       // Verifica veículo atribuído ao vão
       const itemVehicleId = item.transportProgress?.vehicleId ?? null;
@@ -391,8 +401,9 @@ export async function updateItemTransportNotesAction(
     };
   }
 
+  let session: SessionUser;
   try {
-    await requireRole(["admin", "gerente", "motorista"]);
+    session = await requireRole(["admin", "gerente", "motorista"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -429,8 +440,11 @@ export async function updateItemTransportNotesAction(
         );
       }
 
-      const itemExists = items.some((item) => item.id === itemId);
-      if (!itemExists) throw new WorkflowActionError("Vão não encontrado");
+      const targetItem = items.find((item) => item.id === itemId);
+      if (!targetItem) throw new WorkflowActionError("Vão não encontrado");
+      if (!canAccessVaoAsSession(session, targetItem)) {
+        throw new WorkflowActionError("Vão não encontrado");
+      }
 
       const updatedItems = items.map((item) => {
         if (item.id !== itemId) return item;
@@ -487,7 +501,9 @@ export async function assignDriverToVaoAction(
   }
 
   try {
-    await requireRole(["admin", "gerente", "motorista"]);
+    // Atribuir motorista ao vão é decisão de gestão — alinhado ao
+    // `canAssignDriver={isManager}` da UI (drivers só são listados para gerente/admin).
+    await requireRole(["admin", "gerente"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
