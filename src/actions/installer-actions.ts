@@ -30,7 +30,8 @@ export async function assignInstallerToVaoAction(
   }
 
   try {
-    await requireRole(["admin", "gerente"]);
+    // Atribuir instalador ao vão é decisão de gestão — somente admin.
+    await requireRole(["admin"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -109,7 +110,9 @@ export async function sendVaosToInstallationAction(
   }
 
   try {
-    await requireRole(["admin", "gerente"]);
+    // Enviar vãos para instalação (com escolha de instalador) é decisão
+    // de gestão — somente admin.
+    await requireRole(["admin"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }

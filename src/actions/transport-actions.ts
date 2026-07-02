@@ -83,7 +83,9 @@ export async function assignVehicleToVaoAction(
 
   let session: SessionUser;
   try {
-    session = await requireRole(["admin", "gerente", "motorista"]);
+    // Atribuir veículo ao vão é decisão de gestão — somente admin
+    // (alinhado ao `canAssignVehicle={isAdmin}` da UI de transporte).
+    session = await requireRole(["admin"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -501,9 +503,10 @@ export async function assignDriverToVaoAction(
   }
 
   try {
-    // Atribuir motorista ao vão é decisão de gestão — alinhado ao
-    // `canAssignDriver={isManager}` da UI (drivers só são listados para gerente/admin).
-    await requireRole(["admin", "gerente"]);
+    // Atribuir motorista ao vão é decisão de gestão — somente admin
+    // (alinhado ao `canAssignDriver={isAdmin}` da UI; drivers só são
+    // listados para admin).
+    await requireRole(["admin"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }

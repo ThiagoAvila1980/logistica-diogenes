@@ -9,7 +9,7 @@ import { filterVaoItemsForSession } from "@/lib/logistics/transport-driver-acces
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canViewAllOrders, canEditMeasurementHeader } from "@/lib/auth/permissions";
+import { canEditMeasurementHeader, hasRole } from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
@@ -29,7 +29,7 @@ export default async function LogisticsOsPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const isManager = canViewAllOrders(session?.roles ?? []);
+  const isAdmin = hasRole(session?.roles ?? [], "admin");
   const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
   const [detail, lookups] = await Promise.all([
@@ -38,8 +38,8 @@ export default async function LogisticsOsPage({ params }: Props) {
   ]);
   const vehicles = await listVehiclesForTransportSelection(osId);
 
-  const drivers = isManager ? await listActiveDrivers() : [];
-  const installers = isManager ? await listActiveInstallers() : [];
+  const drivers = isAdmin ? await listActiveDrivers() : [];
+  const installers = isAdmin ? await listActiveInstallers() : [];
   const visibleItems = filterVaoItemsForSession(detail.items, session);
 
   const header = (
@@ -110,11 +110,11 @@ export default async function LogisticsOsPage({ params }: Props) {
         vehicles={vehicles}
         lookups={lookups}
         drivers={drivers}
-        canAssignDriver={isManager}
-        canAssignVehicle
+        canAssignDriver={isAdmin}
+        canAssignVehicle={isAdmin}
       />
 
-      {isManager && (
+      {isAdmin && (
         <SendToInstallationDialog
           osId={osId}
           osNumber={getOrderDisplayNumber(order)}
