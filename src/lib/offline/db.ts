@@ -1,7 +1,9 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { MeasurementDbType, MeasurementPriority, OsStatus } from "@/db/schema";
-import type { OrderListItem } from "@/lib/data/types";
+import type { OrderListItem, OrderDetail } from "@/lib/data/types";
+import type { FieldMeasurementDraft } from "@/lib/data/field";
+import type { MeasurementLookups } from "@/lib/data/lookup-types";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +27,8 @@ export interface PendingMeasurement {
   lastError?: string;
   /** Quantas tentativas de sync já foram feitas */
   retryCount: number;
+  /** Epoch ms — não tentar novo retry automático antes deste horário (backoff) */
+  nextRetryAt?: number;
 }
 
 /** Upload de foto ou desenho aguardando sync */
@@ -76,6 +80,19 @@ export interface SyncLogEntry {
   syncedAt: string;
 }
 
+/** Snapshot completo de uma OS (dados + drafts de ambos os tipos + lookups) para abrir offline */
+export interface CachedOrderDetail {
+  /** UUID da OS — mesma chave usada em cachedMeasurements */
+  osId: string;
+  order: OrderDetail;
+  draftsByType: {
+    orcamento?: FieldMeasurementDraft;
+    final?: FieldMeasurementDraft;
+  };
+  lookups: MeasurementLookups;
+  cachedAt: string;
+}
+
 // ─── Database ─────────────────────────────────────────────────────────────────
 
 class OfflineDatabase extends Dexie {
@@ -84,6 +101,7 @@ class OfflineDatabase extends Dexie {
   cachedMeasurements!: EntityTable<CachedMeasurement, "id">;
   cachedLookups!: EntityTable<CachedLookup, "key">;
   syncLog!: EntityTable<SyncLogEntry, "id">;
+  cachedOrderDetails!: EntityTable<CachedOrderDetail, "osId">;
 
   constructor() {
     super("FluxoDiogenesOffline");
@@ -94,6 +112,15 @@ class OfflineDatabase extends Dexie {
       cachedMeasurements: "id, status, assignedUserId, cachedAt",
       cachedLookups: "key",
       syncLog: "++id, osId, result, syncedAt",
+    });
+
+    this.version(2).stores({
+      pendingMeasurements: "++id, osId, status, clientUpdatedAt",
+      pendingUploads: "++id, osId, itemId, status, uploadType",
+      cachedMeasurements: "id, status, assignedUserId, cachedAt",
+      cachedLookups: "key",
+      syncLog: "++id, osId, result, syncedAt",
+      cachedOrderDetails: "osId, cachedAt",
     });
   }
 }
@@ -140,5 +167,23 @@ export function toCachedMeasurement(item: OrderListItem): CachedMeasurement {
     budgetReference: item.budgetReference,
     hasMeasurement: item.hasMeasurement,
     cachedAt: new Date().toISOString(),
+  };
+}
+
+/** Converte de volta CachedMeasurement para OrderListItem (leitura offline) */
+export function fromCachedMeasurement(cached: CachedMeasurement): OrderListItem {
+  return {
+    id: cached.id,
+    number: cached.number,
+    status: cached.status,
+    type: cached.type,
+    measurementStatus: cached.measurementStatus,
+    priority: cached.priority,
+    clientName: cached.clientName,
+    assignedUserId: cached.assignedUserId,
+    scheduledDate: cached.scheduledDate ? new Date(cached.scheduledDate) : null,
+    updatedAt: new Date(cached.updatedAt),
+    budgetReference: cached.budgetReference,
+    hasMeasurement: cached.hasMeasurement,
   };
 }

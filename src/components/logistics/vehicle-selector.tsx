@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Car, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
 import {
   Card,
@@ -38,6 +37,7 @@ type Props = {
   vehicleDescription: string | null;
   vehicles: VehicleOptionForSelection[];
   canChange: boolean;
+  onAssigned?: (vehicleId: string) => void;
 };
 
 export function VehicleSelector({
@@ -48,12 +48,17 @@ export function VehicleSelector({
   vehicleDescription,
   vehicles,
   canChange,
+  onAssigned,
 }: Props) {
-  const router = useRouter();
+  const [assignedVehicleId, setAssignedVehicleId] = useState(vehicleId);
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(!vehicleId);
+
+  useEffect(() => {
+    setAssignedVehicleId(vehicleId);
+  }, [vehicleId]);
 
   const vehicleIds = useMemo(
     () => new Set(vehicles.map((v) => v.id)),
@@ -61,18 +66,28 @@ export function VehicleSelector({
   );
 
   useEffect(() => {
-    if (vehicleId && vehicleIds.has(vehicleId)) {
-      setSelectedId(vehicleId);
+    if (assignedVehicleId && vehicleIds.has(assignedVehicleId)) {
+      setSelectedId(assignedVehicleId);
     } else {
       setSelectedId("");
     }
-  }, [vehicleId, vehicleIds]);
+  }, [assignedVehicleId, vehicleIds]);
+
+  const assignedVehicle = assignedVehicleId
+    ? vehicles.find((v) => v.id === assignedVehicleId)
+    : undefined;
 
   const assignedLabel =
-    vehicleId != null && vehiclePlate != null
-      ? vehicleDescription
-        ? `${vehicleDescription} (${vehiclePlate})`
-        : vehiclePlate
+    assignedVehicleId != null
+      ? assignedVehicle
+        ? assignedVehicle.description
+          ? `${assignedVehicle.description} (${assignedVehicle.plate})`
+          : assignedVehicle.plate
+        : vehiclePlate != null
+          ? vehicleDescription
+            ? `${vehicleDescription} (${vehiclePlate})`
+            : vehiclePlate
+          : null
       : null;
 
   async function handleConfirm() {
@@ -87,14 +102,15 @@ export function VehicleSelector({
     });
 
     if (result.success) {
-      router.refresh();
+      setAssignedVehicleId(selectedId);
+      onAssigned?.(selectedId);
     } else {
       setError(result.message);
     }
     setLoading(false);
   }
 
-  if (vehicleId && !canChange) {
+  if (assignedVehicleId && !canChange) {
     return (
       <Card className="mb-2 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
         <CardHeader className="pb-2 pt-3">
@@ -126,7 +142,7 @@ export function VehicleSelector({
           <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
             <Car className="h-4 w-4 shrink-0 text-info" />
             <span className="truncate">
-              {vehicleId && assignedLabel ? assignedLabel : "Selecionar Veículo"}
+              {assignedVehicleId && assignedLabel ? assignedLabel : "Selecionar Veículo"}
             </span>
           </CardTitle>
           <ChevronDown
@@ -141,12 +157,12 @@ export function VehicleSelector({
       {open && (
         <CardContent id={`vehicle-panel-${itemId}`} className="space-y-3 pt-0">
           <p className="text-sm text-muted-foreground">
-            {vehicleId
+            {assignedVehicleId
               ? "Altere o veículo deste vão."
               : "Escolha o veículo deste vão. É obrigatório para iniciar a entrega do perfil estrutural."}
           </p>
 
-          {vehicleId && assignedLabel && (
+          {assignedVehicleId && assignedLabel && (
             <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
               <span className="min-w-0 truncate">
@@ -194,7 +210,7 @@ export function VehicleSelector({
             disabled={
               loading ||
               !selectedId ||
-              selectedId === vehicleId ||
+              selectedId === assignedVehicleId ||
               vehicles.length === 0
             }
             onClick={handleConfirm}
@@ -205,7 +221,7 @@ export function VehicleSelector({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Confirmando...
               </>
-            ) : vehicleId ? (
+            ) : assignedVehicleId ? (
               "Confirmar alteração"
             ) : (
               "Confirmar veículo"

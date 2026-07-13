@@ -14,6 +14,7 @@ type Props = {
   photos: string[];
   lookups: MeasurementLookups;
   cutterNotes: string | null;
+  canEditDrawings?: boolean;
 };
 
 export function CuttingDetailView({
@@ -23,6 +24,7 @@ export function CuttingDetailView({
   photos,
   lookups,
   cutterNotes,
+  canEditDrawings = false,
 }: Props) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(
     items.length > 0 ? (items[0]?.id ?? null) : null,
@@ -47,9 +49,11 @@ export function CuttingDetailView({
       />
 
       <ProductionMeasurementMedia
+        osId={osId}
         items={filteredItems}
         photos={filteredPhotos}
         lookups={lookups}
+        canEditDrawings={canEditDrawings}
       />
 
       <CuttingNotesField osId={osId} initialNotes={cutterNotes} />

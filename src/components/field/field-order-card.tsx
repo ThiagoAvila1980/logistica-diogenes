@@ -6,6 +6,8 @@ import type { OrderListItem } from "@/lib/data/types";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { formatBrDate } from "@/lib/date-format";
 import { cn } from "@/lib/utils";
+import { PrintMeasurementMenu } from "@/components/field/print-measurement-menu";
+import { PendingBadge } from "@/components/offline/pending-badge";
 
 const PRIORITY_BORDER: Record<string, string> = {
   urgente: "border-l-[3px] border-l-destructive",
@@ -35,8 +37,8 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
   return (
     <div
       className={cn(
-        "group flex w-full min-w-0 items-center gap-1 overflow-hidden rounded-xl border border-primary/10 bg-card p-4 shadow-[var(--shadow-card)] transition-all",
-        "hover:border-primary/30 hover:shadow-[var(--shadow-brand)]",
+        "group flex w-full min-w-0 items-center gap-1 overflow-hidden rounded-xl border border-primary/10 bg-card p-4 shadow-(--shadow-card) transition-all",
+        "hover:border-primary/30 hover:shadow-(--shadow-brand)",
         PRIORITY_BORDER[order.priority],
       )}
     >
@@ -97,30 +99,15 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
                 {formatBrDate(order.scheduledDate)}
               </span>
             )}
+
+            <PendingBadge osId={order.id} />
           </div>
         </div>
 
         <ChevronRight className="h-5 w-5 shrink-0 text-primary/30 transition-colors group-hover:text-primary" />
       </Link>
 
-      <button
-        type="button"
-        className="shrink-0 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
-        aria-label="Abrir PDF da medição"
-        title="Abrir PDF da medição"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          window.open(`/api/measurements/${order.id}/pdf`, "_blank", "noopener");
-        }}
-      >
-        <span
-          className="flex h-7 w-9 flex-col items-center justify-center rounded border border-current bg-background/80 leading-none"
-          aria-hidden
-        >
-          <span className="mt-0.5 text-[9px] font-bold tracking-tight">PDF</span>
-        </span>
-      </button>
+      <PrintMeasurementMenu osId={order.id} />
     </div>
   );
 }

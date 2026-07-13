@@ -293,6 +293,7 @@ export function MeasurementItemCard({
               osId={osId}
               scope="measurements"
               existingUrls={savedPhotoUrls}
+              initialPendingFiles={pendingFiles}
               mode="form"
               disabled={disabled}
               showLabel={false}

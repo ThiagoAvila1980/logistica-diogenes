@@ -39,10 +39,10 @@ import {
 } from "@/lib/logistics/transport-item-gates";
 
 const TRANSPORT_STEPS: { key: TransportStep; label: string; shortLabel: string }[] = [
-  { key: "perfilEstrutural", label: "Perf. Est.", shortLabel: "P.Est." },
-  { key: "perfilTotal", label: "Perf. Total", shortLabel: "P.Tot." },
-  { key: "acessorios", label: "Acessórios", shortLabel: "Acess." },
-  { key: "vidros", label: "Vidros", shortLabel: "Vidr." },
+  { key: "perfilEstrutural", label: "Perfil estrutural", shortLabel: "Perfil Estrut." },
+  { key: "perfilTotal", label: "Perfil total", shortLabel: "Perfil Total" },
+  { key: "acessorios", label: "Acessórios", shortLabel: "Acessórios" },
+  { key: "vidros", label: "Vidros", shortLabel: "Vidros" },
 ];
 
 type ItemTransportProgress = Record<TransportStep, boolean>;
@@ -83,6 +83,9 @@ export function TransportChecklist({
         items.map((item) => [item.id, getItemTransportProgress(item)]),
       ),
   );
+  const [vehicleOverrides, setVehicleOverrides] = useState<
+    Record<string, string | null>
+  >({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -188,7 +191,10 @@ export function TransportChecklist({
               acessorios: false,
               vidros: false,
             };
-            const itemVehicleId = item.transportProgress?.vehicleId ?? null;
+            const itemVehicleId =
+              item.id in vehicleOverrides
+                ? vehicleOverrides[item.id]
+                : (item.transportProgress?.vehicleId ?? null);
             const itemVehicle = itemVehicleId
               ? vehicles.find((v) => v.id === itemVehicleId)
               : undefined;
@@ -277,18 +283,18 @@ export function TransportChecklist({
                 {isExpanded && (
                   <div className="px-3 pb-3">
                     {/* Desktop: grid com 4 colunas de checkboxes */}
-                    <div className="hidden items-center gap-2 sm:grid sm:grid-cols-[1fr_repeat(4,56px)]">
+                    <div className="hidden items-center gap-4 sm:grid sm:grid-cols-[1fr_repeat(4,88px)]">
                       <div />
                       {TRANSPORT_STEPS.map(({ key, label }) => (
                         <span
                           key={key}
-                          className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                          className="text-center text-[10px] font-medium leading-tight text-muted-foreground"
                         >
                           {label}
                         </span>
                       ))}
                       <div className="min-w-0" />
-                      {TRANSPORT_STEPS.map(({ key }) => {
+                      {TRANSPORT_STEPS.map(({ key, label }) => {
                         const done = itemProgress[key];
                         const gate = gates[key];
                         const lKey = `${item.id}-${key}`;
@@ -315,7 +321,7 @@ export function TransportChecklist({
                                   "shrink-0",
                                   done && "border-success bg-success",
                                 )}
-                                aria-label={`${key} — Vão ${vaoNumber}`}
+                                aria-label={`${label} — Vão ${vaoNumber}`}
                                 title={gate.reason ?? undefined}
                               />
                             )}
@@ -326,7 +332,7 @@ export function TransportChecklist({
 
                     {/* Mobile: 4 botões */}
                     <div className="grid grid-cols-4 gap-1.5 sm:hidden">
-                      {TRANSPORT_STEPS.map(({ key, label: stepLabel }) => {
+                      {TRANSPORT_STEPS.map(({ key, shortLabel: stepLabel }) => {
                         const done = itemProgress[key];
                         const gate = gates[key];
                         const lKey = `${item.id}-${key}`;
@@ -400,6 +406,12 @@ export function TransportChecklist({
                           vehicleDescription={itemVehicle?.description ?? null}
                           vehicles={vehicles}
                           canChange={canAssignVehicle}
+                          onAssigned={(vehicleId) =>
+                            setVehicleOverrides((prev) => ({
+                              ...prev,
+                              [item.id]: vehicleId,
+                            }))
+                          }
                         />
                       </div>
                     )}

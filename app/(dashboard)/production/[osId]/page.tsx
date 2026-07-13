@@ -4,7 +4,7 @@ import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canEditMeasurementHeader } from "@/lib/auth/permissions";
+import { canEditMeasurementHeader, hasRole } from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
@@ -27,6 +27,7 @@ export default async function ProductionOsPage({ params }: Props) {
   if (!order) notFound();
 
   const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
+  const isAdmin = hasRole(session?.roles ?? [], "admin");
 
   const { measurement, cutterNotes } = detail;
 
@@ -75,6 +76,7 @@ export default async function ProductionOsPage({ params }: Props) {
             photos={measurement.photos}
             lookups={lookups}
             cutterNotes={cutterNotes}
+            canEditDrawings={isAdmin}
           />
         ) : (
           <Card>

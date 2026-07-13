@@ -3,6 +3,7 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { getFieldMeasurementDraft } from "@/lib/data/field";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { FieldMeasurementForm } from "@/components/field/field-measurement-form";
+import { FieldDetailCacheHydrator } from "@/components/offline/field-detail-cache-hydrator";
 import { getSession } from "@/lib/auth/session";
 import { hasAnyRole } from "@/lib/auth/permissions";
 
@@ -32,18 +33,27 @@ export default async function FieldOsPage({ params }: Props) {
   const session = await getSession();
   const canManage = hasAnyRole(session?.roles ?? [], ["admin", "gerente"]);
 
+  const draftsByType = {
+    orcamento: draftOrcamento,
+    final: draftFinal,
+  };
+
   return (
-    <FieldMeasurementForm
-      order={order}
-      lookups={lookups}
-      draftsByType={{
-        orcamento: draftOrcamento,
-        final: draftFinal,
-      }}
-      canEditHeader={canManage}
-      canDelete={canManage}
-      canSendToCutting={canManage}
-    />
+    <>
+      <FieldMeasurementForm
+        order={order}
+        lookups={lookups}
+        draftsByType={draftsByType}
+        canEditHeader={canManage}
+        canDelete={canManage}
+        canSendToCutting={canManage}
+      />
+      <FieldDetailCacheHydrator
+        order={order}
+        draftsByType={draftsByType}
+        lookups={lookups}
+      />
+    </>
   );
 }
 

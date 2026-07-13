@@ -46,3 +46,10 @@ export function buildVaoItemSubtitle(
 export function formatVaoItemFullLabel(subtitle: VaoItemSubtitle): string {
   return subtitle.dims ? `${subtitle.spec} — ${subtitle.dims}` : subtitle.spec;
 }
+
+/** Opção resumida de vão para seleção em UI (ex.: menu "Imprimir por Vão"). */
+export type VaoOption = {
+  id: string;
+  vaoNumber: number;
+  label: string;
+};

@@ -23,6 +23,10 @@ import {
   findActiveCortador,
   recordVaoStepCompletion,
 } from "@/lib/performance/scoring";
+import { saveBase64Drawing } from "@/lib/upload/save-base64-image";
+import { isDrawingDataUrl } from "@/lib/upload/canvas-export";
+import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
+import type { DrawingItem } from "@/lib/workflow/schemas";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -385,5 +389,107 @@ export async function sendItemsToCuttingAction(
   } catch (err) {
     console.error("[sendItemsToCutting]", err);
     return { success: false, message: "Erro ao enviar para o corte" };
+  }
+}
+
+const LEGACY_DRAWING_ID = "__legacy__";
+
+const updateItemDrawingSchema = z.object({
+  osId: z.string().uuid(),
+  itemId: z.string().min(1),
+  drawingId: z.string().min(1),
+  imageDataUrl: z.string().min(1),
+});
+
+export type UpdateItemDrawingResult =
+  | { success: true; url: string }
+  | { success: false; message: string };
+
+export async function updateItemDrawingAction(
+  raw: z.infer<typeof updateItemDrawingSchema>,
+): Promise<UpdateItemDrawingResult> {
+  const parsed = updateItemDrawingSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Requisição inválida. Recarregue a página e tente novamente.",
+    };
+  }
+
+  try {
+    await requireRole(["admin"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const { osId, itemId, drawingId, imageDataUrl } = parsed.data;
+
+  if (!isDrawingDataUrl(imageDataUrl)) {
+    return { success: false, message: "Formato de imagem inválido." };
+  }
+
+  try {
+    const order = await getServiceOrderById(osId);
+    if (!order) return { success: false, message: "OS não encontrada" };
+
+    const savedUrl = await saveBase64Drawing(imageDataUrl, osId);
+    const db = getDb();
+
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
+
+      if (!meas) throw new WorkflowActionError("OS não encontrada");
+
+      const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const itemIndex = items.findIndex((item) => item.id === itemId);
+      if (itemIndex === -1) throw new WorkflowActionError("Vão não encontrado");
+
+      const item = items[itemIndex]!;
+      let nextDrawings: DrawingItem[] | undefined = item.drawings;
+      let nextDrawingUrl: string | null | undefined = item.drawingUrl ?? null;
+
+      if (item.drawings && item.drawings.length > 0) {
+        const targetId =
+          drawingId === LEGACY_DRAWING_ID ? item.drawings[0]!.id : drawingId;
+        const hasTarget = item.drawings.some((d) => d.id === targetId);
+        if (!hasTarget) throw new WorkflowActionError("Desenho não encontrado");
+
+        nextDrawings = item.drawings.map((d) =>
+          d.id === targetId ? { ...d, url: savedUrl } : d,
+        );
+        nextDrawingUrl = nextDrawings[0]?.url ?? null;
+      } else if (drawingId === LEGACY_DRAWING_ID || !item.drawingUrl) {
+        nextDrawingUrl = savedUrl;
+      } else {
+        throw new WorkflowActionError("Desenho não encontrado");
+      }
+
+      const updatedItems = [...items];
+      updatedItems[itemIndex] = {
+        ...item,
+        drawingUrl: nextDrawingUrl,
+        drawings: nextDrawings,
+      };
+
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
+    });
+
+    const displayUrl = await resolveUploadDisplayUrl(savedUrl);
+    revalidateOSRoutes(osId);
+    return { success: true, url: displayUrl };
+  } catch (err) {
+    if (err instanceof WorkflowActionError) {
+      return { success: false, message: err.message };
+    }
+    logger.error("updateItemDrawingAction failed", { osId, itemId, drawingId, err });
+    return { success: false, message: "Erro ao salvar desenho" };
   }
 }

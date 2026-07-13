@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { SwRegister } from "@/components/offline/sw-register";
 import { PwaInstallPrompt } from "@/components/offline/pwa-install-prompt";
+import { AutoSyncRegistrar } from "@/components/offline/auto-sync-registrar";
 import { getSession } from "@/lib/auth/session";
 import {
   getRoleScreenMatrix,
@@ -47,6 +48,7 @@ export default async function DashboardLayout({
     <>
       <SwRegister />
       <PwaInstallPrompt />
+      <AutoSyncRegistrar />
       <DashboardShell
         session={session}
         navItems={navItems}

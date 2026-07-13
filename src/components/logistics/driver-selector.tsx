@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { CalendarDays, CheckCircle2, ChevronDown, Loader2, UserRound } from "lucide-react";
 import {
   Card,
@@ -36,7 +35,10 @@ export function DriverSelector({
   drivers,
   canChange,
 }: Props) {
-  const router = useRouter();
+  const [assignedDriverId, setAssignedDriverId] = useState(driverId);
+  const [assignedDate, setAssignedDate] = useState<Date | null>(
+    scheduledTransportDate,
+  );
   const [selectedDriverId, setSelectedDriverId] = useState(driverId ?? "");
   const [selectedDate, setSelectedDate] = useState(
     scheduledTransportDate
@@ -48,6 +50,11 @@ export function DriverSelector({
   const [open, setOpen] = useState(!driverId);
 
   useEffect(() => {
+    setAssignedDriverId(driverId);
+    setAssignedDate(scheduledTransportDate);
+  }, [driverId, scheduledTransportDate]);
+
+  useEffect(() => {
     setSelectedDriverId(driverId ?? "");
     setSelectedDate(
       scheduledTransportDate
@@ -57,11 +64,14 @@ export function DriverSelector({
   }, [driverId, scheduledTransportDate]);
 
   const hasChanges =
-    selectedDriverId !== (driverId ?? "") ||
+    selectedDriverId !== (assignedDriverId ?? "") ||
     selectedDate !==
-      (scheduledTransportDate
-        ? formatDateForInput(scheduledTransportDate)
-        : "");
+      (assignedDate ? formatDateForInput(assignedDate) : "");
+
+  const assignedDriverName =
+    assignedDriverId != null
+      ? (drivers.find((d) => d.id === assignedDriverId)?.name ?? driverName)
+      : null;
 
   async function handleConfirm() {
     setLoading(true);
@@ -75,14 +85,15 @@ export function DriverSelector({
     });
 
     if (result.success) {
-      router.refresh();
+      setAssignedDriverId(selectedDriverId || null);
+      setAssignedDate(selectedDate ? new Date(`${selectedDate}T12:00:00`) : null);
     } else {
       setError(result.message);
     }
     setLoading(false);
   }
 
-  if (!canChange && driverId) {
+  if (!canChange && assignedDriverId) {
     return (
       <Card className="mb-2 min-w-0 overflow-hidden border-success-border bg-success-muted/50">
         <CardHeader className="pb-2 pt-3">
@@ -94,15 +105,15 @@ export function DriverSelector({
         <CardContent className="space-y-1.5 pb-3">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-            <span className="font-medium">{driverName ?? "—"}</span>
+            <span className="font-medium">{assignedDriverName ?? "—"}</span>
           </div>
-          {scheduledTransportDate && (
+          {assignedDate && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <CalendarDays className="h-4 w-4 shrink-0" />
               <span>
                 Data do transporte:{" "}
                 <span className="font-medium">
-                  {formatDateDisplay(scheduledTransportDate)}
+                  {formatDateDisplay(assignedDate)}
                 </span>
               </span>
             </div>
@@ -125,7 +136,9 @@ export function DriverSelector({
           <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
             <UserRound className="h-4 w-4 shrink-0 text-info" />
             <span className="truncate">
-              {driverId && driverName ? driverName : "Selecionar Motorista"}
+              {assignedDriverId && assignedDriverName
+                ? assignedDriverName
+                : "Selecionar Motorista"}
             </span>
           </CardTitle>
           <ChevronDown
@@ -140,21 +153,21 @@ export function DriverSelector({
       {open && (
         <CardContent id={`driver-panel-${itemId}`} className="space-y-3 pt-0">
           <p className="text-sm text-muted-foreground">
-            {driverId
+            {assignedDriverId
               ? "Altere o motorista responsável e/ou a data do transporte."
               : "Escolha o motorista deste vão e, opcionalmente, a data do transporte."}
           </p>
 
-          {driverId && driverName && (
+          {assignedDriverId && assignedDriverName && (
             <div className="flex items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
               <span>
                 Atual:{" "}
-                <span className="font-medium">{driverName}</span>
-                {scheduledTransportDate && (
+                <span className="font-medium">{assignedDriverName}</span>
+                {assignedDate && (
                   <span className="text-muted-foreground">
                     {" "}
-                    — {formatDateDisplay(scheduledTransportDate)}
+                    — {formatDateDisplay(assignedDate)}
                   </span>
                 )}
               </span>
@@ -212,7 +225,7 @@ export function DriverSelector({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Confirmando...
               </>
-            ) : driverId ? (
+            ) : assignedDriverId ? (
               "Confirmar alteração"
             ) : (
               "Confirmar motorista"

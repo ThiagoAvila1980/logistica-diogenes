@@ -45,12 +45,34 @@ function getBackoffDelay(retryCount: number): number {
 // ─── Salvar localmente ────────────────────────────────────────────────────────
 
 /**
+ * Pede ao navegador para não descartar o storage local sob pressão de
+ * quota (best-effort — sem isso, iOS/Chrome podem apagar o IndexedDB de
+ * origens pouco usadas justamente quando há uma medição pendente de sync).
+ */
+async function requestPersistentStorage(): Promise<void> {
+  try {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.storage?.persist ||
+      (await navigator.storage.persisted?.())
+    ) {
+      return;
+    }
+    await navigator.storage.persist();
+  } catch {
+    // Não suportado ou negado — segue sem persistência garantida
+  }
+}
+
+/**
  * Salva medição no IndexedDB.
  * Comprime fotos pendentes antes de armazenar para economizar espaço.
  */
 export async function saveMeasurementLocally(
   payload: SaveOfflinePayload,
 ): Promise<void> {
+  void requestPersistentStorage();
+
   const db = getOfflineDb();
 
   // Comprimir fotos ANTES de abrir a transação do IndexedDB.
@@ -121,14 +143,25 @@ export async function saveMeasurementLocally(
 /**
  * Sincroniza todas as medições pendentes com o servidor.
  * Importa as server actions dinamicamente para evitar bundle no cliente.
+ *
+ * @param respectBackoff Se `true`, ignora pendências cujo `nextRetryAt` ainda
+ * não venceu (usado pelo agendador automático). Sync manual/reconexão sempre
+ * tenta tudo imediatamente.
  */
-export async function syncPendingMeasurements(): Promise<SyncResult> {
+export async function syncPendingMeasurements(
+  options?: { respectBackoff?: boolean },
+): Promise<SyncResult> {
   const db = getOfflineDb();
 
-  const pending = await db.pendingMeasurements
+  let pending = await db.pendingMeasurements
     .where("status")
     .anyOf(["pending", "error"])
     .toArray();
+
+  if (options?.respectBackoff) {
+    const now = Date.now();
+    pending = pending.filter((m) => !m.nextRetryAt || m.nextRetryAt <= now);
+  }
 
   if (pending.length === 0) {
     return { success: true, synced: 0 };
@@ -172,21 +205,13 @@ async function syncSingleMeasurement(measurement: PendingMeasurement): Promise<v
       .filter((u) => u.status === "pending" || u.status === "error")
       .toArray();
 
-    // 2. Upload de fotos por item
+    // 2. Upload de fotos por item — falha em um item não derruba os demais
     const uploadedUrlsByItemId: Record<string, string[]> = {};
+    const photoErrors: string[] = [];
 
     if (pendingUploads.length > 0) {
       const { uploadPhotos } = await import("@/actions/upload-actions");
 
-      // Agrupar por itemId
-      const byItem: Record<number, typeof pendingUploads> = {};
-      for (const u of pendingUploads) {
-        const key = u.id ?? 0;
-        byItem[key] = byItem[key] ?? [];
-        byItem[key].push(u);
-      }
-
-      // Agrupar por itemId (string)
       const byItemId: Record<string, typeof pendingUploads> = {};
       for (const u of pendingUploads) {
         byItemId[u.itemId] = byItemId[u.itemId] ?? [];
@@ -205,19 +230,23 @@ async function syncSingleMeasurement(measurement: PendingMeasurement): Promise<v
           fd.append("photos", file);
         }
 
-        const res = await uploadPhotos(fd);
-        if (!res.success) {
-          throw new Error(`Upload falhou para item ${itemId}: ${res.message}`);
+        try {
+          const res = await uploadPhotos(fd);
+          if (!res.success) {
+            throw new Error(res.message);
+          }
+
+          uploadedUrlsByItemId[itemId] = res.urls;
+          await db.pendingUploads.bulkPut(
+            uploads.map((u) => ({ ...u, status: "synced" as const })),
+          );
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Erro desconhecido";
+          photoErrors.push(`item ${itemId}: ${msg}`);
+          await db.pendingUploads.bulkPut(
+            uploads.map((u) => ({ ...u, status: "error" as const })),
+          );
         }
-
-        uploadedUrlsByItemId[itemId] = res.urls;
-
-        // Marcar uploads como synced
-        const ids = uploads.map((u) => u.id!).filter(Boolean);
-        await db.pendingUploads.bulkPut(
-          uploads.map((u) => ({ ...u, status: "synced" as const })),
-        );
-        void ids;
       }
     }
 
@@ -254,14 +283,23 @@ async function syncSingleMeasurement(measurement: PendingMeasurement): Promise<v
       throw new Error(result.message);
     }
 
-    // 5. Limpeza pós-sync: apagar dados pesados, manter apenas cache de leitura
+    // 5. Limpeza pós-sync: medição salva, apaga a pendência e os uploads que
+    // sincronizaram. Fotos que falharam permanecem em `pendingUploads` (status
+    // "error") para retry granular na próxima rodada de sync.
     await db.transaction("rw", [db.pendingMeasurements, db.pendingUploads], async () => {
       await db.pendingMeasurements.delete(measurement.id!);
       await db.pendingUploads
         .where("osId")
         .equals(measurement.osId)
+        .filter((u) => u.status === "synced")
         .delete();
     });
+
+    if (photoErrors.length > 0) {
+      throw new Error(
+        `Medição salva, mas ${photoErrors.length} foto(s) falharam e serão reenviadas: ${photoErrors.join("; ")}`,
+      );
+    }
 
     await appendSyncLog({
       osId: measurement.osId,
@@ -273,10 +311,12 @@ async function syncSingleMeasurement(measurement: PendingMeasurement): Promise<v
     const msg = err instanceof Error ? err.message : "Erro desconhecido";
 
     const retryCount = (measurement.retryCount ?? 0) + 1;
+    const nextRetryAt = Date.now() + getBackoffDelay(retryCount - 1);
     await db.pendingMeasurements.update(measurement.id, {
       status: "error",
       lastError: msg,
       retryCount,
+      nextRetryAt,
     });
 
     await appendSyncLog({
@@ -308,27 +348,44 @@ export async function getPendingMeasurements() {
     .toArray();
 }
 
-// ─── Listener de reconexão ────────────────────────────────────────────────────
+// ─── Listener de reconexão + retry agendado (backoff) ─────────────────────────
 
 let _syncInProgress = false;
 let _syncRegistered = false;
 
+const BACKOFF_POLL_INTERVAL_MS = 15_000;
+
+async function runAutoSync(respectBackoff: boolean): Promise<void> {
+  if (_syncInProgress) return;
+  if (!getNetworkMonitor().isOnline) return;
+
+  const count = await getPendingCount();
+  if (count === 0) return;
+
+  _syncInProgress = true;
+  try {
+    await syncPendingMeasurements({ respectBackoff });
+  } finally {
+    _syncInProgress = false;
+  }
+}
+
+/**
+ * Ativa o motor de sync automático: dispara ao reconectar e, com backoff
+ * exponencial, tenta novamente pendências que falharam — sem exigir que
+ * nenhuma tela específica esteja montada.
+ */
 export function registerAutoSync(): void {
   if (_syncRegistered || typeof window === "undefined") return;
   _syncRegistered = true;
 
   const monitor = getNetworkMonitor();
-  monitor.subscribe(async (isOnline) => {
-    if (!isOnline || _syncInProgress) return;
-
-    const count = await getPendingCount();
-    if (count === 0) return;
-
-    _syncInProgress = true;
-    try {
-      await syncPendingMeasurements();
-    } finally {
-      _syncInProgress = false;
-    }
+  monitor.subscribe((isOnline) => {
+    if (!isOnline) return;
+    void runAutoSync(false);
   });
+
+  setInterval(() => {
+    void runAutoSync(true);
+  }, BACKOFF_POLL_INTERVAL_MS);
 }

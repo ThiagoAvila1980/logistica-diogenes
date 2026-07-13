@@ -23,6 +23,8 @@ type PhotoUploadProps = {
   scope: UploadScope;
   /** URLs já salvas no servidor */
   existingUrls?: string[];
+  /** Arquivos pendentes reidratados (ex.: blobs salvos offline no IndexedDB) */
+  initialPendingFiles?: File[];
   maxFiles?: number;
   multiple?: boolean;
   /**
@@ -54,6 +56,7 @@ export function PhotoUpload({
   osId,
   scope,
   existingUrls = [],
+  initialPendingFiles,
   maxFiles = UPLOAD_MAX_FILES,
   multiple = true,
   sources: sourcesProp,
@@ -83,9 +86,26 @@ export function PhotoUpload({
   const onFilesChangeRef = useRef(onFilesChange);
   const lastNotifiedUrlsRef = useRef<string | null>(null);
   const lastNotifiedFilesRef = useRef<string | null>(null);
+  const hydratedPendingRef = useRef(false);
 
   onUrlsChangeRef.current = onUrlsChange;
   onFilesChangeRef.current = onFilesChange;
+
+  // Injeta arquivos pendentes reidratados (ex.: blobs offline do IndexedDB)
+  // assim que chegarem — só uma vez, para não reaparecer após o usuário remover.
+  useEffect(() => {
+    if (hydratedPendingRef.current) return;
+    if (!initialPendingFiles?.length) return;
+    hydratedPendingRef.current = true;
+
+    setItems((prev) => {
+      const pending: PhotoUploadItem[] = initialPendingFiles.map((file) => {
+        const preview = URL.createObjectURL(file);
+        return { id: newId(), url: preview, preview, file };
+      });
+      return [...prev, ...pending].slice(0, maxFiles);
+    });
+  }, [initialPendingFiles, maxFiles]);
 
   useEffect(() => {
     setItems((prev) => {

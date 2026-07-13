@@ -19,7 +19,8 @@ import {
   toSaveResult,
 } from "@/hooks/use-offline-measurement";
 import { useIsOffline } from "@/hooks/use-network-status";
-import { registerAutoSync } from "@/lib/offline/sync-engine";
+import { getPendingMeasurements } from "@/lib/offline/sync-engine";
+import { getOfflineDb } from "@/lib/offline/db";
 import {
   MeasurementItemCard,
   createEmptyMeasurementItem,
@@ -188,14 +189,66 @@ export function FieldMeasurementForm({
   const [specValues, setSpecValues] = useState({
     priority: order.priority,
   });
+  const [hasLocalPending, setHasLocalPending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const isOffline = useIsOffline();
   const { save: saveOffline, isSaving: isOfflineSaving } = useOfflineMeasurement();
 
-  // Registrar sync automático ao reconectar (uma vez por montagem)
+  // Se há uma edição salva localmente aguardando sync para esta OS, ela vence
+  // o draft do servidor — senão a edição offline "some" ao reabrir a tela.
   useEffect(() => {
-    registerAutoSync();
-  }, []);
+    let cancelled = false;
+
+    async function rehydrate() {
+      const pending = await getPendingMeasurements();
+      if (cancelled) return;
+      const match = pending.find((p) => p.osId === order.id);
+      if (!match) return;
+
+      setHasLocalPending(true);
+      setMeasurementType(match.type);
+      setSpecValues({ priority: match.priority });
+      const nextItems = backfillVaoNumbers(
+        sortMeasurementItemsOldestFirst(match.items),
+      );
+      setItems(nextItems);
+      setViewMode(false);
+      setExpandedItemId(nextItems[0]?.id ?? null);
+
+      // Reconstrói os previews de fotos pendentes a partir dos blobs
+      // comprimidos salvos no IndexedDB (o File original não sobrevive a um
+      // remount — só o blob persistido).
+      const db = getOfflineDb();
+      const pendingUploads = await db.pendingUploads
+        .where("osId")
+        .equals(order.id)
+        .filter((u) => u.uploadType === "photo" && u.status !== "synced")
+        .toArray();
+      if (cancelled || pendingUploads.length === 0) return;
+
+      const filesByItemId: Record<string, File[]> = {};
+      for (const upload of pendingUploads) {
+        const ext = upload.mimeType.split("/")[1] ?? "jpg";
+        const file = new File([upload.blob], `pendente-${upload.id}.${ext}`, {
+          type: upload.mimeType,
+        });
+        filesByItemId[upload.itemId] = [
+          ...(filesByItemId[upload.itemId] ?? []),
+          file,
+        ];
+      }
+      setPendingFilesByItemId(filesByItemId);
+    }
+
+    rehydrate().catch(() => {
+      // IndexedDB pode não estar disponível — mantém o draft do servidor
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id]);
 
   const { relockPage, lockLandscape } = useScreenOrientationLock(!viewMode);
 
@@ -528,6 +581,17 @@ export function FieldMeasurementForm({
           <StageProblemReport osId={order.id} stage="measurement" />
         </div>
       </ServiceOrderHeader>
+
+      {hasLocalPending && (
+        <Alert>
+          <AlertTitle>Edição local não enviada</AlertTitle>
+          <AlertDescription>
+            Esta medição tem alterações salvas neste dispositivo que ainda não
+            foram sincronizadas com o servidor. Elas estão sendo exibidas
+            abaixo e serão enviadas assim que a conexão for restabelecida.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <section className="overflow-hidden rounded-xl border bg-card p-3 shadow-sm md:p-4">
         <StatusWizard currentStatus={wizardStatus} />

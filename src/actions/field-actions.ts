@@ -13,6 +13,7 @@ import { sortMeasurementItemsOldestFirst } from "@/lib/measurement/item-order";
 import { persistMeasurementDrawings } from "@/lib/upload/save-base64-image";
 import { parsePdfFileField } from "@/lib/upload/pdf-file-field";
 import { getOrderDisplayNumber } from "@/lib/order-display";
+import { mergeMeasurementItemsOnConflict } from "@/lib/measurement/merge-on-conflict";
 import {
   collectMeasurementFileUrls,
   purgeAllOsFiles,
@@ -497,10 +498,28 @@ export async function saveFieldMeasurement(
     };
   }
 
-  const photos = aggregateMeasurementPhotos(itemsToSave);
-
   try {
     const db = getDb();
+
+    // Conflito offline: se este salvamento partiu de um snapshot capturado
+    // no dispositivo (clientUpdatedAt) antes da última gravação do servidor,
+    // outro dispositivo/aba salvou primeiro — mesclar por item em vez de
+    // sobrescrever cegamente o que foi criado nesse meio-tempo.
+    if (clientUpdatedAt) {
+      const [current] = await db
+        .select({ items: measurements.items, updatedAt: measurements.updatedAt })
+        .from(measurements)
+        .where(eq(measurements.id, osId));
+
+      if (current && current.updatedAt > new Date(clientUpdatedAt)) {
+        itemsToSave = mergeMeasurementItemsOnConflict(
+          itemsToSave,
+          current.items ?? [],
+        );
+      }
+    }
+
+    const photos = aggregateMeasurementPhotos(itemsToSave);
 
     await db
       .update(measurements)

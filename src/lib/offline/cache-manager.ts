@@ -14,9 +14,11 @@ import {
   getOfflineDb,
   toCachedMeasurement,
   type CachedMeasurement,
+  type CachedOrderDetail,
 } from "./db";
-import type { OrderListItem } from "@/lib/data/types";
+import type { OrderListItem, OrderDetail } from "@/lib/data/types";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
+import type { FieldMeasurementDraft } from "@/lib/data/field";
 
 // ─── Cache de medições ────────────────────────────────────────────────────────
 
@@ -72,4 +74,35 @@ export async function getCachedLookups(): Promise<MeasurementLookups | null> {
   if (age > LOOKUPS_TTL_MS) return null;
 
   return entry.data as MeasurementLookups;
+}
+
+// ─── Cache do detalhe da OS (draft + lookups) ─────────────────────────────────
+
+/** Salva o snapshot de uma OS (order + drafts dos dois tipos + lookups) para reabrir offline */
+export async function cacheOrderDetail(params: {
+  osId: string;
+  order: OrderDetail;
+  draftsByType: {
+    orcamento?: FieldMeasurementDraft;
+    final?: FieldMeasurementDraft;
+  };
+  lookups: MeasurementLookups;
+}): Promise<void> {
+  const db = getOfflineDb();
+  const entry: CachedOrderDetail = {
+    osId: params.osId,
+    order: params.order,
+    draftsByType: params.draftsByType,
+    lookups: params.lookups,
+    cachedAt: new Date().toISOString(),
+  };
+  await db.cachedOrderDetails.put(entry);
+}
+
+/** Retorna o snapshot cacheado de uma OS, se existir */
+export async function getCachedOrderDetail(
+  osId: string,
+): Promise<CachedOrderDetail | undefined> {
+  const db = getOfflineDb();
+  return db.cachedOrderDetails.get(osId);
 }

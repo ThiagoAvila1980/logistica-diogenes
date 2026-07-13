@@ -8,13 +8,16 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { DrawingPreview } from "@/components/production/drawing-preview";
+import { EditableDrawingPreview } from "@/components/production/editable-drawing-preview";
 import { MediaCarousel } from "@/components/production/media-carousel";
 import { MeasurementDimensionsSummary } from "@/components/field/measurement-item-view";
 
 type ProductionMeasurementMediaProps = {
+  osId: string;
   items: MeasurementLineItem[];
   photos: string[];
   lookups?: MeasurementLookups;
+  canEditDrawings?: boolean;
 };
 
 type MediaSlide =
@@ -22,15 +25,18 @@ type MediaSlide =
       kind: "drawing";
       item: MeasurementLineItem;
       index: number;
+      drawingId: string;
       drawingUrl: string | null;
       drawingIndex: number;
     }
   | { kind: "photo"; url: string; itemIndex: number; photoIndex: number };
 
 export function ProductionMeasurementMedia({
+  osId,
   items,
   photos,
   lookups,
+  canEditDrawings = false,
 }: ProductionMeasurementMediaProps) {
   const itemPhotoUrls = new Set(items.flatMap((item) => item.photos ?? []));
   const legacyOnlyPhotos = photos.filter((url) => !itemPhotoUrls.has(url));
@@ -50,10 +56,11 @@ export function ProductionMeasurementMedia({
             kind: "drawing" as const,
             item,
             index,
+            drawingId: d.id,
             drawingUrl: d.url,
             drawingIndex: dIdx,
           }))
-        : [{ kind: "drawing" as const, item, index, drawingUrl: null, drawingIndex: 0 }];
+        : [{ kind: "drawing" as const, item, index, drawingId: "__legacy__", drawingUrl: null, drawingIndex: 0 }];
 
       for (const [photoIndex, url] of (item.photos ?? []).entries()) {
         itemSlides.push({
@@ -102,9 +109,14 @@ export function ProductionMeasurementMedia({
                 >
                   {slide.drawingUrl ? (
                     <div className="border-b bg-card">
-                      <DrawingPreview
+                      <EditableDrawingPreview
+                        osId={osId}
+                        itemId={slide.item.id}
+                        drawingId={slide.drawingId}
+                        drawingNumber={slide.drawingIndex + 1}
                         src={slide.drawingUrl}
                         alt={`Desenho ${slide.drawingIndex + 1} — medição ${slide.index + 1}`}
+                        canEdit={canEditDrawings}
                       />
                     </div>
                   ) : (
