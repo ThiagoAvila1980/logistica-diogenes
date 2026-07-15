@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OrderListItem } from "@/lib/data/types";
-import type { InstallationSteps } from "@/lib/transport-gates";
+import type { InstallationOrderProgress } from "@/lib/data/installation-steps-batch";
 import {
   isActiveInstallationListing,
   isInstallationIndexCandidate,
@@ -26,10 +26,18 @@ function makeOrder(
   };
 }
 
-const completedInstallation: InstallationSteps = {
+const completedInstallation: InstallationOrderProgress = {
   instalacaoEstruturalFeita: true,
   instalacaoVidrosFeita: true,
   instalacaoAcabamentoFeito: true,
+  todosVaosConcluidos: true,
+};
+
+const stepsDoneButNotConfirmed: InstallationOrderProgress = {
+  instalacaoEstruturalFeita: true,
+  instalacaoVidrosFeita: true,
+  instalacaoAcabamentoFeito: true,
+  todosVaosConcluidos: false,
 };
 
 describe("isInstallationIndexCandidate", () => {
@@ -86,11 +94,18 @@ describe("isActiveInstallationListing", () => {
       isActiveInstallationListing(makeOrder(), {
         ...completedInstallation,
         instalacaoAcabamentoFeito: false,
+        todosVaosConcluidos: false,
       }),
     ).toBe(true);
   });
 
-  it("remove instalação concluída da listagem", () => {
+  it("mantém instalação quando todas as fases estão ticadas mas vãos não foram confirmados", () => {
+    expect(
+      isActiveInstallationListing(makeOrder(), stepsDoneButNotConfirmed),
+    ).toBe(true);
+  });
+
+  it("remove instalação quando todos os vãos foram confirmados como concluídos", () => {
     expect(
       isActiveInstallationListing(makeOrder(), completedInstallation),
     ).toBe(false);

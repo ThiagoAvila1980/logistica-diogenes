@@ -46,13 +46,7 @@ function isTransportKanbanPhaseComplete(os: KanbanOrderItem): boolean {
 }
 
 function isInstallationKanbanPhaseComplete(os: KanbanOrderItem): boolean {
-  const inst = os.installationSteps;
-  if (!inst) return false;
-  return (
-    inst.instalacaoEstruturalFeita &&
-    inst.instalacaoVidrosFeita &&
-    inst.instalacaoAcabamentoFeito
-  );
+  return os.installationSteps?.todosVaosConcluidos === true;
 }
 
 /** Fases em que a OS deve aparecer no kanban (suporta colunas paralelas). */

@@ -39,6 +39,10 @@ import {
   KanbanMoveConfirmDialog,
   type KanbanPendingMove,
 } from "./kanban-move-confirm-dialog";
+import {
+  KanbanRevertVaosDialog,
+  type KanbanRevertRequest,
+} from "./kanban-revert-vaos-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { getOrderDisplayNumber } from "@/lib/order-display";
@@ -53,9 +57,11 @@ function groupByPhase(data: KanbanOrderItem[]): PhaseColumnsState {
 
 type KanbanBoardProps = {
   initialData: KanbanOrderItem[];
+  /** Se o usuário logado pode voltar OS para etapas anteriores */
+  canRevertStage?: boolean;
 };
 
-export function KanbanBoard({ initialData }: KanbanBoardProps) {
+export function KanbanBoard({ initialData, canRevertStage = false }: KanbanBoardProps) {
   const [orders, setOrders] = useState(initialData);
   const [filters, setFilters] = useState<KanbanFilters>(DEFAULT_KANBAN_FILTERS);
   const [columns, setColumns] = useState<PhaseColumnsState>(() =>
@@ -71,6 +77,7 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
   const [pendingMove, setPendingMove] = useState<KanbanPendingMove | null>(
     null,
   );
+  const [revertRequest, setRevertRequest] = useState<KanbanRevertRequest>(null);
 
   useEffect(() => {
     setOrders(initialData);
@@ -257,6 +264,36 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
     setPendingMove(null);
   }, [isPending]);
 
+  const requestRevert = useCallback(
+    (osId: string) => {
+      setDragError(null);
+      setDragSuccess(null);
+
+      const order = findOrder(osId);
+      if (!order) {
+        setDragError("Ordem de serviço não encontrada.");
+        return;
+      }
+
+      setRevertRequest({
+        osId,
+        osNumber: getOrderDisplayNumber(order),
+        clientName: order.clientName,
+      });
+    },
+    [findOrder],
+  );
+
+  const handleCloseRevert = useCallback(() => {
+    setRevertRequest(null);
+  }, []);
+
+  const handleReverted = useCallback(() => {
+    setRevertRequest(null);
+    setDragSuccess("Etapa revertida com sucesso.");
+    handleRefresh();
+  }, [handleRefresh]);
+
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -418,6 +455,12 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
         onCancel={handleCancelMove}
       />
 
+      <KanbanRevertVaosDialog
+        pending={revertRequest}
+        onClose={handleCloseRevert}
+        onReverted={handleReverted}
+      />
+
       <DragDropContext onDragEnd={onDragEnd}>
         <KanbanMobileCarousel
           phases={KANBAN_PHASES}
@@ -430,6 +473,8 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
               items={columns[phase.id] ?? []}
               isDropDisabled={isPending}
               onKeyboardAdvance={handleKeyboardAdvance}
+              canRevertStage={canRevertStage}
+              onRequestRevert={requestRevert}
               variant="carousel"
             />
           ))}
@@ -443,6 +488,8 @@ export function KanbanBoard({ initialData }: KanbanBoardProps) {
               items={columns[phase.id] ?? []}
               isDropDisabled={isPending}
               onKeyboardAdvance={handleKeyboardAdvance}
+              canRevertStage={canRevertStage}
+              onRequestRevert={requestRevert}
             />
           ))}
         </div>

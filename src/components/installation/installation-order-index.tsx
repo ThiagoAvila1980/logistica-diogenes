@@ -5,12 +5,12 @@ import { FilteredOrderList } from "@/components/dashboard/filtered-order-list";
 import { serviceOrderFilterFields } from "@/lib/filters/service-order-fields";
 import type { OrderListItem } from "@/lib/data/types";
 import type { InstallationSummary } from "@/lib/data/installation";
-import type { InstallationSteps } from "@/lib/transport-gates";
+import type { InstallationOrderProgress } from "@/lib/data/installation-steps-batch";
 
 type InstallationOrderIndexProps = {
   orders: OrderListItem[];
   summaries: Record<string, InstallationSummary>;
-  installationStepsByOs: Record<string, InstallationSteps>;
+  installationStepsByOs: Record<string, InstallationOrderProgress>;
 };
 
 export function InstallationOrderIndex({

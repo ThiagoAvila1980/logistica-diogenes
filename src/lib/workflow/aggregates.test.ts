@@ -3,6 +3,9 @@ import {
   aggregateCuttingStepsFromItems,
   aggregateTransportStepsFromItems,
   aggregateInstallationStepsFromItems,
+  aggregateAllVaosInstallationConcluded,
+  isVaoInstallationStepsComplete,
+  isVaoInstallationConcluded,
   canOperateCuttingForItems,
   effectiveCuttingSteps,
   hasPendingCuttingWorkOnItems,
@@ -167,6 +170,52 @@ describe("aggregateInstallationStepsFromItems", () => {
     const agg = aggregateInstallationStepsFromItems(items);
     expect(agg.instalacaoEstruturalFeita).toBe(true);
     expect(agg.instalacaoVidrosFeita).toBe(false);
+  });
+});
+
+describe("installation vão conclusion", () => {
+  const allSteps = {
+    estrutural: true,
+    vidros: true,
+    acabamento: true,
+  } as const;
+
+  it("isVaoInstallationStepsComplete exige as 3 fases", () => {
+    expect(
+      isVaoInstallationStepsComplete(
+        item("a", { installationProgress: { estrutural: true, vidros: true, acabamento: false } }),
+      ),
+    ).toBe(false);
+    expect(
+      isVaoInstallationStepsComplete(item("a", { installationProgress: allSteps })),
+    ).toBe(true);
+  });
+
+  it("isVaoInstallationConcluded exige flag concluido", () => {
+    expect(
+      isVaoInstallationConcluded(
+        item("a", { installationProgress: { ...allSteps, concluido: false } }),
+      ),
+    ).toBe(false);
+    expect(
+      isVaoInstallationConcluded(
+        item("a", { installationProgress: { ...allSteps, concluido: true } }),
+      ),
+    ).toBe(true);
+  });
+
+  it("aggregateAllVaosInstallationConcluded exige todos os vãos confirmados", () => {
+    const items = [
+      item("a", { installationProgress: { ...allSteps, concluido: true } }),
+      item("b", { installationProgress: { ...allSteps, concluido: false } }),
+    ];
+    expect(aggregateAllVaosInstallationConcluded(items)).toBe(false);
+
+    const allConfirmed = [
+      item("a", { installationProgress: { ...allSteps, concluido: true } }),
+      item("b", { installationProgress: { ...allSteps, concluido: true } }),
+    ];
+    expect(aggregateAllVaosInstallationConcluded(allConfirmed)).toBe(true);
   });
 });
 

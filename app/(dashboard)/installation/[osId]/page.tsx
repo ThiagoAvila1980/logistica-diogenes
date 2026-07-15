@@ -118,7 +118,7 @@ export default async function InstallationOsPage({ params }: Props) {
           dailyNotes={detail.dailyNotes}
           lookups={lookups}
           installers={installers}
-          canAssignInstaller={false}
+          canAssignInstaller={isManager}
         />
 
         <InstallationServicePhotos

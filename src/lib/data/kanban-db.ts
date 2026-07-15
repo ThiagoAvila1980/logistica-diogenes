@@ -17,6 +17,7 @@ import {
   aggregateCuttingStepsFromItems,
   aggregateTransportStepsFromItems,
   aggregateInstallationStepsFromItems,
+  aggregateAllVaosInstallationConcluded,
   hasPendingCuttingWorkOnItems,
   selectCuttingLineItems,
 } from "@/lib/workflow/aggregates";
@@ -127,7 +128,10 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
     const hasFirstTransportDelivery =
       isTransportPhase && transportStepsData.levarPerfilEstrutural;
 
-    const installationStepsData = aggregateInstallationStepsFromItems(items);
+    const installationStepsData = {
+      ...aggregateInstallationStepsFromItems(items),
+      todosVaosConcluidos: aggregateAllVaosInstallationConcluded(items),
+    };
 
     const showCutting = isCortePhase || hasPendingCutting;
     const showTransport = isTransportPhase;

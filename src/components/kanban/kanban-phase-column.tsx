@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { KanbanCard } from "./kanban-card";
 import { getAllowedTransitions } from "@/lib/workflow/status-machine";
+import { getRevertablePhase } from "@/lib/workflow/stage-revert";
 import type { KanbanPhase } from "@/lib/kanban/column-groups";
 
 import type { KanbanPlacedOrder } from "@/lib/kanban/phase-placement";
@@ -14,6 +15,8 @@ type KanbanPhaseColumnProps = {
   items: KanbanPlacedOrder[];
   isDropDisabled?: boolean;
   onKeyboardAdvance?: (osId: string) => void;
+  canRevertStage?: boolean;
+  onRequestRevert?: (osId: string) => void;
   /** Coluna em tela cheia no carrossel mobile */
   variant?: "default" | "carousel";
 };
@@ -23,6 +26,8 @@ export function KanbanPhaseColumn({
   items,
   isDropDisabled,
   onKeyboardAdvance,
+  canRevertStage,
+  onRequestRevert,
   variant = "default",
 }: KanbanPhaseColumnProps) {
   const isCarousel = variant === "carousel";
@@ -99,6 +104,12 @@ export function KanbanPhaseColumn({
                     index={idx}
                     canAdvance={canAdvance}
                     onKeyboardAdvance={onKeyboardAdvance}
+                    canRevert={
+                      canRevertStage &&
+                      !item.isParallelPlacement &&
+                      getRevertablePhase(item.os.status) !== null
+                    }
+                    onRequestRevert={onRequestRevert}
                     variant={variant}
                   />
                 );

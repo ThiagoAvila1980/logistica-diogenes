@@ -1,12 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requireRole } from "@/lib/auth/require-role";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { getDb } from "@/lib/db";
-import { measurements, users } from "@/db/schema";
+import { measurements } from "@/db/schema";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { logger } from "@/lib/logger";
 
@@ -30,8 +30,8 @@ export async function assignInstallerToVaoAction(
   }
 
   try {
-    // Atribuir instalador ao vão é decisão de gestão — somente admin.
-    await requireRole(["admin"]);
+    // Atribuir instalador ao vão é decisão de gestão — admin ou gerente.
+    await requireRole(["admin", "gerente"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -93,13 +93,16 @@ export async function assignInstallerToVaoAction(
 const sendVaosToInstallationSchema = z.object({
   osId: z.string().uuid(),
   selectedItemIds: z.array(z.string().min(1)).min(1, "Selecione ao menos um vão"),
-  installerId: z.string().uuid(),
 });
 
 export type SendVaosToInstallationResult =
   | { success: true; message: string }
   | { success: false; message: string };
 
+/**
+ * Envia vãos para instalação sem exigir instalador nesta etapa — o
+ * instalador é designado depois, individualmente, na tela de instalação.
+ */
 export async function sendVaosToInstallationAction(
   raw: z.infer<typeof sendVaosToInstallationSchema>,
 ): Promise<SendVaosToInstallationResult> {
@@ -110,14 +113,13 @@ export async function sendVaosToInstallationAction(
   }
 
   try {
-    // Enviar vãos para instalação (com escolha de instalador) é decisão
-    // de gestão — somente admin.
-    await requireRole(["admin"]);
+    // Enviar vãos para instalação é decisão de gestão — admin ou gerente.
+    await requireRole(["admin", "gerente"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
 
-  const { osId, selectedItemIds, installerId } = parsed.data;
+  const { osId, selectedItemIds } = parsed.data;
   const selectedSet = new Set(selectedItemIds);
 
   try {
@@ -125,16 +127,6 @@ export async function sendVaosToInstallationAction(
     if (!order) return { success: false, message: "OS não encontrada" };
 
     const db = getDb();
-
-    const [installer] = await db
-      .select({ id: users.id, active: users.active, roles: users.roles })
-      .from(users)
-      .where(and(eq(users.id, installerId), eq(users.active, true)))
-      .limit(1);
-
-    if (!installer || !installer.roles.includes("instalador")) {
-      return { success: false, message: "Instalador não encontrado ou inativo" };
-    }
 
     await db.transaction(async (tx) => {
       const [meas] = await tx
@@ -154,17 +146,13 @@ export async function sendVaosToInstallationAction(
 
       const updatedItems = items.map((item) => {
         if (!selectedSet.has(item.id)) return item;
-        const prev =
-          item.installationProgress ?? {
-            estrutural: false,
-            vidros: false,
-            acabamento: false,
-          };
+        if (item.installationProgress) return item;
         return {
           ...item,
           installationProgress: {
-            ...prev,
-            installerId,
+            estrutural: false,
+            vidros: false,
+            acabamento: false,
           },
         };
       });

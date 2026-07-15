@@ -3,8 +3,8 @@ import type { UserRole } from "@/lib/auth/permissions";
 import { canViewAllOrders, hasRole } from "@/lib/auth/permissions";
 import {
   isTransportPhaseStatus,
-  type InstallationSteps,
 } from "@/lib/transport-gates";
+import type { InstallationOrderProgress } from "@/lib/data/installation-steps-batch";
 
 /** Candidatos à listagem do módulo de instalação (antes de checar progresso). */
 export function isInstallationIndexCandidate(
@@ -19,18 +19,12 @@ export function isInstallationIndexCandidate(
   return false;
 }
 
-/** Instalação concluída vai para /concluded e some de /installation. */
+/** OS some de /installation quando todos os vãos foram confirmados como concluídos. */
 export function isActiveInstallationListing(
   order: OrderListItem,
-  installationSteps: InstallationSteps | null,
+  progress: InstallationOrderProgress | null,
 ): boolean {
   if (order.status === "concluido") return false;
-  if (!installationSteps) return true;
-
-  const installationComplete =
-    installationSteps.instalacaoEstruturalFeita &&
-    installationSteps.instalacaoVidrosFeita &&
-    installationSteps.instalacaoAcabamentoFeito;
-
-  return !installationComplete;
+  if (!progress) return true;
+  return !progress.todosVaosConcluidos;
 }

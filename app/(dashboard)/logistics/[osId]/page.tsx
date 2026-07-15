@@ -4,12 +4,15 @@ import { getTransportDetailForOs } from "@/lib/data/transport-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { listVehiclesForTransportSelection } from "@/lib/data/vehicles";
 import { listActiveDrivers } from "@/lib/data/drivers";
-import { listActiveInstallers } from "@/lib/data/installers";
 import { filterVaoItemsForSession } from "@/lib/logistics/transport-driver-access";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canEditMeasurementHeader, hasRole } from "@/lib/auth/permissions";
+import {
+  canEditMeasurementHeader,
+  canViewAllOrders,
+  hasRole,
+} from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
@@ -30,6 +33,7 @@ export default async function LogisticsOsPage({ params }: Props) {
   if (!order) notFound();
 
   const isAdmin = hasRole(session?.roles ?? [], "admin");
+  const canSendToInstallation = canViewAllOrders(session?.roles ?? []);
   const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
   const [detail, lookups] = await Promise.all([
@@ -39,7 +43,6 @@ export default async function LogisticsOsPage({ params }: Props) {
   const vehicles = await listVehiclesForTransportSelection(osId);
 
   const drivers = isAdmin ? await listActiveDrivers() : [];
-  const installers = isAdmin ? await listActiveInstallers() : [];
   const visibleItems = filterVaoItemsForSession(detail.items, session);
 
   const header = (
@@ -114,13 +117,12 @@ export default async function LogisticsOsPage({ params }: Props) {
         canAssignVehicle={isAdmin}
       />
 
-      {isAdmin && (
+      {canSendToInstallation && (
         <SendToInstallationDialog
           osId={osId}
           osNumber={getOrderDisplayNumber(order)}
           clientName={order.clientName}
           items={detail.items}
-          installers={installers}
           lookups={lookups}
         />
       )}

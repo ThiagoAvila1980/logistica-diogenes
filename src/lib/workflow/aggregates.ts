@@ -133,6 +133,21 @@ export function aggregateTransportStepsFromItems(
  * - instalacaoEstruturalFeita → TODOS os vãos têm estrutural concluído
  * - instalacaoVidrosFeita    → TODOS os vãos têm vidros concluídos
  */
+export function isVaoInstallationStepsComplete(
+  item: MeasurementLineItem,
+): boolean {
+  const progress = item.installationProgress;
+  return (
+    progress?.estrutural === true &&
+    progress?.vidros === true &&
+    progress?.acabamento === true
+  );
+}
+
+export function isVaoInstallationConcluded(item: MeasurementLineItem): boolean {
+  return item.installationProgress?.concluido === true;
+}
+
 export function aggregateInstallationStepsFromItems(
   items: MeasurementLineItem[],
 ): InstallationSteps {
@@ -150,6 +165,14 @@ export function aggregateInstallationStepsFromItems(
       (i) => i.installationProgress?.acabamento === true,
     ),
   };
+}
+
+/** Todos os vãos foram confirmados como concluídos na instalação */
+export function aggregateAllVaosInstallationConcluded(
+  items: MeasurementLineItem[],
+): boolean {
+  if (!items.length) return false;
+  return items.every(isVaoInstallationConcluded);
 }
 
 /**

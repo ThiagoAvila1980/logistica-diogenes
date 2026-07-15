@@ -23,6 +23,7 @@ export type InstallationKanbanSteps = {
   instalacaoEstruturalFeita: boolean;
   instalacaoVidrosFeita: boolean;
   instalacaoAcabamentoFeito: boolean;
+  todosVaosConcluidos: boolean;
 };
 
 export type KanbanOrderItem = {

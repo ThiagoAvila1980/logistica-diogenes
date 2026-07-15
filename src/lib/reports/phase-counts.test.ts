@@ -43,6 +43,17 @@ describe("countOrdersByKanbanPhase", () => {
           instalacaoEstruturalFeita: true,
           instalacaoVidrosFeita: true,
           instalacaoAcabamentoFeito: true,
+          todosVaosConcluidos: false,
+        },
+      }),
+      makeOrder({
+        id: "4",
+        status: "instalacao_vidros",
+        installationSteps: {
+          instalacaoEstruturalFeita: true,
+          instalacaoVidrosFeita: true,
+          instalacaoAcabamentoFeito: true,
+          todosVaosConcluidos: true,
         },
       }),
       makeOrder({
@@ -56,7 +67,7 @@ describe("countOrdersByKanbanPhase", () => {
     );
 
     expect(counts.transporte).toBe(1);
-    expect(counts.instalacao).toBe(1);
+    expect(counts.instalacao).toBe(2);
     expect(counts.concluidos).toBe(2);
   });
 

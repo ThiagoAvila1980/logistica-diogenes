@@ -3,7 +3,7 @@
 import type React from "react";
 import Link from "next/link";
 import { Draggable } from "@hello-pangea/dnd";
-import { GripVertical, BadgeCheck } from "lucide-react";
+import { GripVertical, BadgeCheck, Undo2 } from "lucide-react";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { formatBrDate } from "@/lib/date-format";
 import { getOsModuleHrefForKanbanPhase } from "@/lib/os-module-href";
@@ -31,6 +31,8 @@ type KanbanCardProps = {
   index: number;
   canAdvance?: boolean;
   onKeyboardAdvance?: (osId: string) => void;
+  canRevert?: boolean;
+  onRequestRevert?: (osId: string) => void;
   variant?: "default" | "carousel";
 };
 
@@ -76,6 +78,8 @@ export function KanbanCard({
   index,
   canAdvance,
   onKeyboardAdvance,
+  canRevert,
+  onRequestRevert,
   variant = "default",
 }: KanbanCardProps) {
   const text = kanbanCardTextClasses(variant);
@@ -158,6 +162,21 @@ export function KanbanCard({
                 >
                   {displayNumber}
                 </Link>
+                {canRevert && onRequestRevert && (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded p-0.5 text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                    title="Voltar etapa"
+                    aria-label={`Voltar etapa do orçamento ${displayNumber}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRequestRevert(os.id);
+                    }}
+                    tabIndex={snapshot.isDragging ? -1 : 0}
+                  >
+                    <Undo2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+                  </button>
+                )}
               </div>
               <Link
                 href={detailHref}

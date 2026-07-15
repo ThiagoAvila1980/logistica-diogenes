@@ -26,6 +26,7 @@ export type VaoInstallationProgress = {
   estrutural: boolean;
   vidros: boolean;
   acabamento: boolean;
+  concluido: boolean;
 };
 
 export type ConcludedOrderItem = {
@@ -58,7 +59,7 @@ const CONCLUDED_STATUSES: OsStatus[] = [
 ];
 
 function hasVaoInstallationWork(vao: VaoInstallationProgress): boolean {
-  return vao.estrutural || vao.vidros || vao.acabamento;
+  return vao.concluido;
 }
 
 function summarizeVaos(vaos: VaoInstallationProgress[]) {
@@ -175,15 +176,16 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
           estrutural: item.installationProgress?.estrutural ?? false,
           vidros: item.installationProgress?.vidros ?? false,
           acabamento: item.installationProgress?.acabamento ?? false,
+          concluido: item.installationProgress?.concluido ?? false,
         };
       });
 
-      const estruturalCount = vaos.filter((v) => v.estrutural).length;
-      const vidrosCount = vaos.filter((v) => v.vidros).length;
-      const acabamentoCount = vaos.filter((v) => v.acabamento).length;
+      const concludedVaos = vaos.filter((v) => v.concluido);
+      const estruturalCount = concludedVaos.filter((v) => v.estrutural).length;
+      const vidrosCount = concludedVaos.filter((v) => v.vidros).length;
+      const acabamentoCount = concludedVaos.filter((v) => v.acabamento).length;
 
-      // Só mostra OSs que têm pelo menos um vão com algum progresso de instalação
-      const hasAnyProgress = estruturalCount > 0 || vidrosCount > 0 || acabamentoCount > 0;
+      const hasAnyProgress = concludedVaos.length > 0;
       if (!hasAnyProgress && r.status !== "concluido") return null;
 
       const item: ConcludedOrderItem = {

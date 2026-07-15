@@ -13,6 +13,7 @@ import {
   aggregateInstallationStepsFromItems,
   effectiveCuttingSteps,
   isInstallationOrLater,
+  isVaoInstallationStepsComplete,
 } from "@/lib/workflow/aggregates";
 import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
@@ -22,6 +23,10 @@ import { recordVaoStepCompletion } from "@/lib/performance/scoring";
 export type UpdateInstallationStepResult =
   | { success: true }
   | { success: false; message: string; reason?: "gate_locked" };
+
+export type CompleteInstallationVaoResult =
+  | { success: true }
+  | { success: false; message: string };
 
 // ─── Action: atualizar etapa de instalação por vão ───────────────────────────
 
@@ -121,10 +126,16 @@ export async function updateItemInstallationStepAction(
       }
 
       // Atualiza o item no JSONB
+      let wasConcluded = false;
       const updatedItems = items.map((i) => {
         if (i.id !== itemId) return i;
         const prev = i.installationProgress ?? { estrutural: false, vidros: false, acabamento: false };
-        return { ...i, installationProgress: { ...prev, [step]: done } };
+        wasConcluded = prev.concluido === true;
+        const next = { ...prev, [step]: done };
+        if (!done) {
+          next.concluido = false;
+        }
+        return { ...i, installationProgress: next };
       });
 
       await tx
@@ -153,8 +164,8 @@ export async function updateItemInstallationStepAction(
         await tx.insert(installationLogs).values({ idMedicao: osId, ...logFields });
       }
 
-      // Pontuação: instalacao_vao ao marcar/desmarcar step=acabamento (último step)
-      if (step === "acabamento") {
+      // Reverte pontuação se o vão estava confirmado e alguma etapa foi desmarcada
+      if (wasConcluded && !done) {
         const updatedItem = updatedItems.find((i) => i.id === itemId);
         await recordVaoStepCompletion(tx, {
           userId: updatedItem?.installationProgress?.installerId,
@@ -162,7 +173,7 @@ export async function updateItemInstallationStepAction(
           itemId,
           eventType: "instalacao_vao",
           idTipoEnvidracamento: updatedItem?.idTipoEnvidracamento,
-          done,
+          done: false,
         });
       }
     });
@@ -179,5 +190,106 @@ export async function updateItemInstallationStepAction(
     }
     logger.error("updateItemInstallationStep failed", { osId, itemId, step, err });
     return { success: false, message: "Erro ao atualizar etapa de instalação" };
+  }
+}
+
+// ─── Action: confirmar conclusão de vão na instalação ────────────────────────
+
+const completeInstallationVaoSchema = z.object({
+  osId: z.string().uuid(),
+  itemId: z.string().min(1),
+});
+
+export async function completeInstallationVaoAction(
+  raw: z.infer<typeof completeInstallationVaoSchema>,
+): Promise<CompleteInstallationVaoResult> {
+  const parsed = completeInstallationVaoSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
+  }
+
+  try {
+    await requireRole(["admin", "gerente", "instalador"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const { osId, itemId } = parsed.data;
+
+  try {
+    const order = await getServiceOrderById(osId);
+    if (!order) return { success: false, message: "OS não encontrada" };
+
+    const db = getDb();
+    const isLatePhase = isInstallationOrLater(order.status);
+
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
+
+      if (!meas) throw new WorkflowActionError("OS não encontrada");
+
+      const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const cuttingSteps = effectiveCuttingSteps(
+        aggregateCuttingStepsFromItems(items),
+        isLatePhase,
+      );
+
+      if (!canOperateInstallationModule(order.status, cuttingSteps)) {
+        throw new WorkflowActionError(
+          "Aguardando conclusão do corte para liberar instalação",
+        );
+      }
+
+      const item = items.find((i) => i.id === itemId);
+      if (!item) throw new WorkflowActionError("Vão não encontrado");
+
+      if (!isVaoInstallationStepsComplete(item)) {
+        throw new WorkflowActionError(
+          "Conclua todas as fases do vão antes de confirmar",
+        );
+      }
+
+      if (item.installationProgress?.concluido === true) {
+        throw new WorkflowActionError("Este vão já foi concluído");
+      }
+
+      const updatedItems = items.map((i) => {
+        if (i.id !== itemId) return i;
+        const prev = i.installationProgress ?? { estrutural: false, vidros: false, acabamento: false };
+        return {
+          ...i,
+          installationProgress: { ...prev, concluido: true },
+        };
+      });
+
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
+
+      const updatedItem = updatedItems.find((i) => i.id === itemId);
+      await recordVaoStepCompletion(tx, {
+        userId: updatedItem?.installationProgress?.installerId,
+        measurementId: osId,
+        itemId,
+        eventType: "instalacao_vao",
+        idTipoEnvidracamento: updatedItem?.idTipoEnvidracamento,
+        done: true,
+      });
+    });
+
+    revalidateOSRoutes(osId);
+    return { success: true };
+  } catch (err) {
+    if (err instanceof WorkflowActionError) {
+      return { success: false, message: err.message };
+    }
+    logger.error("completeInstallationVao failed", { osId, itemId, err });
+    return { success: false, message: "Erro ao concluir vão" };
   }
 }

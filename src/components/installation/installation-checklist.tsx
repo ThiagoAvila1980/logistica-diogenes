@@ -23,7 +23,10 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { updateItemInstallationStepAction } from "@/actions/installation-step-actions";
+import {
+  completeInstallationVaoAction,
+  updateItemInstallationStepAction,
+} from "@/actions/installation-step-actions";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { DrawingPreview } from "@/components/production/drawing-preview";
 import { MeasurementDimensionsSummary } from "@/components/field/measurement-item-view";
@@ -35,8 +38,10 @@ import {
   getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
 import { InstallationDailyNotes } from "@/components/installation/installation-daily-notes";
-import { InstallerSelector } from "@/components/logistics/installer-selector";
+import { VaoInstallerSelect } from "@/components/installation/vao-installer-select";
 import type { InstallerOption } from "@/lib/data/installers-db";
+import { CompleteInstallationVaoDialog } from "@/components/installation/complete-installation-vao-dialog";
+import { Button } from "@/components/ui/button";
 
 type InstStep = "estrutural" | "vidros" | "acabamento";
 
@@ -59,6 +64,10 @@ function getItemInstProgress(item: MeasurementLineItem): ItemInstProgress {
     vidros: item.installationProgress?.vidros ?? false,
     acabamento: item.installationProgress?.acabamento ?? false,
   };
+}
+
+function isItemConcluded(item: MeasurementLineItem): boolean {
+  return item.installationProgress?.concluido === true;
 }
 
 function getItemInstGates(
@@ -202,14 +211,27 @@ export function InstallationChecklist({
     () =>
       Object.fromEntries(items.map((item) => [item.id, getItemInstProgress(item)])),
   );
+  const [concludedIds, setConcludedIds] = useState<Set<string>>(
+    () => new Set(items.filter(isItemConcluded).map((item) => item.id)),
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [pendingComplete, setPendingComplete] = useState<{
+    itemId: string;
+    vaoLabel: string;
+    vaoSpec: string;
+  } | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
 
-  const allEstrutural = items.length > 0 && items.every((i) => progress[i.id]?.estrutural);
-  const allVidros = items.length > 0 && items.every((i) => progress[i.id]?.vidros);
-  const allAcabamento = items.length > 0 && items.every((i) => progress[i.id]?.acabamento);
-  const allDone = allEstrutural && allVidros && allAcabamento;
+  const activeItems = items.filter((item) => !concludedIds.has(item.id));
+  const concludedItems = items.filter((item) => concludedIds.has(item.id));
+
+  const allEstrutural = activeItems.length > 0 && activeItems.every((i) => progress[i.id]?.estrutural);
+  const allVidros = activeItems.length > 0 && activeItems.every((i) => progress[i.id]?.vidros);
+  const allAcabamento = activeItems.length > 0 && activeItems.every((i) => progress[i.id]?.acabamento);
+  const allActiveStepsDone = activeItems.length === 0 || (allEstrutural && allVidros && allAcabamento);
+  const allVaosConcluded = items.length > 0 && concludedIds.size === items.length;
 
   function toggleExpand(itemId: string) {
     setExpandedId((prev) => (prev === itemId ? null : itemId));
@@ -237,10 +259,276 @@ export function InstallationChecklist({
         ...prev,
         [itemId]: { ...prev[itemId], [step]: done },
       }));
+      if (!done) {
+        setConcludedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(itemId);
+          return next;
+        });
+      }
     } else {
       setStepError(result.message);
     }
     setLoadingKey(null);
+  }
+
+  async function handleConfirmComplete() {
+    if (!pendingComplete) return;
+    setIsCompleting(true);
+    setStepError(null);
+
+    let result: Awaited<ReturnType<typeof completeInstallationVaoAction>> | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        result = await completeInstallationVaoAction({
+          osId,
+          itemId: pendingComplete.itemId,
+        });
+        break;
+      } catch {
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+
+    if (!result) {
+      setStepError("Falha de conexão. Verifique sua internet e tente novamente.");
+    } else if (result.success) {
+      setConcludedIds((prev) => new Set(prev).add(pendingComplete.itemId));
+      setPendingComplete(null);
+    } else {
+      setStepError(result.message);
+    }
+    setIsCompleting(false);
+  }
+
+  function renderVaoCard(item: MeasurementLineItem, index: number, readOnly = false) {
+    const itemProgress = progress[item.id] ?? { estrutural: false, vidros: false, acabamento: false };
+    const gates = getItemInstGates(item, isLatePhase, itemProgress);
+    const doneSteps = INST_STEPS.filter(({ key }) => itemProgress[key]).length;
+    const itemStepsComplete = doneSteps === 3;
+    const itemConcluded = concludedIds.has(item.id);
+    const subtitle = buildVaoItemSubtitle(item, index, lookups);
+    const fullLabel = formatVaoItemFullLabel(subtitle);
+    const vaoNumber = getVaoNumber(item, index);
+    const isExpanded = expandedId === item.id;
+
+    return (
+      <div
+        key={item.id}
+        className={cn(
+          "rounded-lg border transition-colors",
+          itemConcluded
+            ? "border-success-border bg-success-muted"
+            : itemStepsComplete
+              ? "border-amber-500/40 bg-amber-500/5"
+              : "border-border bg-card",
+        )}
+      >
+        <div className="flex w-full items-center gap-2 px-3 py-2.5">
+          <button
+            type="button"
+            className="min-w-0 flex-1 text-left"
+            onClick={() => toggleExpand(item.id)}
+            aria-expanded={isExpanded}
+          >
+            <div className="flex items-center gap-2">
+              <p
+                className={cn(
+                  "text-xs font-semibold leading-tight",
+                  itemConcluded ? "text-success-foreground" : "text-foreground",
+                )}
+              >
+                Vão {vaoNumber}
+              </p>
+              {itemConcluded && (
+                <Badge variant="outline" className="border-success-border text-[10px] text-success-foreground">
+                  Concluído
+                </Badge>
+              )}
+            </div>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground" title={fullLabel}>
+              {subtitle.spec}
+            </p>
+            {subtitle.dims ? (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums" title={subtitle.dims}>
+                {subtitle.dims}
+              </p>
+            ) : null}
+          </button>
+
+          <div className="hidden items-center gap-3 sm:flex">
+            {INST_STEPS.map(({ key, shortLabel }) => {
+              const done = itemProgress[key];
+              const gate = gates[key];
+              const lKey = `${item.id}-${key}`;
+              const isLoading = loadingKey === lKey;
+              const isLocked = !readOnly && !gate.unlocked && !done;
+
+              return (
+                <div key={key} className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{shortLabel}</span>
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : readOnly || isLocked ? (
+                    <span title={isLocked ? (gate.reason ?? undefined) : undefined}>
+                      {isLocked ? (
+                        <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                      ) : done ? (
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                      ) : (
+                        <Lock className="h-3.5 w-3.5 text-muted-foreground/30" />
+                      )}
+                    </span>
+                  ) : (
+                    <Checkbox
+                      checked={done}
+                      disabled={isLoading}
+                      onCheckedChange={(v) => handleToggle(item.id, key, v === true)}
+                      className={cn("shrink-0", done && "border-success bg-success")}
+                      aria-label={`${key} — Vão ${vaoNumber}`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 sm:hidden">
+            {itemConcluded || itemStepsComplete ? (
+              <CheckCircle2
+                className={cn("h-4 w-4 shrink-0", itemConcluded ? "text-success" : "text-amber-500")}
+              />
+            ) : (
+              <Badge variant="outline" className="shrink-0 text-xs">
+                {doneSteps}/3
+              </Badge>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="ml-1 shrink-0 text-muted-foreground"
+            onClick={() => toggleExpand(item.id)}
+            aria-expanded={isExpanded}
+            aria-label={`${isExpanded ? "Recolher" : "Expandir"} vão ${vaoNumber}`}
+          >
+            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        </div>
+
+        {(canAssignInstaller || item.installationProgress?.installerId) && (
+          <div className="border-t px-3 py-2">
+            <VaoInstallerSelect
+              osId={osId}
+              itemId={item.id}
+              vaoNumber={vaoNumber}
+              installerId={item.installationProgress?.installerId ?? null}
+              installerName={
+                item.installationProgress?.installerId
+                  ? (installers.find((i) => i.id === item.installationProgress?.installerId)?.name ?? null)
+                  : null
+              }
+              scheduledInstallationDate={
+                item.installationProgress?.scheduledInstallationDate ?? null
+              }
+              installers={installers}
+              canChange={canAssignInstaller && !readOnly}
+            />
+          </div>
+        )}
+
+        {!readOnly && (
+          <div className="grid grid-cols-2 gap-1.5 px-3 pb-2.5 sm:hidden">
+            {INST_STEPS.map(({ key, label: stepLabel, icon: Icon }) => {
+              const done = itemProgress[key];
+              const gate = gates[key];
+              const lKey = `${item.id}-${key}`;
+              const isLoading = loadingKey === lKey;
+              const isLocked = !gate.unlocked && !done;
+
+              return (
+                <label
+                  key={key}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 transition-colors",
+                    done
+                      ? "border-success-border bg-success-muted"
+                      : isLocked
+                        ? "cursor-not-allowed border-border bg-muted/30 opacity-60"
+                        : "border-border bg-background hover:bg-muted/50",
+                    isLoading && "opacity-60",
+                  )}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : isLocked ? (
+                    <Lock className="h-4 w-4 text-muted-foreground/50" />
+                  ) : done ? (
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  ) : (
+                    <Icon className="h-4 w-4 text-success/70" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        "block text-xs font-semibold leading-tight",
+                        done
+                          ? "text-success-foreground"
+                          : isLocked
+                            ? "text-muted-foreground/60"
+                            : "text-foreground",
+                      )}
+                    >
+                      {stepLabel}
+                    </span>
+                    {isLocked && (
+                      <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground/60">
+                        {gate.reason}
+                      </p>
+                    )}
+                  </div>
+                  {!isLocked && !isLoading && (
+                    <Checkbox
+                      checked={done}
+                      disabled={isLoading}
+                      onCheckedChange={(v) => handleToggle(item.id, key, v === true)}
+                      className={cn("ml-auto shrink-0", done && "border-success bg-success")}
+                      aria-label={`${stepLabel} — Vão ${vaoNumber}`}
+                    />
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        {!readOnly && itemStepsComplete && !itemConcluded && (
+          <div className="border-t px-3 py-2.5">
+            <Button
+              type="button"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() =>
+                setPendingComplete({
+                  itemId: item.id,
+                  vaoLabel: `Vão ${vaoNumber}`,
+                  vaoSpec: subtitle.spec,
+                })
+              }
+            >
+              <BadgeCheck className="mr-2 h-4 w-4" />
+              Concluir vão
+            </Button>
+          </div>
+        )}
+
+        {isExpanded && (
+          <div className="px-3 pb-3">
+            <VaoMediaPanel item={item} vaoNumber={vaoNumber} lookups={lookups} />
+          </div>
+        )}
+      </div>
+    );
   }
 
   if (items.length === 0) {
@@ -264,13 +552,14 @@ export function InstallationChecklist({
           {/* Barra de progresso */}
           <div className="flex items-center gap-1.5">
             {INST_STEPS.map(({ key, shortLabel }) => {
-              const doneCount = items.filter((i) => progress[i.id]?.[key]).length;
-              const isAll = doneCount === items.length;
+              const doneCount = activeItems.filter((i) => progress[i.id]?.[key]).length;
+              const totalActive = activeItems.length;
+              const isAll = totalActive > 0 && doneCount === totalActive;
               return (
                 <div
                   key={key}
                   className="flex flex-col items-center gap-0.5"
-                  title={`${shortLabel}: ${doneCount}/${items.length}`}
+                  title={`${shortLabel}: ${doneCount}/${totalActive || items.length}`}
                 >
                   <div
                     className={cn(
@@ -298,240 +587,54 @@ export function InstallationChecklist({
           </Alert>
         )}
 
-        {/* Lista de vãos */}
-        <div className="space-y-2">
-          {items.map((item, index) => {
-            const itemProgress = progress[item.id] ?? { estrutural: false, vidros: false, acabamento: false };
-            const gates = getItemInstGates(item, isLatePhase, itemProgress);
-            const doneSteps = INST_STEPS.filter(({ key }) => itemProgress[key]).length;
-            const itemAllDone = doneSteps === 3;
-            const subtitle = buildVaoItemSubtitle(item, index, lookups);
-            const fullLabel = formatVaoItemFullLabel(subtitle);
-            const vaoNumber = getVaoNumber(item, index);
-            const isExpanded = expandedId === item.id;
+        {/* Vãos em andamento */}
+        {activeItems.length > 0 && (
+          <div className="space-y-2">
+            {activeItems.map((item) => renderVaoCard(item, items.indexOf(item)))}
+          </div>
+        )}
 
-            return (
-              <div
-                key={item.id}
-                className={cn(
-                  "rounded-lg border transition-colors",
-                  itemAllDone
-                    ? "border-success-border bg-success-muted"
-                    : "border-border bg-card",
-                )}
-              >
-                {/* Cabeçalho do vão */}
-                <div className="flex w-full items-center gap-2 px-3 py-2.5">
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 text-left"
-                    onClick={() => toggleExpand(item.id)}
-                    aria-expanded={isExpanded}
-                  >
-                    <p
-                      className={cn(
-                        "text-xs font-semibold leading-tight",
-                        itemAllDone ? "text-success-foreground" : "text-foreground",
-                      )}
-                    >
-                      Vão {vaoNumber}
-                    </p>
-                    <p
-                      className="mt-0.5 truncate text-xs text-muted-foreground"
-                      title={fullLabel}
-                    >
-                      {subtitle.spec}
-                    </p>
-                    {subtitle.dims ? (
-                      <p
-                        className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums"
-                        title={subtitle.dims}
-                      >
-                        {subtitle.dims}
-                      </p>
-                    ) : null}
-                  </button>
-
-                  {/* Checkboxes inline (desktop) */}
-                  <div className="hidden items-center gap-3 sm:flex">
-                    {INST_STEPS.map(({ key, shortLabel }) => {
-                      const done = itemProgress[key];
-                      const gate = gates[key];
-                      const lKey = `${item.id}-${key}`;
-                      const isLoading = loadingKey === lKey;
-                      const isLocked = !gate.unlocked && !done;
-
-                      return (
-                        <div key={key} className="flex items-center gap-1.5">
-                          <span className="text-xs text-muted-foreground">{shortLabel}</span>
-                          {isLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          ) : isLocked ? (
-                            <span title={gate.reason ?? undefined}>
-                              <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                            </span>
-                          ) : (
-                            <Checkbox
-                              checked={done}
-                              disabled={isLoading}
-                              onCheckedChange={(v) =>
-                                handleToggle(item.id, key, v === true)
-                              }
-                              className={cn(
-                                "shrink-0",
-                                done && "border-success bg-success",
-                              )}
-                              aria-label={`${key} — Vão ${vaoNumber}`}
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Badge de progresso (mobile) */}
-                  <div className="flex items-center gap-2 sm:hidden">
-                    {itemAllDone ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-                    ) : (
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        {doneSteps}/3
-                      </Badge>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    className="ml-1 shrink-0 text-muted-foreground"
-                    onClick={() => toggleExpand(item.id)}
-                    aria-expanded={isExpanded}
-                    aria-label={`${isExpanded ? "Recolher" : "Expandir"} vão ${vaoNumber}`}
-                  >
-                    {isExpanded ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Checkboxes mobile (fora do header, sempre visíveis) */}
-                <div className="grid grid-cols-2 gap-1.5 px-3 pb-2.5 sm:hidden">
-                  {INST_STEPS.map(({ key, label: stepLabel, icon: Icon }) => {
-                    const done = itemProgress[key];
-                    const gate = gates[key];
-                    const lKey = `${item.id}-${key}`;
-                    const isLoading = loadingKey === lKey;
-                    const isLocked = !gate.unlocked && !done;
-
-                    return (
-                      <label
-                        key={key}
-                        className={cn(
-                          "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 transition-colors",
-                          done
-                            ? "border-success-border bg-success-muted"
-                            : isLocked
-                              ? "cursor-not-allowed border-border bg-muted/30 opacity-60"
-                              : "border-border bg-background hover:bg-muted/50",
-                          isLoading && "opacity-60",
-                        )}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        ) : isLocked ? (
-                          <Lock className="h-4 w-4 text-muted-foreground/50" />
-                        ) : done ? (
-                          <CheckCircle2 className="h-4 w-4 text-success" />
-                        ) : (
-                          <Icon className="h-4 w-4 text-success/70" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <span
-                            className={cn(
-                              "block text-xs font-semibold leading-tight",
-                              done
-                                ? "text-success-foreground"
-                                : isLocked
-                                  ? "text-muted-foreground/60"
-                                  : "text-foreground",
-                            )}
-                          >
-                            {stepLabel}
-                          </span>
-                          {isLocked && (
-                            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground/60">
-                              {gate.reason}
-                            </p>
-                          )}
-                        </div>
-                        {!isLocked && !isLoading && (
-                          <Checkbox
-                            checked={done}
-                            disabled={isLoading}
-                            onCheckedChange={(v) =>
-                              handleToggle(item.id, key, v === true)
-                            }
-                            className={cn(
-                              "ml-auto shrink-0",
-                              done && "border-success bg-success",
-                            )}
-                            aria-label={`${stepLabel} — Vão ${vaoNumber}`}
-                          />
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-
-                {/* Painel de mídia expansível */}
-                {isExpanded && (
-                  <div className="px-3 pb-3">
-                    {(canAssignInstaller || item.installationProgress?.installerId) && (
-                      <div className="mt-2.5">
-                        <InstallerSelector
-                          osId={osId}
-                          itemId={item.id}
-                          installerId={item.installationProgress?.installerId ?? null}
-                          installerName={
-                            item.installationProgress?.installerId
-                              ? (installers.find(
-                                  (i) =>
-                                    i.id === item.installationProgress?.installerId,
-                                )?.name ?? null)
-                              : null
-                          }
-                          scheduledInstallationDate={
-                            item.installationProgress?.scheduledInstallationDate
-                              ? new Date(
-                                  item.installationProgress.scheduledInstallationDate,
-                                )
-                              : null
-                          }
-                          installers={installers}
-                          canChange={canAssignInstaller}
-                        />
-                      </div>
-                    )}
-                    <VaoMediaPanel item={item} vaoNumber={vaoNumber} lookups={lookups} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {/* Vãos concluídos */}
+        {concludedItems.length > 0 && (
+          <div className="space-y-2">
+            {activeItems.length > 0 && (
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Concluídos ({concludedItems.length})
+              </p>
+            )}
+            {concludedItems.map((item) => renderVaoCard(item, items.indexOf(item), true))}
+          </div>
+        )}
 
         <InstallationDailyNotes osId={osId} initialNotes={dailyNotes} />
 
-        {/* Banner: instalação concluída */}
-        {allDone && (
+        {allVaosConcluded && (
           <Alert variant="success">
             <BadgeCheck className="h-4 w-4" />
             <AlertDescription>
-              Instalação concluída! Todos os vãos foram instalados.
+              Instalação concluída! Todos os vãos foram confirmados e enviados para concluídos.
             </AlertDescription>
           </Alert>
         )}
+
+        {allActiveStepsDone && !allVaosConcluded && activeItems.length > 0 && (
+          <Alert>
+            <AlertDescription>
+              Todas as fases foram registradas. Confirme cada vão com o botão &quot;Concluir vão&quot; para finalizar.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <CompleteInstallationVaoDialog
+          open={pendingComplete !== null}
+          vaoLabel={pendingComplete?.vaoLabel ?? ""}
+          vaoSpec={pendingComplete?.vaoSpec}
+          isSubmitting={isCompleting}
+          onConfirm={handleConfirmComplete}
+          onCancel={() => {
+            if (!isCompleting) setPendingComplete(null);
+          }}
+        />
       </CardContent>
     </Card>
   );

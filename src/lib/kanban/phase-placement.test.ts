@@ -26,6 +26,20 @@ function makeOrder(overrides: Partial<KanbanOrderItem>): KanbanOrderItem {
   };
 }
 
+const completedInstallationSteps = {
+  instalacaoEstruturalFeita: true,
+  instalacaoVidrosFeita: true,
+  instalacaoAcabamentoFeito: true,
+  todosVaosConcluidos: true,
+};
+
+const stepsDoneNotConfirmed = {
+  instalacaoEstruturalFeita: true,
+  instalacaoVidrosFeita: true,
+  instalacaoAcabamentoFeito: true,
+  todosVaosConcluidos: false,
+};
+
 describe("getKanbanPhaseIdsForOrder", () => {
   it("mantém OS na coluna transporte enquanto entregas pendentes", () => {
     const phases = getKanbanPhaseIdsForOrder(
@@ -72,6 +86,7 @@ describe("getKanbanPhaseIdsForOrder", () => {
           instalacaoEstruturalFeita: false,
           instalacaoVidrosFeita: false,
           instalacaoAcabamentoFeito: false,
+          todosVaosConcluidos: false,
         },
       }),
     );
@@ -79,15 +94,23 @@ describe("getKanbanPhaseIdsForOrder", () => {
     expect(phases).toEqual(["instalacao"]);
   });
 
-  it("remove OS da coluna instalação quando instalação concluída", () => {
+  it("mantém OS em instalação quando fases ticadas mas vãos não confirmados", () => {
     const phases = getKanbanPhaseIdsForOrder(
       makeOrder({
         status: "instalacao_vidros",
-        installationSteps: {
-          instalacaoEstruturalFeita: true,
-          instalacaoVidrosFeita: true,
-          instalacaoAcabamentoFeito: true,
-        },
+        installationSteps: stepsDoneNotConfirmed,
+      }),
+    );
+
+    expect(phases).toContain("instalacao");
+    expect(phases).not.toContain("concluidos");
+  });
+
+  it("remove OS da coluna instalação quando todos os vãos foram confirmados", () => {
+    const phases = getKanbanPhaseIdsForOrder(
+      makeOrder({
+        status: "instalacao_vidros",
+        installationSteps: completedInstallationSteps,
       }),
     );
 
@@ -106,11 +129,7 @@ describe("getKanbanPhaseIdsForOrder", () => {
           levarVidros: true,
           transporteConcluido: true,
         },
-        installationSteps: {
-          instalacaoEstruturalFeita: true,
-          instalacaoVidrosFeita: true,
-          instalacaoAcabamentoFeito: true,
-        },
+        installationSteps: completedInstallationSteps,
       }),
     );
 
@@ -120,12 +139,6 @@ describe("getKanbanPhaseIdsForOrder", () => {
 });
 
 describe("placeKanbanOrders", () => {
-  const completedInstallationSteps = {
-    instalacaoEstruturalFeita: true,
-    instalacaoVidrosFeita: true,
-    instalacaoAcabamentoFeito: true,
-  };
-
   it("limita a coluna concluídos aos 15 serviços mais recentes", () => {
     const orders = Array.from({ length: 20 }, (_, index) =>
       makeOrder({

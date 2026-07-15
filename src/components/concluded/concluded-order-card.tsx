@@ -12,9 +12,7 @@ type Props = {
 export function ConcludedOrderCard({ order }: Props) {
   const allDone =
     order.totalVaos > 0 &&
-    order.estruturalCount === order.totalVaos &&
-    order.vidrosCount === order.totalVaos &&
-    order.acabamentoCount === order.totalVaos;
+    order.vaos.every((v) => v.concluido);
 
   return (
     <Link
@@ -74,8 +72,8 @@ export function ConcludedOrderCard({ order }: Props) {
       {order.totalVaos > 0 && (
         <ul className="space-y-1 border-t border-border/50 pt-2">
           {order.vaos.map((vao) => {
-            const vaoAllDone = vao.estrutural && vao.vidros && vao.acabamento;
-            const vaoParcial = vao.estrutural || vao.vidros || vao.acabamento;
+            const vaoAllDone = vao.concluido;
+            const vaoParcial = !vao.concluido && (vao.estrutural || vao.vidros || vao.acabamento);
 
             return (
               <li

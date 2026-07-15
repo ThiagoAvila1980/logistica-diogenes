@@ -47,6 +47,8 @@ export const itemInstallationProgressSchema = z.object({
   estrutural: z.boolean().default(false),
   vidros: z.boolean().default(false),
   acabamento: z.boolean().default(false),
+  /** Confirmado explicitamente pelo instalador após todas as fases do vão */
+  concluido: z.boolean().default(false).optional(),
   installerId: z.string().uuid().nullable().optional(),
   scheduledInstallationDate: z.string().nullable().optional(),
 });

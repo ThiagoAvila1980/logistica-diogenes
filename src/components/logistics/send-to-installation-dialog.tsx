@@ -2,13 +2,7 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Hammer,
-  Loader2,
-  UserCheck,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Hammer } from "lucide-react";
 import { sendVaosToInstallationAction } from "@/actions/installer-actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,10 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
-import type { InstallerOption } from "@/lib/data/installers-db";
 import {
   buildVaoItemSubtitle,
   formatVaoItemFullLabel,
@@ -37,14 +29,13 @@ type SendToInstallationDialogProps = {
   osNumber: string;
   clientName: string;
   items: MeasurementLineItem[];
-  installers: InstallerOption[];
   lookups?: MeasurementLookups;
 };
 
 function defaultSelectedIds(items: MeasurementLineItem[]): Set<string> {
-  const unassigned = items.filter((item) => !item.installationProgress?.installerId);
-  if (unassigned.length > 0) {
-    return new Set(unassigned.map((item) => item.id));
+  const notSent = items.filter((item) => !item.installationProgress);
+  if (notSent.length > 0) {
+    return new Set(notSent.map((item) => item.id));
   }
   return new Set(items.map((item) => item.id));
 }
@@ -54,26 +45,21 @@ export function SendToInstallationDialog({
   osNumber,
   clientName,
   items,
-  installers,
   lookups,
 }: SendToInstallationDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [vaoDialogOpen, setVaoDialogOpen] = useState(false);
-  const [installerDialogOpen, setInstallerDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() =>
     defaultSelectedIds(items),
   );
-  const [pendingSelectedIds, setPendingSelectedIds] = useState<string[]>([]);
-  const [selectedInstallerId, setSelectedInstallerId] = useState("");
 
   const handleOpen = useCallback(() => {
     setError(null);
     setSuccess(null);
     setSelectedIds(defaultSelectedIds(items));
-    setSelectedInstallerId("");
     setVaoDialogOpen(true);
   }, [items]);
 
@@ -93,33 +79,20 @@ export function SendToInstallationDialog({
       return;
     }
     setError(null);
-    setPendingSelectedIds(selected);
-    setVaoDialogOpen(false);
-    setInstallerDialogOpen(true);
-  }, [selectedIds]);
-
-  const handleConfirmInstaller = useCallback(() => {
-    if (!selectedInstallerId) {
-      setError("Selecione um instalador.");
-      return;
-    }
-    setError(null);
-    setInstallerDialogOpen(false);
     startTransition(async () => {
       const result = await sendVaosToInstallationAction({
         osId,
-        selectedItemIds: pendingSelectedIds,
-        installerId: selectedInstallerId,
+        selectedItemIds: selected,
       });
       if (!result.success) {
         setError(result.message);
-        setInstallerDialogOpen(true);
         return;
       }
+      setVaoDialogOpen(false);
       setSuccess(result.message);
       router.refresh();
     });
-  }, [osId, pendingSelectedIds, selectedInstallerId, router]);
+  }, [osId, selectedIds, router]);
 
   if (items.length === 0) return null;
 
@@ -128,7 +101,7 @@ export function SendToInstallationDialog({
 
   return (
     <div className="space-y-3">
-      {error && !vaoDialogOpen && !installerDialogOpen && (
+      {error && !vaoDialogOpen && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
@@ -165,7 +138,8 @@ export function SendToInstallationDialog({
               Enviar para instalação
             </DialogTitle>
             <DialogDescription>
-              Selecione quais vãos enviar para instalação.
+              Selecione quais vãos enviar para instalação. O instalador é
+              escolhido depois, na tela de instalação.
             </DialogDescription>
           </DialogHeader>
 
@@ -192,7 +166,7 @@ export function SendToInstallationDialog({
                 const fullLabel = formatVaoItemFullLabel(subtitle);
                 const vaoNumber = getVaoNumber(item, index);
                 const checked = selectedIds.has(item.id);
-                const hasInstaller = Boolean(item.installationProgress?.installerId);
+                const alreadySent = Boolean(item.installationProgress);
 
                 return (
                   <Label
@@ -207,9 +181,9 @@ export function SendToInstallationDialog({
                     <span className="min-w-0 flex-1 overflow-hidden">
                       <span className="block text-xs font-semibold leading-snug">
                         Vão {vaoNumber}
-                        {hasInstaller ? (
+                        {alreadySent ? (
                           <span className="ml-1.5 font-normal text-muted-foreground">
-                            (já designado)
+                            (já enviado)
                           </span>
                         ) : null}
                       </span>
@@ -250,118 +224,7 @@ export function SendToInstallationDialog({
               onClick={handleConfirmVaos}
               disabled={isPending || noneSelected}
             >
-              Confirmar envio
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={installerDialogOpen}
-        onOpenChange={(open) => {
-          if (!isPending) {
-            setInstallerDialogOpen(open);
-            if (!open) setError(null);
-          }
-        }}
-      >
-        <DialogContent className="flex max-h-[min(90dvh,720px)] flex-col overflow-hidden sm:max-w-md">
-          <DialogHeader className="shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 shrink-0" />
-              Escolher instalador
-            </DialogTitle>
-            <DialogDescription>
-              Selecione o instalador responsável pelos vãos escolhidos.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-            <div className="min-w-0 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-              <p className="truncate font-mono font-medium">{osNumber}</p>
-              <p className="truncate text-muted-foreground">
-                {pendingSelectedIds.length === 1
-                  ? "1 vão selecionado"
-                  : `${pendingSelectedIds.length} vãos selecionados`}
-              </p>
-            </div>
-
-            {installers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum instalador cadastrado.
-              </p>
-            ) : (
-              <div className="min-w-0 space-y-1.5 rounded-md border bg-muted/10 p-2">
-                {installers.map((installer) => {
-                  const selected = selectedInstallerId === installer.id;
-                  return (
-                    <button
-                      key={installer.id}
-                      type="button"
-                      onClick={() => setSelectedInstallerId(installer.id)}
-                      className={cn(
-                        "flex w-full min-w-0 items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
-                        selected
-                          ? "border border-primary bg-primary/10"
-                          : "border border-transparent hover:bg-muted/40",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                          selected && "border-primary bg-primary",
-                        )}
-                        aria-hidden
-                      >
-                        {selected ? (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
-                        ) : null}
-                      </span>
-                      <span className="min-w-0 truncate font-medium">{installer.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {error && installerDialogOpen && (
-            <Alert variant="destructive" className="shrink-0">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <DialogFooter className="shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setInstallerDialogOpen(false);
-                setVaoDialogOpen(true);
-              }}
-              disabled={isPending}
-            >
-              Voltar
-            </Button>
-            <Button
-              type="button"
-              onClick={handleConfirmInstaller}
-              disabled={
-                isPending || !selectedInstallerId || installers.length === 0
-              }
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Confirmando…
-                </>
-              ) : (
-                <>
-                  <UserCheck className="mr-1.5 h-3.5 w-3.5" />
-                  Confirmar instalador
-                </>
-              )}
+              {isPending ? "Enviando…" : "Confirmar envio"}
             </Button>
           </DialogFooter>
         </DialogContent>
