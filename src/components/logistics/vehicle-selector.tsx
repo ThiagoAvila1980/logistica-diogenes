@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Car, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
+import { Car, CheckCircle2, ChevronDown, Loader2, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -37,7 +37,7 @@ type Props = {
   vehicleDescription: string | null;
   vehicles: VehicleOptionForSelection[];
   canChange: boolean;
-  onAssigned?: (vehicleId: string) => void;
+  onAssigned?: (vehicleId: string | null) => void;
 };
 
 export function VehicleSelector({
@@ -90,20 +90,22 @@ export function VehicleSelector({
           : null
       : null;
 
+  const hasChanges = selectedId !== (assignedVehicleId ?? "");
+
   async function handleConfirm() {
-    if (!selectedId) return;
+    if (!hasChanges) return;
     setLoading(true);
     setError(null);
 
     const result = await assignVehicleToVaoAction({
       osId,
       itemId,
-      vehicleId: selectedId,
+      vehicleId: selectedId || null,
     });
 
     if (result.success) {
-      setAssignedVehicleId(selectedId);
-      onAssigned?.(selectedId);
+      setAssignedVehicleId(selectedId || null);
+      onAssigned?.(selectedId || null);
     } else {
       setError(result.message);
     }
@@ -179,40 +181,49 @@ export function VehicleSelector({
 
           <div className="min-w-0 space-y-2">
             <Label htmlFor={`vehicle-select-${itemId}`}>Veículo</Label>
-            <div className="min-w-0 w-full max-w-full overflow-hidden">
-              <Select
-                id={`vehicle-select-${itemId}`}
-                value={selectedId}
-                disabled={loading || vehicles.length === 0}
-                className="h-11 w-full min-w-0 max-w-full truncate"
-                onChange={(e) => setSelectedId(e.target.value)}
-              >
-                <option value="">
-                  {vehicles.length === 0
-                    ? "Nenhum veículo cadastrado"
-                    : "Selecione um veículo..."}
-                </option>
-                {vehicles.map((vehicle) => (
-                  <option
-                    key={vehicle.id}
-                    value={vehicle.id}
-                    title={formatVehicleOptionTitle(vehicle)}
-                  >
-                    {formatVehicleOptionLabel(vehicle)}
+            <div className="flex min-w-0 w-full max-w-full items-center gap-2">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <Select
+                  id={`vehicle-select-${itemId}`}
+                  value={selectedId}
+                  disabled={loading || vehicles.length === 0}
+                  className="h-11 w-full min-w-0 max-w-full truncate"
+                  onChange={(e) => setSelectedId(e.target.value)}
+                >
+                  <option value="">
+                    {vehicles.length === 0
+                      ? "Nenhum veículo cadastrado"
+                      : "Selecione um veículo..."}
                   </option>
-                ))}
-              </Select>
+                  {vehicles.map((vehicle) => (
+                    <option
+                      key={vehicle.id}
+                      value={vehicle.id}
+                      title={formatVehicleOptionTitle(vehicle)}
+                    >
+                      {formatVehicleOptionLabel(vehicle)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                title="Limpar seleção"
+                aria-label="Limpar seleção do veículo"
+                disabled={loading || !selectedId}
+                onClick={() => setSelectedId("")}
+                className="h-11 w-11 shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
           <Button
             type="button"
-            disabled={
-              loading ||
-              !selectedId ||
-              selectedId === assignedVehicleId ||
-              vehicles.length === 0
-            }
+            disabled={loading || !hasChanges}
             onClick={handleConfirm}
             className="w-full sm:w-auto"
           >

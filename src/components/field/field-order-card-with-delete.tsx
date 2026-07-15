@@ -31,7 +31,6 @@ export function FieldOrderCardWithDelete({
             osId={order.id}
             displayNumber={displayNumber}
             clientName={order.clientName}
-            variant="list"
           />
         </div>
       )}

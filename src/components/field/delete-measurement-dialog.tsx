@@ -18,14 +18,15 @@ type DeleteMeasurementDialogProps = {
   osId: string;
   displayNumber: string;
   clientName: string;
-  variant?: "header" | "list";
+  /** Rota após exclusão bem-sucedida (padrão: lista de medições). */
+  redirectHref?: string;
 };
 
 export function DeleteMeasurementDialog({
   osId,
   displayNumber,
   clientName,
-  variant = "header",
+  redirectHref = "/field",
 }: DeleteMeasurementDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -41,42 +42,31 @@ export function DeleteMeasurementDialog({
         return;
       }
       setOpen(false);
-      router.push("/field");
+      router.push(redirectHref);
       router.refresh();
     });
   }
 
+  const buttonClass =
+    "h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive";
+
+  const iconClass = "h-4 w-4";
+
   return (
     <>
-      {variant === "list" ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          aria-label="Excluir medição"
-          onClick={() => {
-            setError(null);
-            setOpen(true);
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          aria-label="Excluir medição"
-          onClick={() => {
-            setError(null);
-            setOpen(true);
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      )}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className={buttonClass}
+        aria-label="Excluir medição"
+        onClick={() => {
+          setError(null);
+          setOpen(true);
+        }}
+      >
+        <Trash2 className={iconClass} />
+      </Button>
 
       <Dialog
         open={open}

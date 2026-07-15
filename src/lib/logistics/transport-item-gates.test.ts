@@ -16,23 +16,19 @@ function item(
 }
 
 describe("getItemTransportGates", () => {
-  it("libera perfil estrutural quando corte concluído, mesmo sem veículo", () => {
+  it("libera perfil estrutural quando corte concluído, sem exigir veículo", () => {
     const gates = getItemTransportGates(
       item("a", { cuttingProgress: { corte: true, embalagem: false, acessorios: false, vidros: false } }),
       "transporte_perfil",
-      false,
     );
     expect(gates.perfilEstrutural.unlocked).toBe(true);
-    expect(gates.perfilEstrutural.reason).toBe(
-      "Selecione um veículo para iniciar a entrega do perfil estrutural",
-    );
+    expect(gates.perfilEstrutural.reason).toBeNull();
   });
 
   it("bloqueia perfil estrutural enquanto corte pendente na fase de corte", () => {
     const gates = getItemTransportGates(
       item("a", { cuttingProgress: { corte: false, embalagem: false, acessorios: false, vidros: false } }),
       "cortes",
-      true,
     );
     expect(gates.perfilEstrutural.unlocked).toBe(false);
     expect(gates.perfilEstrutural.reason).toBe("Aguardando corte deste vão");
@@ -42,7 +38,6 @@ describe("getItemTransportGates", () => {
     const gates = getItemTransportGates(
       item("a", { cuttingProgress: { corte: true, embalagem: true, acessorios: true, vidros: false } }),
       "transporte_perfil",
-      false,
     );
     expect(gates.vidros.unlocked).toBe(true);
     expect(gates.vidros.reason).toBeNull();
@@ -52,7 +47,6 @@ describe("getItemTransportGates", () => {
     const gates = getItemTransportGates(
       item("a", { cuttingProgress: { corte: true, embalagem: true, acessorios: true, vidros: false } }),
       "cortes",
-      false,
     );
     expect(gates.vidros.unlocked).toBe(false);
     expect(gates.vidros.reason).toBe("Aguardando vidros deste vão");

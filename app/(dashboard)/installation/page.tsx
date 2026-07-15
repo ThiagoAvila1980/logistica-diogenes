@@ -32,6 +32,7 @@ export default async function InstallationIndexPage() {
   );
 
   const isManager = canViewAllOrders(roles);
+  const canDelete = isManager;
   const installerIdFilter =
     !isManager && session ? session.userId : undefined;
 
@@ -53,6 +54,7 @@ export default async function InstallationIndexPage() {
         orders={installationOrders}
         summaries={summaries}
         installationStepsByOs={installationStepsByOs}
+        canDelete={canDelete}
       />
     </div>
   );

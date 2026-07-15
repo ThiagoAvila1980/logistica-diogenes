@@ -4,14 +4,18 @@ import { measurements, transportLogs } from "@/db/schema";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { SessionUser } from "@/lib/auth/session-types";
 import { canViewAllOrders, hasAnyRole } from "@/lib/auth/permissions";
+import type { TransportStep } from "./transport-item-gates";
+import {
+  collectVaoStepDriverIds,
+  getVaoStepAssignment,
+} from "./transport-step-assignment";
 
 export function collectDriverIdsFromMeasurementItems(
   items: MeasurementLineItem[] | null | undefined,
 ): string[] {
   const ids = new Set<string>();
   for (const item of items ?? []) {
-    const driverId = item.transportProgress?.driverId;
-    if (driverId) ids.add(driverId);
+    for (const id of collectVaoStepDriverIds(item)) ids.add(id);
   }
   return [...ids];
 }
@@ -76,10 +80,19 @@ export function isAssignedTransportDriver(
   return !!driverIds?.includes(userId);
 }
 
+function isDriverAssignedToAnyStep(
+  item: Pick<MeasurementLineItem, "transportProgress">,
+  userId: string,
+): boolean {
+  return collectVaoStepDriverIds(item).includes(userId);
+}
+
 /**
- * Motorista só enxerga/opera os vãos em que está designado.
+ * Motorista só enxerga o vão se estiver designado em pelo menos um item de
+ * ticagem (perfil estrutural, perfil total, acessórios ou vidros).
  * Admin/gerente (ou outros papéis) enxergam todos os vãos da OS.
- * Usada tanto para filtrar a listagem quanto para validar as actions de escrita.
+ * Usada tanto para filtrar a listagem quanto para validar as actions de escrita
+ * que não são específicas de um item (ex.: veículo, observações).
  */
 export function canAccessVaoAsSession(
   session: SessionUser,
@@ -88,7 +101,23 @@ export function canAccessVaoAsSession(
   if (canViewAllOrders(session.roles)) return true;
   if (!hasAnyRole(session.roles, ["motorista"])) return true;
 
-  return item.transportProgress?.driverId === session.userId;
+  return isDriverAssignedToAnyStep(item, session.userId);
+}
+
+/**
+ * Motorista só pode marcar/desmarcar um item de ticagem específico se for o
+ * motorista designado NAQUELE item (cada item pode ter um motorista diferente).
+ * Admin/gerente podem operar qualquer item.
+ */
+export function canOperateVaoStepAsSession(
+  session: SessionUser,
+  item: Pick<MeasurementLineItem, "transportProgress">,
+  step: TransportStep,
+): boolean {
+  if (canViewAllOrders(session.roles)) return true;
+  if (!hasAnyRole(session.roles, ["motorista"])) return true;
+
+  return getVaoStepAssignment(item, step).driverId === session.userId;
 }
 
 /** Filtra os vãos de uma OS para o que a sessão do motorista pode ver/operar. */
@@ -99,5 +128,5 @@ export function filterVaoItemsForSession<
   if (canViewAllOrders(session.roles)) return items;
   if (!hasAnyRole(session.roles, ["motorista"])) return items;
 
-  return items.filter((item) => item.transportProgress?.driverId === session.userId);
+  return items.filter((item) => isDriverAssignedToAnyStep(item, session.userId));
 }

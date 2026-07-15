@@ -7,7 +7,7 @@
 export class WorkflowActionError extends Error {
   constructor(
     message: string,
-    public reason?: "gate_locked" | "vehicle_required",
+    public reason?: "gate_locked",
   ) {
     super(message);
     this.name = "WorkflowActionError";

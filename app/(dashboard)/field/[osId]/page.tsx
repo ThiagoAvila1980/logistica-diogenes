@@ -3,6 +3,7 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { getFieldMeasurementDraft } from "@/lib/data/field";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { FieldMeasurementForm } from "@/components/field/field-measurement-form";
+import { FieldMeasurementPastStage } from "@/components/field/field-measurement-past-stage";
 import { FieldDetailCacheHydrator } from "@/components/offline/field-detail-cache-hydrator";
 import { getSession } from "@/lib/auth/session";
 import { hasAnyRole } from "@/lib/auth/permissions";
@@ -14,7 +15,14 @@ export default async function FieldOsPage({ params }: Props) {
   const order = await getServiceOrderById(osId);
   if (!order) notFound();
 
+  const session = await getSession();
+  const canManage = hasAnyRole(session?.roles ?? [], ["admin", "gerente"]);
+
   if (!order.status.startsWith("medicao")) {
+    if (canManage) {
+      return <FieldMeasurementPastStage order={order} />;
+    }
+
     return (
       <div className="rounded-xl border bg-card p-6 text-center">
         <p className="text-sm text-muted-foreground">
@@ -29,9 +37,6 @@ export default async function FieldOsPage({ params }: Props) {
     getFieldMeasurementDraft(osId, order, "final"),
     listMeasurementLookups(),
   ]);
-
-  const session = await getSession();
-  const canManage = hasAnyRole(session?.roles ?? [], ["admin", "gerente"]);
 
   const draftsByType = {
     orcamento: draftOrcamento,

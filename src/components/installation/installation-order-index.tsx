@@ -1,6 +1,7 @@
 "use client";
 
 import { InstallationOrderCard } from "@/components/installation/installation-order-card";
+import { OrderCardWithDelete } from "@/components/order/order-card-with-delete";
 import { FilteredOrderList } from "@/components/dashboard/filtered-order-list";
 import { serviceOrderFilterFields } from "@/lib/filters/service-order-fields";
 import type { OrderListItem } from "@/lib/data/types";
@@ -11,12 +12,14 @@ type InstallationOrderIndexProps = {
   orders: OrderListItem[];
   summaries: Record<string, InstallationSummary>;
   installationStepsByOs: Record<string, InstallationOrderProgress>;
+  canDelete?: boolean;
 };
 
 export function InstallationOrderIndex({
   orders,
   summaries,
   installationStepsByOs,
+  canDelete = false,
 }: InstallationOrderIndexProps) {
   return (
     <FilteredOrderList
@@ -26,11 +29,17 @@ export function InstallationOrderIndex({
       idPrefix="installation"
       getFilterFields={serviceOrderFilterFields}
       renderItem={(order) => (
-        <InstallationOrderCard
+        <OrderCardWithDelete
           order={order}
-          installation={summaries[order.id] ?? null}
-          installationSteps={installationStepsByOs[order.id] ?? null}
-        />
+          canDelete={canDelete}
+          redirectHref="/installation"
+        >
+          <InstallationOrderCard
+            order={order}
+            installation={summaries[order.id] ?? null}
+            installationSteps={installationStepsByOs[order.id] ?? null}
+          />
+        </OrderCardWithDelete>
       )}
     />
   );

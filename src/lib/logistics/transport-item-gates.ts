@@ -19,12 +19,11 @@ function isTransportOrLater(status: OsStatus | string): boolean {
  * baseado no progresso de corte daquele vão e na fase atual da OS.
  *
  * Alinhado com `updateItemTransportStepAction` (usa `isTransportOrLater`).
- * Perfil estrutural libera após o corte; veículo é validado ao marcar.
+ * Perfil estrutural libera após o corte — sem outra condição.
  */
 export function getItemTransportGates(
   item: MeasurementLineItem,
   osStatus: OsStatus | string,
-  hasVehicle: boolean,
 ): Record<TransportStep, TransportStepGate> {
   const isLatePhase = isTransportOrLater(osStatus as OsStatus);
   const cut = item.cuttingProgress ?? {
@@ -42,11 +41,7 @@ export function getItemTransportGates(
   return {
     perfilEstrutural: {
       unlocked: corteOk,
-      reason: !corteOk
-        ? "Aguardando corte deste vão"
-        : !hasVehicle
-          ? "Selecione um veículo para iniciar a entrega do perfil estrutural"
-          : null,
+      reason: corteOk ? null : "Aguardando corte deste vão",
     },
     perfilTotal: {
       unlocked: embalagemOk,

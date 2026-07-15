@@ -64,7 +64,7 @@ export function MeasurementItemView({
       className="rounded-xl border bg-card p-4 shadow-sm"
     >
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">Medição {vaoNumber}</h3>
+        <h3 className="text-sm font-medium">Vão {vaoNumber}</h3>
         <Button
           type="button"
           variant="ghost"

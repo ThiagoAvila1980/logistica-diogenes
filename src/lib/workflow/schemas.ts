@@ -55,6 +55,14 @@ export const itemInstallationProgressSchema = z.object({
 
 export type ItemInstallationProgress = z.infer<typeof itemInstallationProgressSchema>;
 
+/** Motorista e data designados para um item de ticagem específico do vão */
+export const transportStepAssignmentSchema = z.object({
+  driverId: z.string().uuid().nullable().optional(),
+  scheduledDate: z.string().nullable().optional(),
+});
+
+export type TransportStepAssignment = z.infer<typeof transportStepAssignmentSchema>;
+
 /** Progresso de transporte por vão (item de medição) */
 export const itemTransportProgressSchema = z.object({
   perfilEstrutural: z.boolean().default(false),
@@ -63,8 +71,24 @@ export const itemTransportProgressSchema = z.object({
   vidros: z.boolean().default(false),
   observacoes: z.string().max(2000).optional(),
   vehicleId: z.string().uuid().nullable().optional(),
+  /**
+   * @deprecated Legado (motorista único por vão). Mantido como valor
+   * inicial (fallback) para itens de ticagem que ainda não têm um motorista
+   * definido individualmente em `stepAssignments`.
+   */
   driverId: z.string().uuid().nullable().optional(),
+  /** @deprecated Legado (data única por vão). Ver `driverId`. */
   scheduledTransportDate: z.string().nullable().optional(),
+  /** Motorista e data por item de ticagem (perfil estrutural, perfil total, acessórios, vidros) */
+  stepAssignments: z
+    .object({
+      perfilEstrutural: transportStepAssignmentSchema.optional(),
+      perfilTotal: transportStepAssignmentSchema.optional(),
+      acessorios: transportStepAssignmentSchema.optional(),
+      vidros: transportStepAssignmentSchema.optional(),
+    })
+    .partial()
+    .optional(),
 });
 
 export type ItemTransportProgress = z.infer<typeof itemTransportProgressSchema>;

@@ -251,13 +251,13 @@ export function NotificationBell({
       ? createPortal(
           <>
             <div
-              className="fixed inset-0 z-[200] bg-overlay/20"
+              className="fixed inset-0 z-200 bg-overlay/20"
               aria-hidden
               onClick={() => setOpen(false)}
             />
             <div
               ref={panelRef}
-              className="fixed z-[201] w-[min(92vw,22rem)] overflow-hidden rounded-xl border bg-card shadow-2xl"
+              className="fixed z-201 w-[min(92vw,22rem)] overflow-hidden rounded-xl border bg-card shadow-2xl"
               style={{
                 top: panelPosition.top,
                 left: panelPosition.left,
@@ -385,7 +385,7 @@ export function NotificationBell({
 
           {detailNotification && (
             <div className="max-h-[min(60vh,24rem)] overflow-y-auto rounded-md border bg-muted/40 p-3">
-              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+              <p className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed text-foreground">
                 {detailNotification.body}
               </p>
             </div>

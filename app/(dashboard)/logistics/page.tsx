@@ -8,11 +8,13 @@ import {
   isActiveTransportListing,
   isLogisticsIndexCandidate,
 } from "@/lib/logistics/filter-orders";
+import { canViewAllOrders } from "@/lib/auth/permissions";
 import { Truck } from "lucide-react";
 
 export default async function LogisticsIndexPage() {
   const session = await getSession();
   const roles = session?.roles ?? [];
+  const canDelete = canViewAllOrders(roles);
   const orders = await listServiceOrders();
 
   const candidates = orders.filter((order) =>
@@ -44,6 +46,7 @@ export default async function LogisticsIndexPage() {
         orders={logisticsOrders}
         summaries={summaries}
         transportStepsByOs={transportStepsByOs}
+        canDelete={canDelete}
       />
     </div>
   );

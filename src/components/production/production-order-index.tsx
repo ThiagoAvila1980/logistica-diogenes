@@ -1,6 +1,7 @@
 "use client";
 
 import { ProductionOrderCard } from "@/components/production/production-order-card";
+import { OrderCardWithDelete } from "@/components/order/order-card-with-delete";
 import { FilteredOrderList } from "@/components/dashboard/filtered-order-list";
 import { serviceOrderFilterFields } from "@/lib/filters/service-order-fields";
 import type { OrderListItem } from "@/lib/data/types";
@@ -9,11 +10,13 @@ import type { CuttingSteps } from "@/lib/transport-gates";
 type ProductionOrderIndexProps = {
   orders: OrderListItem[];
   stepsByOs: Record<string, CuttingSteps>;
+  canDelete?: boolean;
 };
 
 export function ProductionOrderIndex({
   orders,
   stepsByOs,
+  canDelete = false,
 }: ProductionOrderIndexProps) {
   return (
     <FilteredOrderList
@@ -23,17 +26,23 @@ export function ProductionOrderIndex({
       idPrefix="production"
       getFilterFields={serviceOrderFilterFields}
       renderItem={(order) => (
-        <ProductionOrderCard
+        <OrderCardWithDelete
           order={order}
-          steps={
-            stepsByOs[order.id] ?? {
-              corteFeito: false,
-              embalagemFeita: false,
-              acessoriosFeitos: false,
-              vidrosFeitos: false,
+          canDelete={canDelete}
+          redirectHref="/production"
+        >
+          <ProductionOrderCard
+            order={order}
+            steps={
+              stepsByOs[order.id] ?? {
+                corteFeito: false,
+                embalagemFeita: false,
+                acessoriosFeitos: false,
+                vidrosFeitos: false,
+              }
             }
-          }
-        />
+          />
+        </OrderCardWithDelete>
       )}
     />
   );

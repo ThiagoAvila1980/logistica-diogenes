@@ -29,7 +29,7 @@ import {
   formatVaoItemFullLabel,
   getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
-import { DriverSelector } from "@/components/logistics/driver-selector";
+import { VaoStepDriverSelect } from "@/components/logistics/vao-step-driver-select";
 import { VehicleSelector } from "@/components/logistics/vehicle-selector";
 import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
@@ -37,6 +37,7 @@ import {
   getItemTransportGates,
   type TransportStep,
 } from "@/lib/logistics/transport-item-gates";
+import { getVaoStepAssignment } from "@/lib/logistics/transport-step-assignment";
 
 const TRANSPORT_STEPS: { key: TransportStep; label: string; shortLabel: string }[] = [
   { key: "perfilEstrutural", label: "Perfil estrutural", shortLabel: "Perfil Estrut." },
@@ -198,11 +199,7 @@ export function TransportChecklist({
             const itemVehicle = itemVehicleId
               ? vehicles.find((v) => v.id === itemVehicleId)
               : undefined;
-            const gates = getItemTransportGates(
-              item,
-              osStatus,
-              Boolean(itemVehicleId),
-            );
+            const gates = getItemTransportGates(item, osStatus);
             const doneSteps = TRANSPORT_STEPS.filter(({ key }) => itemProgress[key]).length;
             const itemAllDone = doneSteps === 4;
             const subtitle = buildVaoItemSubtitle(item, index, lookups);
@@ -282,109 +279,84 @@ export function TransportChecklist({
                 {/* Conteúdo expansível */}
                 {isExpanded && (
                   <div className="px-3 pb-3">
-                    {/* Desktop: grid com 4 colunas de checkboxes */}
-                    <div className="hidden items-center gap-4 sm:grid sm:grid-cols-[1fr_repeat(4,88px)]">
-                      <div />
-                      {TRANSPORT_STEPS.map(({ key, label }) => (
-                        <span
-                          key={key}
-                          className="text-center text-[10px] font-medium leading-tight text-muted-foreground"
-                        >
-                          {label}
-                        </span>
-                      ))}
-                      <div className="min-w-0" />
+                    {/* Cada etapa: check + label, e o motorista/data dela diretamente abaixo */}
+                    <div className="space-y-2">
                       {TRANSPORT_STEPS.map(({ key, label }) => {
                         const done = itemProgress[key];
                         const gate = gates[key];
                         const lKey = `${item.id}-${key}`;
                         const isLoading = loadingKey === lKey;
-                        const needsVehicle = key === "perfilEstrutural" && !itemVehicleId;
-                        const isLocked = !gate.unlocked || needsVehicle;
+                        const isLocked = !gate.unlocked && !done;
+                        const assignment = getVaoStepAssignment(item, key);
+                        const showAssignment = canAssignDriver || !!assignment.driverId;
 
                         return (
-                          <div key={key} className="flex justify-center">
-                            {isLoading ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            ) : isLocked && !done ? (
-                              <span title={gate.reason ?? undefined}>
-                                <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                              </span>
-                            ) : (
-                              <Checkbox
-                                checked={done}
-                                disabled={isLoading || (isLocked && !done)}
-                                onCheckedChange={(v) =>
-                                  handleToggle(item.id, key, v === true)
-                                }
-                                className={cn(
-                                  "shrink-0",
-                                  done && "border-success bg-success",
-                                )}
-                                aria-label={`${label} — Vão ${vaoNumber}`}
-                                title={gate.reason ?? undefined}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Mobile: 4 botões */}
-                    <div className="grid grid-cols-4 gap-1.5 sm:hidden">
-                      {TRANSPORT_STEPS.map(({ key, shortLabel: stepLabel }) => {
-                        const done = itemProgress[key];
-                        const gate = gates[key];
-                        const lKey = `${item.id}-${key}`;
-                        const isLoading = loadingKey === lKey;
-                        const needsVehicle = key === "perfilEstrutural" && !itemVehicleId;
-                        const isLocked = (!gate.unlocked || needsVehicle) && !done;
-
-                        return (
-                          <label
+                          <div
                             key={key}
                             className={cn(
-                              "flex cursor-pointer flex-col items-center gap-1 rounded-md border px-1 py-2 text-center transition-colors",
+                              "rounded-md border px-2.5 py-2 transition-colors",
                               done
-                                ? "border-success-border bg-success-muted"
-                                : isLocked
-                                  ? "cursor-not-allowed border-border bg-muted/30 opacity-60"
-                                  : "border-border bg-background hover:bg-muted/50",
-                              isLoading && "opacity-60",
+                                ? "border-success-border bg-success-muted/40"
+                                : "border-border bg-background",
                             )}
                           >
-                            {isLoading ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                            ) : isLocked ? (
-                              <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                            ) : (
-                              <Checkbox
-                                checked={done}
-                                disabled={isLoading}
-                                onCheckedChange={(v) =>
-                                  handleToggle(item.id, key, v === true)
-                                }
-                                className={cn(
-                                  "shrink-0",
-                                  done && "border-success bg-success",
-                                )}
-                                aria-label={`${stepLabel} — Vão ${vaoNumber}`}
-                                title={gate.reason ?? undefined}
-                              />
-                            )}
-                            <span
-                              className={cn(
-                                "text-[11px] font-medium leading-tight",
-                                done
-                                  ? "text-success-foreground"
-                                  : isLocked
-                                    ? "text-muted-foreground/60"
-                                    : "text-muted-foreground",
+                            <div className="flex items-center gap-2">
+                              {isLoading ? (
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                              ) : isLocked ? (
+                                <span title={gate.reason ?? undefined} className="shrink-0">
+                                  <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                </span>
+                              ) : (
+                                <Checkbox
+                                  checked={done}
+                                  disabled={isLoading || (isLocked && !done)}
+                                  onCheckedChange={(v) =>
+                                    handleToggle(item.id, key, v === true)
+                                  }
+                                  className={cn(
+                                    "shrink-0",
+                                    done && "border-success bg-success",
+                                  )}
+                                  aria-label={`${label} — Vão ${vaoNumber}`}
+                                  title={gate.reason ?? undefined}
+                                />
                               )}
-                            >
-                              {stepLabel}
-                            </span>
-                          </label>
+                              <span
+                                className={cn(
+                                  "text-xs font-medium leading-tight",
+                                  done
+                                    ? "text-success-foreground"
+                                    : isLocked
+                                      ? "text-muted-foreground/60"
+                                      : "text-foreground",
+                                )}
+                              >
+                                {label}
+                              </span>
+                            </div>
+
+                            {showAssignment && (
+                              <div className="mt-1.5 pl-6">
+                                <VaoStepDriverSelect
+                                  osId={osId}
+                                  itemId={item.id}
+                                  step={key}
+                                  stepLabel={label}
+                                  vaoNumber={vaoNumber}
+                                  driverId={assignment.driverId}
+                                  driverName={
+                                    assignment.driverId
+                                      ? (drivers.find((d) => d.id === assignment.driverId)?.name ?? null)
+                                      : null
+                                  }
+                                  scheduledDate={assignment.scheduledDate}
+                                  drivers={drivers}
+                                  canChange={canAssignDriver}
+                                />
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -412,29 +384,6 @@ export function TransportChecklist({
                               [item.id]: vehicleId,
                             }))
                           }
-                        />
-                      </div>
-                    )}
-
-                    {/* Motorista por vão */}
-                    {(canAssignDriver || item.transportProgress?.driverId) && (
-                      <div className="mt-2.5">
-                        <DriverSelector
-                          osId={osId}
-                          itemId={item.id}
-                          driverId={item.transportProgress?.driverId ?? null}
-                          driverName={
-                            item.transportProgress?.driverId
-                              ? (drivers.find((d) => d.id === item.transportProgress?.driverId)?.name ?? null)
-                              : null
-                          }
-                          scheduledTransportDate={
-                            item.transportProgress?.scheduledTransportDate
-                              ? new Date(item.transportProgress.scheduledTransportDate)
-                              : null
-                          }
-                          drivers={drivers}
-                          canChange={canAssignDriver}
                         />
                       </div>
                     )}

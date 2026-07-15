@@ -18,10 +18,10 @@ export function ConcludedOrderCard({ order }: Props) {
     <Link
       href={`/installation/${order.id}`}
       className={cn(
-        "group flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border bg-card p-4 shadow-[var(--shadow-card)] transition-all premium-card",
+        "group flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border bg-card p-4 shadow-(--shadow-card) transition-all premium-card",
         allDone
           ? "border-success-border hover:shadow-[0_4px_24px_-8px_rgba(34,197,94,0.25)]"
-          : "border-primary/10 hover:border-primary/30 hover:shadow-[var(--shadow-brand)]",
+          : "border-primary/10 hover:border-primary/30 hover:shadow-(--shadow-brand)",
         "active:scale-[0.98]",
       )}
     >

@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const { next } = await searchParams;
 
   return (
-    <Card className="premium-card w-full overflow-hidden border-0 shadow-[var(--shadow-brand)]">
+    <Card className="premium-card w-full overflow-hidden border-0 shadow-(--shadow-brand)">
       <CardHeader className="hidden lg:block">
         <div className="brass-rule mb-3" aria-hidden />
         <CardTitle className="text-primary">Entrar</CardTitle>

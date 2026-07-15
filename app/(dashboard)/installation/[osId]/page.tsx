@@ -11,7 +11,7 @@ import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
-import { MeasurementHeaderEditAction } from "@/components/order/measurement-header-edit-action";
+import { ServiceOrderManageActions } from "@/components/order/service-order-manage-actions";
 import { InstallationChecklist } from "@/components/installation/installation-checklist";
 import { InstallationServicePhotos } from "@/components/installation/installation-service-photos";
 import { Hammer } from "lucide-react";
@@ -27,6 +27,7 @@ export default async function InstallationOsPage({ params }: Props) {
   if (!order) notFound();
 
   const isManager = canViewAllOrders(session?.roles ?? []);
+  const canDelete = isManager;
   const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
   const [detail, lookups] = await Promise.all([
@@ -60,15 +61,17 @@ export default async function InstallationOsPage({ params }: Props) {
       description={order.description}
       className="mb-4 sm:mb-6"
       actions={
-        canEditHeader ? (
-          <MeasurementHeaderEditAction
-            osId={order.id}
-            clientName={order.clientName}
-            clientPhone={order.clientPhone}
-            clientAddress={order.clientAddress}
-            budgetReference={order.budgetReference}
-          />
-        ) : undefined
+        <ServiceOrderManageActions
+          osId={order.id}
+          displayNumber={getOrderDisplayNumber(order)}
+          clientName={order.clientName}
+          clientPhone={order.clientPhone}
+          clientAddress={order.clientAddress}
+          budgetReference={order.budgetReference}
+          canEditHeader={canEditHeader}
+          canDelete={canDelete}
+          redirectHref="/installation"
+        />
       }
     >
       <div className="mt-3">

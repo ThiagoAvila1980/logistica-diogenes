@@ -190,7 +190,7 @@ export function KanbanRevertVaosDialog({
                         <span className="block text-xs font-semibold">
                           Vão {vao.vaoNumber}
                         </span>
-                        <span className="block break-words text-xs text-muted-foreground">
+                        <span className="block wrap-break-word text-xs text-muted-foreground">
                           {vao.label}
                         </span>
                         {vao.hasProgress && (

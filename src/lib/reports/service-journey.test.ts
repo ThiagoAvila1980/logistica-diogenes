@@ -80,6 +80,7 @@ describe("buildServiceJourneyRow", () => {
           instalacaoEstruturalFeita: false,
           instalacaoVidrosFeita: false,
           instalacaoAcabamentoFeito: false,
+          todosVaosConcluidos: false,
         },
       }),
     );
@@ -97,6 +98,7 @@ describe("buildServiceJourneyRow", () => {
           instalacaoEstruturalFeita: true,
           instalacaoVidrosFeita: true,
           instalacaoAcabamentoFeito: true,
+          todosVaosConcluidos: true,
         },
       }),
     );
@@ -153,6 +155,7 @@ describe("filterServiceJourneyRows", () => {
             instalacaoEstruturalFeita: true,
             instalacaoVidrosFeita: true,
             instalacaoAcabamentoFeito: true,
+            todosVaosConcluidos: true,
           },
         }),
       ),

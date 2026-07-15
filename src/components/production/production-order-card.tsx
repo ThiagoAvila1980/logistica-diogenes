@@ -29,7 +29,7 @@ export function ProductionOrderCard({
       href={`/production/${order.id}`}
       className={cn(
         "group flex h-full w-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border px-4 py-3 transition-all",
-        "hover:border-primary/25 hover:shadow-[var(--shadow-card)] active:scale-[0.98]",
+        "hover:border-primary/25 hover:shadow-(--shadow-card) active:scale-[0.98]",
         allDone
           ? "border-success-border bg-success-muted premium-card"
           : "border-primary/10 bg-card premium-card",

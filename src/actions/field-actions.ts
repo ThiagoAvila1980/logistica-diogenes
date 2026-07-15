@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { revalidateOSRoutes } from "@/lib/revalidate";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { measurements } from "@/db/schema";
@@ -338,7 +339,7 @@ export async function updateMeasurementHeader(
 
 /**
  * Exclui medição por completo: arquivos no storage + registro (cascade).
- * Apenas admin/gerente; somente medições em etapa medicao_*.
+ * Apenas admin/gerente; permitido em qualquer etapa do fluxo.
  */
 export async function deleteMeasurement(
   osId: string,
@@ -360,14 +361,6 @@ export async function deleteMeasurement(
   const order = await getServiceOrderById(osId);
   if (!order) {
     return { success: false, message: "Medição não encontrada." };
-  }
-
-  if (!order.status.startsWith("medicao")) {
-    return {
-      success: false,
-      message:
-        "Só é possível excluir medições ainda em etapa de medição (antes do orçamento enviado).",
-    };
   }
 
   try {
@@ -392,9 +385,7 @@ export async function deleteMeasurement(
 
     await db.delete(measurements).where(eq(measurements.id, osId));
 
-    revalidatePath("/field");
-    revalidatePath(`/field/${osId}`);
-    revalidatePath("/dashboard");
+    revalidateOSRoutes(osId);
 
     return { success: true };
   } catch (error) {

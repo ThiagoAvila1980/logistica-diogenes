@@ -4,12 +4,12 @@ import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canEditMeasurementHeader, hasRole } from "@/lib/auth/permissions";
+import { canEditMeasurementHeader, canViewAllOrders, hasRole } from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
-import { MeasurementHeaderEditAction } from "@/components/order/measurement-header-edit-action";
+import { ServiceOrderManageActions } from "@/components/order/service-order-manage-actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { CuttingDetailView } from "@/components/production/cutting-detail-view";
 import { Scissors } from "lucide-react";
@@ -27,6 +27,7 @@ export default async function ProductionOsPage({ params }: Props) {
   if (!order) notFound();
 
   const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
+  const canDelete = canViewAllOrders(session?.roles ?? []);
   const isAdmin = hasRole(session?.roles ?? [], "admin");
 
   const { measurement, cutterNotes } = detail;
@@ -47,15 +48,17 @@ export default async function ProductionOsPage({ params }: Props) {
         description={order.description}
         className="mb-4 sm:mb-6"
         actions={
-          canEditHeader ? (
-            <MeasurementHeaderEditAction
-              osId={order.id}
-              clientName={order.clientName}
-              clientPhone={order.clientPhone}
-              clientAddress={order.clientAddress}
-              budgetReference={order.budgetReference}
-            />
-          ) : undefined
+          <ServiceOrderManageActions
+            osId={order.id}
+            displayNumber={getOrderDisplayNumber(order)}
+            clientName={order.clientName}
+            clientPhone={order.clientPhone}
+            clientAddress={order.clientAddress}
+            budgetReference={order.budgetReference}
+            canEditHeader={canEditHeader}
+            canDelete={canDelete}
+            redirectHref="/production"
+          />
         }
       >
         <div className="mt-3">
