@@ -19,6 +19,7 @@ function baseOrder(overrides: Partial<KanbanOrderItem> = {}): KanbanOrderItem {
     scheduledDate: new Date("2026-06-01"),
     updatedAt: new Date(),
     hasMeasurement: true,
+    pedidoStatus: "sem_pedido",
     cuttingSteps: null,
     transportSteps: {
       levarPerfilEstrutural: false,

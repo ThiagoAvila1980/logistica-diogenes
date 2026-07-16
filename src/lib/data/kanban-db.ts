@@ -1,11 +1,12 @@
-import { desc, inArray } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
-import { measurements, transportLogs } from "@/db/schema";
+import { measurements, pedidos, transportLogs } from "@/db/schema";
 import {
   hasMeasurementItems,
   measurementClientName,
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
+import { derivePedidoStatus } from "@/lib/pedido/pedido-status";
 import { findActiveCortador } from "@/lib/performance/scoring";
 import { collectDriverIdsFromMeasurementItems } from "@/lib/logistics/transport-driver-access";
 import { collectInstallerIdsFromMeasurementItems } from "@/lib/installation/installation-installer-access";
@@ -58,9 +59,12 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       updatedAt: measurements.updatedAt,
       assignedUserId: measurements.assignedUserId,
       hasMeasurement: hasMeasurementItems,
+      pedidoFeito: pedidos.pedidoFeito,
+      pedidoRecebido: pedidos.pedidoRecebido,
       items: measurements.items,
     })
     .from(measurements)
+    .leftJoin(pedidos, eq(pedidos.idMedicao, measurements.id))
     .orderBy(desc(measurements.updatedAt));
 
   const osIds = rows.map((row) => row.id);
@@ -162,6 +166,11 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       scheduledDate: r.scheduledDate,
       updatedAt: r.updatedAt,
       hasMeasurement: Boolean(r.hasMeasurement),
+      pedidoStatus: derivePedidoStatus(
+        r.pedidoFeito == null
+          ? null
+          : { pedidoFeito: r.pedidoFeito, pedidoRecebido: r.pedidoRecebido ?? false },
+      ),
       cuttingSteps: showCutting ? cuttingStepsData : null,
       transportSteps: isTransportPhase ? transportStepsData : null,
       installationSteps:

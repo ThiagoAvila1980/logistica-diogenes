@@ -44,6 +44,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   [AUDIT_ACTIONS.ADMIN_LOOKUP_DELETED]: "Cadastro excluído",
   [AUDIT_ACTIONS.ADMIN_ROLE_ACCESS_UPDATED]: "Permissões atualizadas",
   [AUDIT_ACTIONS.ADMIN_SCORING_RULE_UPDATED]: "Regra de pontuação atualizada",
+
+  [AUDIT_ACTIONS.PEDIDO_UPDATED]: "Pedido atualizado",
 };
 
 const CUTTING_STEP_LABELS: Record<string, string> = {

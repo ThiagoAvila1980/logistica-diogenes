@@ -15,6 +15,7 @@ function makeOrder(overrides: Partial<KanbanOrderItem>): KanbanOrderItem {
     scheduledDate: null,
     updatedAt: new Date(),
     hasMeasurement: true,
+    pedidoStatus: "sem_pedido",
     cuttingSteps: null,
     transportSteps: null,
     installationSteps: null,

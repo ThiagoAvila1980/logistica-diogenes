@@ -15,6 +15,13 @@
       "when": 1784205439127,
       "tag": "0001_normal_shriek",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784231502528,
+      "tag": "0002_skinny_cammi",
+      "breakpoints": true
     }
   ]
 }

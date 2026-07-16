@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from "dexie";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { MeasurementDbType, MeasurementPriority, OsStatus } from "@/db/schema";
 import type { OrderListItem, OrderDetail } from "@/lib/data/types";
+import type { PedidoStatus } from "@/lib/pedido/pedido-status";
 import type { FieldMeasurementDraft } from "@/lib/data/field";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 
@@ -60,6 +61,7 @@ export interface CachedMeasurement {
   updatedAt: string;
   budgetReference: string | null;
   hasMeasurement: boolean;
+  pedidoStatus: PedidoStatus;
   cachedAt: string;
 }
 
@@ -166,6 +168,7 @@ export function toCachedMeasurement(item: OrderListItem): CachedMeasurement {
     updatedAt: item.updatedAt.toISOString(),
     budgetReference: item.budgetReference,
     hasMeasurement: item.hasMeasurement,
+    pedidoStatus: item.pedidoStatus,
     cachedAt: new Date().toISOString(),
   };
 }
@@ -185,5 +188,6 @@ export function fromCachedMeasurement(cached: CachedMeasurement): OrderListItem 
     updatedAt: new Date(cached.updatedAt),
     budgetReference: cached.budgetReference,
     hasMeasurement: cached.hasMeasurement,
+    pedidoStatus: cached.pedidoStatus,
   };
 }

@@ -419,6 +419,42 @@ export const auditEvents = pgTable(
 
 export type AuditEvent = typeof auditEvents.$inferSelect;
 
+// ─── Pedidos (compra de material de orçamento) ────────────────────────────────
+
+export const pedidos = pgTable(
+  "pedidos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    idMedicao: uuid("id_medicao")
+      .references(() => measurements.id, { onDelete: "cascade" })
+      .notNull(),
+    pedidoFeito: boolean("pedido_feito").default(false).notNull(),
+    pedidoFeitoAt: timestamp("pedido_feito_at", { withTimezone: true }),
+    pedidoFeitoPorId: uuid("pedido_feito_por_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    pedidoRecebido: boolean("pedido_recebido").default(false).notNull(),
+    pedidoRecebidoAt: timestamp("pedido_recebido_at", { withTimezone: true }),
+    pedidoRecebidoPorId: uuid("pedido_recebido_por_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_pedidos_medicao_unique").on(t.idMedicao),
+    index("idx_pedidos_feito_por").on(t.pedidoFeitoPorId),
+    index("idx_pedidos_recebido_por").on(t.pedidoRecebidoPorId),
+  ],
+);
+
+export type Pedido = typeof pedidos.$inferSelect;
+
 // ─── Role screen access ────────────────────────────────────────────────────────
 
 /** Matriz configurável de acesso tela x papel. admin não é armazenado (acesso total implícito). */
@@ -468,7 +504,25 @@ export const measurementsRelations = relations(measurements, ({ one, many }) => 
   cuttingPlan: one(cuttingPlans),
   transportLog: one(transportLogs),
   installationLog: one(installationLogs),
+  pedido: one(pedidos),
   statusHistory: many(statusHistory),
+}));
+
+export const pedidosRelations = relations(pedidos, ({ one }) => ({
+  measurement: one(measurements, {
+    fields: [pedidos.idMedicao],
+    references: [measurements.id],
+  }),
+  pedidoFeitoPor: one(users, {
+    fields: [pedidos.pedidoFeitoPorId],
+    references: [users.id],
+    relationName: "pedidoFeitoPor",
+  }),
+  pedidoRecebidoPor: one(users, {
+    fields: [pedidos.pedidoRecebidoPorId],
+    references: [users.id],
+    relationName: "pedidoRecebidoPor",
+  }),
 }));
 
 export const statusHistoryRelations = relations(statusHistory, ({ one }) => ({

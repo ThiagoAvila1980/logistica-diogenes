@@ -4,6 +4,7 @@ import type {
   MeasurementPriority,
   OsStatus,
 } from "@/db/schema";
+import type { PedidoStatus } from "@/lib/pedido/pedido-status";
 
 export type OrderListItem = {
   id: string;
@@ -19,6 +20,7 @@ export type OrderListItem = {
   updatedAt: Date;
   budgetReference: string | null;
   hasMeasurement: boolean;
+  pedidoStatus: PedidoStatus;
 };
 
 export type OrderDetail = OrderListItem & {

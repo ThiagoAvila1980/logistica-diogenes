@@ -3,6 +3,7 @@ import type {
   MeasurementDbStatus,
   MeasurementDbType,
 } from "@/db/schema";
+import type { PedidoStatus } from "@/lib/pedido/pedido-status";
 
 export type CuttingSteps = {
   corte: boolean;
@@ -40,6 +41,8 @@ export type KanbanOrderItem = {
   updatedAt: Date;
   /** true quando o medidor já registrou itens de medição (items não vazio). */
   hasMeasurement: boolean;
+  /** Status do pedido de material (somente relevante para orçamentos). */
+  pedidoStatus: PedidoStatus;
   /** Presente quando a medição está no plano de corte */
   cuttingSteps: CuttingSteps | null;
   /** Presente quando a medição está em fase de transporte */

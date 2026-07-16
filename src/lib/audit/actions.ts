@@ -41,6 +41,8 @@ export const AUDIT_ACTIONS = {
   ADMIN_LOOKUP_DELETED: "admin.lookup_deleted",
   ADMIN_ROLE_ACCESS_UPDATED: "admin.role_access_updated",
   ADMIN_SCORING_RULE_UPDATED: "admin.scoring_rule_updated",
+
+  PEDIDO_UPDATED: "pedido.updated",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

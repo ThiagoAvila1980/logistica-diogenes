@@ -10,6 +10,10 @@ import { getOsModuleHrefForKanbanPhase } from "@/lib/os-module-href";
 import { cn } from "@/lib/utils";
 import type { KanbanOrderItem } from "@/lib/data/kanban";
 import { INSTALLATION_STEP_LABELS } from "@/components/dashboard/workflow-step-badges";
+import {
+  PEDIDO_STATUS_LABEL,
+  PEDIDO_STATUS_STYLE,
+} from "@/lib/pedido/pedido-status";
 
 const PRIORITY_BORDER: Record<string, string> = {
   normal: "border-l-border",
@@ -155,28 +159,44 @@ export function KanbanCard({
                 <Link
                   href={detailHref}
                   className={cn(
-                    "block min-w-0 truncate font-mono font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring",
+                    "block min-w-0 flex-1 truncate font-mono font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring",
                     text.orderNumber,
                   )}
                   tabIndex={snapshot.isDragging ? -1 : 0}
                 >
                   {displayNumber}
                 </Link>
-                {canRevert && onRequestRevert && (
-                  <button
-                    type="button"
-                    className="shrink-0 rounded p-0.5 text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
-                    title="Voltar etapa"
-                    aria-label={`Voltar etapa do orçamento ${displayNumber}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRequestRevert(os.id);
-                    }}
-                    tabIndex={snapshot.isDragging ? -1 : 0}
-                  >
-                    <Undo2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
-                  </button>
-                )}
+                <div className="flex shrink-0 items-center gap-0.5">
+                  {isMeasurementColumn && !isFinal && (
+                    <Link
+                      href={`/field/${os.id}/pedidos`}
+                      className={cn(
+                        "inline-flex items-center rounded-full px-1 py-px font-medium outline-none transition-colors hover:opacity-90 focus-visible:ring-1 focus-visible:ring-ring sm:px-1.5 sm:py-0.5",
+                        text.badge,
+                        PEDIDO_STATUS_STYLE[os.pedidoStatus],
+                      )}
+                      tabIndex={snapshot.isDragging ? -1 : 0}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {PEDIDO_STATUS_LABEL[os.pedidoStatus]}
+                    </Link>
+                  )}
+                  {canRevert && onRequestRevert && (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded p-0.5 text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                      title="Voltar etapa"
+                      aria-label={`Voltar etapa do orçamento ${displayNumber}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRequestRevert(os.id);
+                      }}
+                      tabIndex={snapshot.isDragging ? -1 : 0}
+                    >
+                      <Undo2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+                    </button>
+                  )}
+                </div>
               </div>
               <Link
                 href={detailHref}

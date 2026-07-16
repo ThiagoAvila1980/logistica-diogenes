@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, or, isNull, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
-import { measurements } from "@/db/schema";
+import { measurements, pedidos } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session-types";
 import { getVisibleStatusesForRoles } from "@/lib/auth/order-access";
 import { canViewAllOrders } from "@/lib/auth/permissions";
@@ -12,6 +12,7 @@ import {
   measurementClientAddress,
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
+import { derivePedidoStatus } from "@/lib/pedido/pedido-status";
 import type { OrderDetail, OrderListItem } from "./types";
 
 function buildOrderAccessWhere(session: SessionUser | null): SQL | undefined {
@@ -67,6 +68,8 @@ function mapMeasurementRow(r: {
   clientName: string;
   budgetReference: string | null;
   hasMeasurement: boolean;
+  pedidoFeito: boolean | null;
+  pedidoRecebido: boolean | null;
 }): OrderListItem {
   return {
     id: r.id,
@@ -81,6 +84,11 @@ function mapMeasurementRow(r: {
     updatedAt: r.updatedAt,
     budgetReference: r.budgetReference,
     hasMeasurement: Boolean(r.hasMeasurement),
+    pedidoStatus: derivePedidoStatus(
+      r.pedidoFeito == null
+        ? null
+        : { pedidoFeito: r.pedidoFeito, pedidoRecebido: r.pedidoRecebido ?? false },
+    ),
   };
 }
 
@@ -104,8 +112,11 @@ export async function listServiceOrdersDb(
       clientName: measurementClientName,
       budgetReference: resolvedBudgetReference,
       hasMeasurement: hasMeasurementItems,
+      pedidoFeito: pedidos.pedidoFeito,
+      pedidoRecebido: pedidos.pedidoRecebido,
     })
     .from(measurements)
+    .leftJoin(pedidos, eq(pedidos.idMedicao, measurements.id))
     .orderBy(desc(measurements.updatedAt))
     .$dynamic();
 
@@ -140,8 +151,11 @@ export async function getServiceOrderByIdDb(
       budgetReference: resolvedBudgetReference,
       sourcePdfUrl: measurements.sourcePdfUrl,
       hasMeasurement: hasMeasurementItems,
+      pedidoFeito: pedidos.pedidoFeito,
+      pedidoRecebido: pedidos.pedidoRecebido,
     })
     .from(measurements)
+    .leftJoin(pedidos, eq(pedidos.idMedicao, measurements.id))
     .where(eq(measurements.id, id))
     .limit(1);
 
