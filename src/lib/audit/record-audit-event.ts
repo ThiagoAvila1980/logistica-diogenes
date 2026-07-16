@@ -4,7 +4,6 @@ import { auditEvents } from "@/db/schema";
 import type { getDb } from "@/db";
 import type { AuditAction } from "./actions";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Pick<ReturnType<typeof getDb>, "insert">;
 
 export type RecordAuditEventParams = {

@@ -8,6 +8,8 @@ import { cuttingPlans, measurements, statusHistory } from "@/db/schema";
 import type { OsStatus } from "@/db/schema";
 import { isCuttingPhaseStatus } from "@/lib/transport-gates";
 import { requireRole } from "@/lib/auth/require-role";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS, stepCheckAction } from "@/lib/audit/actions";
 import { getServiceOrderById } from "@/lib/data/orders";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import {
@@ -52,8 +54,9 @@ export async function updateItemCuttingStepAction(
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
+  let session;
   try {
-    await requireRole(["admin", "gerente", "cortador"]);
+    session = await requireRole(["admin", "gerente", "cortador"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -99,6 +102,14 @@ export async function updateItemCuttingStepAction(
         .set({ items: updatedItems, updatedAt: new Date() })
         .where(eq(measurements.id, osId));
 
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: stepCheckAction("cutting", done),
+        measurementId: osId,
+        itemId,
+        payload: { step, done },
+      });
+
       const updatedCuttingItems = selectCuttingLineItems(updatedItems);
       const newAggregate = aggregateCuttingStepsFromItems(updatedCuttingItems);
       const aggregate = aggregateCuttingStepsFromItems(
@@ -135,7 +146,19 @@ export async function updateItemCuttingStepAction(
           measurementId: osId,
           fromStatus: status,
           toStatus: "transporte_perfil",
+          changedById: session.userId,
           metadata: { source: "cutting_unlock_transport_per_vao" },
+        });
+        
+        await recordAuditEvent(tx, {
+          actorId: session.userId,
+          action: AUDIT_ACTIONS.OS_STAGE_CHANGED,
+          measurementId: osId,
+          payload: {
+            fromStatus: status,
+            toStatus: "transporte_perfil",
+            source: "cutting_unlock_transport_per_vao",
+          },
         });
       }
     });
@@ -168,8 +191,9 @@ export async function advanceCuttingToTransportAction(
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
+  let session;
   try {
-    await requireRole(["admin", "gerente", "cortador"]);
+    session = await requireRole(["admin", "gerente", "cortador"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -226,7 +250,18 @@ export async function advanceCuttingToTransportAction(
         measurementId: osId,
         fromStatus: meas.etapa as OsStatus,
         toStatus: "transporte_perfil",
+        changedById: session.userId,
         metadata: { source: "cutting_advance_to_transport" },
+      });
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.OS_STAGE_CHANGED,
+        measurementId: osId,
+        payload: {
+          fromStatus: meas.etapa as OsStatus,
+          toStatus: "transporte_perfil",
+          source: "cutting_advance_to_transport",
+        },
       });
     });
 
@@ -256,8 +291,9 @@ export async function updateCuttingNotesAction(
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
+  let session;
   try {
-    await requireRole(["admin", "gerente", "cortador"]);
+    session = await requireRole(["admin", "gerente", "cortador"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -279,23 +315,32 @@ export async function updateCuttingNotesAction(
 
     if (!meas) return { success: false, message: "OS não encontrada" };
 
-    const [existingPlan] = await db
-      .select({ id: cuttingPlans.id })
-      .from(cuttingPlans)
-      .where(eq(cuttingPlans.idMedicao, osId))
-      .limit(1);
+    await db.transaction(async (tx) => {
+      const [existingPlan] = await tx
+        .select({ id: cuttingPlans.id })
+        .from(cuttingPlans)
+        .where(eq(cuttingPlans.idMedicao, osId))
+        .limit(1);
 
-    if (existingPlan) {
-      await db
-        .update(cuttingPlans)
-        .set({ cutterNotes: trimmedNotes })
-        .where(eq(cuttingPlans.id, existingPlan.id));
-    } else {
-      await db.insert(cuttingPlans).values({
-        idMedicao: osId,
-        cutterNotes: trimmedNotes,
+      if (existingPlan) {
+        await tx
+          .update(cuttingPlans)
+          .set({ cutterNotes: trimmedNotes })
+          .where(eq(cuttingPlans.id, existingPlan.id));
+      } else {
+        await tx.insert(cuttingPlans).values({
+          idMedicao: osId,
+          cutterNotes: trimmedNotes,
+        });
+      }
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.CUTTING_NOTES_UPDATED,
+        measurementId: osId,
+        payload: { notes: trimmedNotes },
       });
-    }
+    });
 
     revalidateOSRoutes(osId);
     return { success: true };
@@ -325,8 +370,9 @@ export async function sendItemsToCuttingAction(
     return { success: false, message: msg };
   }
 
+  let session;
   try {
-    await requireRole(["gerente", "admin"]);
+    session = await requireRole(["gerente", "admin"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -373,7 +419,15 @@ export async function sendItemsToCuttingAction(
         measurementId: osId,
         fromStatus,
         toStatus: "cortes",
+        changedById: session.userId,
         metadata: { source: "send_items_to_cutting", selectedItemIds },
+      });
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.CUTTING_ITEMS_SENT,
+        measurementId: osId,
+        payload: { selectedItemIds },
       });
     });
 
@@ -416,8 +470,9 @@ export async function updateItemDrawingAction(
     };
   }
 
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -480,6 +535,14 @@ export async function updateItemDrawingAction(
         .update(measurements)
         .set({ items: updatedItems, updatedAt: new Date() })
         .where(eq(measurements.id, osId));
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.CUTTING_DRAWING_UPDATED,
+        measurementId: osId,
+        itemId,
+        payload: { drawingId },
+      });
     });
 
     const displayUrl = await resolveUploadDisplayUrl(savedUrl);
