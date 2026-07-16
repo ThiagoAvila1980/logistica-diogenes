@@ -59,8 +59,9 @@ export async function createUser(
   _prev: AdminActionResult | null,
   formData: FormData,
 ): Promise<AdminActionResult> {
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch (err) {
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
   }
@@ -94,7 +95,15 @@ export async function createUser(
       return { success: false, message: "E-mail já cadastrado" };
     }
     const passwordHash = await hashPassword(password);
-    await createUserDb({ name, email, roles, phone, passwordHash });
+    const newUserId = await createUserDb({ name, email, roles, phone, passwordHash });
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.ADMIN_USER_CREATED,
+      entityType: "user",
+      entityId: newUserId,
+      actorId: session.userId,
+    });
 
     revalidatePath("/admin/users");
     return { success: true, message: "Usuário criado" };
@@ -168,6 +177,15 @@ export async function updateUser(
     }
     await updateUserDb(id, patch);
 
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.ADMIN_USER_UPDATED,
+      entityType: "user",
+      entityId: id,
+      actorId: session.userId,
+      payload: { fields: Object.keys(patch) },
+    });
+
     revalidatePath("/admin/users");
     return { success: true, message: "Usuário atualizado" };
   } catch (err) {
@@ -214,6 +232,14 @@ export async function deleteUser(userId: string): Promise<AdminActionResult> {
       };
     }
     await deleteUserDb(id.data);
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.ADMIN_USER_DELETED,
+      entityType: "user",
+      entityId: id.data,
+      actorId: session.userId,
+    });
 
     revalidatePath("/admin/users");
     return { success: true, message: "Usuário excluído permanentemente" };

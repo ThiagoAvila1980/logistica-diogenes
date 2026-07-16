@@ -37,16 +37,17 @@ export async function createUserDb(data: {
   roles: AdminUserRow["roles"];
   phone?: string | null;
   passwordHash: string;
-}): Promise<void> {
+}): Promise<string> {
   const db = getDb();
-  await db.insert(users).values({
+  const [inserted] = await db.insert(users).values({
     name: data.name.trim(),
     email: data.email.trim().toLowerCase(),
     roles: data.roles,
     phone: data.phone?.trim() ?? null,
     passwordHash: data.passwordHash,
     active: true,
-  });
+  }).returning({ id: users.id });
+  return inserted.id;
 }
 
 export async function updateUserDb(

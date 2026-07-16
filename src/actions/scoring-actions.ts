@@ -28,8 +28,9 @@ export async function updateScoringRuleAction(
   _prev: ScoringActionResult | null,
   formData: FormData,
 ): Promise<ScoringActionResult> {
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -44,7 +45,7 @@ export async function updateScoringRuleAction(
     return { success: false, message: "Dados inválidos. Verifique os campos." };
   }
 
-  try {
+    try {
     const db = getDb();
     await db
       .update(scoringRules)
@@ -54,6 +55,15 @@ export async function updateScoringRuleAction(
         updatedAt: new Date(),
       })
       .where(eq(scoringRules.eventType, parsed.data.eventType as WorkEventType));
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.ADMIN_SCORING_RULE_UPDATED,
+      entityType: "scoring_rule",
+      entityId: parsed.data.eventType,
+      actorId: session.userId,
+      payload: { points: parsed.data.points, active: parsed.data.active },
+    });
 
     revalidatePath("/admin/scoring");
     return { success: true, message: "Pontuação atualizada com sucesso." };

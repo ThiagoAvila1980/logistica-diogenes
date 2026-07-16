@@ -40,7 +40,7 @@ export async function listCoresAdminDb(): Promise<LookupAdminRow[]> {
 export async function upsertCorDb(data: {
   id?: string;
   descricao: string;
-}): Promise<void> {
+}): Promise<string> {
   const db = getDb();
   const descricao = data.descricao.trim();
   if (data.id) {
@@ -48,9 +48,10 @@ export async function upsertCorDb(data: {
       .update(cores)
       .set({ descricao })
       .where(eq(cores.idCor, data.id));
-    return;
+    return data.id;
   }
-  await db.insert(cores).values({ descricao });
+  const [inserted] = await db.insert(cores).values({ descricao }).returning({ id: cores.idCor });
+  return inserted.id;
 }
 
 export async function deleteCorDb(id: string): Promise<void> {
@@ -96,7 +97,7 @@ export async function listTipoVidroAdminDb(): Promise<LookupAdminRow[]> {
 export async function upsertTipoVidroDb(data: {
   id?: string;
   descricao: string;
-}): Promise<void> {
+}): Promise<string> {
   const db = getDb();
   const descricao = data.descricao.trim();
   if (data.id) {
@@ -104,9 +105,10 @@ export async function upsertTipoVidroDb(data: {
       .update(tipoVidro)
       .set({ descricao })
       .where(eq(tipoVidro.idTipoVidro, data.id));
-    return;
+    return data.id;
   }
-  await db.insert(tipoVidro).values({ descricao });
+  const [inserted] = await db.insert(tipoVidro).values({ descricao }).returning({ id: tipoVidro.idTipoVidro });
+  return inserted.id;
 }
 
 export async function deleteTipoVidroDb(id: string): Promise<void> {
@@ -184,7 +186,7 @@ export async function upsertTipoEnvidracamentoDb(data: {
   descricao: string;
   imagemUrl?: string | null;
   dificuldade?: number;
-}): Promise<void> {
+}): Promise<string> {
   const db = getDb();
   const descricao = data.descricao.trim();
   const imagemUrl = data.imagemUrl ?? null;
@@ -194,9 +196,10 @@ export async function upsertTipoEnvidracamentoDb(data: {
       .update(tipoEnvidracamento)
       .set({ descricao, imagemUrl, dificuldade })
       .where(eq(tipoEnvidracamento.idTipoEnvidracamento, data.id));
-    return;
+    return data.id;
   }
-  await db.insert(tipoEnvidracamento).values({ descricao, imagemUrl, dificuldade });
+  const [inserted] = await db.insert(tipoEnvidracamento).values({ descricao, imagemUrl, dificuldade }).returning({ id: tipoEnvidracamento.idTipoEnvidracamento });
+  return inserted.id;
 }
 
 export async function deleteTipoEnvidracamentoDb(id: string): Promise<void> {
@@ -249,7 +252,7 @@ export async function listAmbientesAdminDb(): Promise<LookupAdminRow[]> {
 export async function upsertAmbienteDb(data: {
   id?: string;
   descricao: string;
-}): Promise<void> {
+}): Promise<string> {
   const db = getDb();
   const descricao = data.descricao.trim();
   if (data.id) {
@@ -257,9 +260,10 @@ export async function upsertAmbienteDb(data: {
       .update(ambientes)
       .set({ descricao })
       .where(eq(ambientes.idAmbiente, data.id));
-    return;
+    return data.id;
   }
-  await db.insert(ambientes).values({ descricao });
+  const [inserted] = await db.insert(ambientes).values({ descricao }).returning({ id: ambientes.idAmbiente });
+  return inserted.id;
 }
 
 export async function deleteAmbienteDb(id: string): Promise<void> {

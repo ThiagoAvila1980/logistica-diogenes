@@ -26,8 +26,9 @@ export async function saveVehicle(
   _prev: AdminActionResult | null,
   formData: FormData,
 ): Promise<AdminActionResult> {
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch (err) {
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
   }
@@ -74,7 +75,15 @@ export async function saveVehicle(
         };
       }
     }
-    await upsertVehicleDb({ id, description, plate, active });
+    const savedId = await upsertVehicleDb({ id, description, plate, active });
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: id ? AUDIT_ACTIONS.ADMIN_VEHICLE_UPDATED : AUDIT_ACTIONS.ADMIN_VEHICLE_CREATED,
+      entityType: "vehicle",
+      entityId: savedId,
+      actorId: session.userId,
+    });
 
     revalidatePath("/admin/vehicles");
     revalidatePath("/logistics");
@@ -91,8 +100,9 @@ export async function saveVehicle(
 }
 
 export async function deleteVehicle(vehicleId: string): Promise<AdminActionResult> {
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch (err) {
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
   }
@@ -105,6 +115,15 @@ export async function deleteVehicle(vehicleId: string): Promise<AdminActionResul
       return { success: false, message: "Veículo em uso no transporte" };
     }
     await deleteVehicleDb(vehicleId);
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.ADMIN_VEHICLE_DELETED,
+      entityType: "vehicle",
+      entityId: vehicleId,
+      actorId: session.userId,
+    });
+
     revalidatePath("/admin/vehicles");
     revalidatePath("/logistics");
     return { success: true, message: "Veículo removido" };

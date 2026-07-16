@@ -27,8 +27,9 @@ const CONFIGURABLE_ROLES: Exclude<UserRole, "admin">[] = [
 export async function saveRoleAccessMatrix(
   formData: FormData,
 ): Promise<RoleAccessActionResult> {
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch (err) {
     return { success: false, message: authErrorMessage(err) ?? "Acesso negado" };
   }
@@ -47,6 +48,21 @@ export async function saveRoleAccessMatrix(
 
   try {
     await saveRoleScreenMatrix(updates);
+
+    let cellCount = 0;
+    for (const role in updates) {
+      cellCount += updates[role as keyof typeof updates]?.length ?? 0;
+    }
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.ADMIN_ROLE_ACCESS_UPDATED,
+      entityType: "system",
+      entityId: "role_access",
+      actorId: session.userId,
+      payload: { cellCount },
+    });
+
     revalidatePath("/admin/permissions");
     return { success: true, message: "Permissões salvas com sucesso." };
   } catch (err) {

@@ -181,7 +181,7 @@ export async function upsertVehicleDb(data: {
   description: string;
   plate: string;
   active?: boolean;
-}): Promise<void> {
+}): Promise<string> {
   const db = getDb();
   const plate = data.plate.trim().toUpperCase();
   const values = {
@@ -193,8 +193,10 @@ export async function upsertVehicleDb(data: {
 
   if (data.id) {
     await db.update(vehicles).set(values).where(eq(vehicles.id, data.id));
+    return data.id;
   } else {
-    await db.insert(vehicles).values(values);
+    const [inserted] = await db.insert(vehicles).values(values).returning({ id: vehicles.id });
+    return inserted.id;
   }
 }
 

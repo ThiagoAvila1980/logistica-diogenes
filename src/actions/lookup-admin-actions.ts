@@ -36,7 +36,7 @@ const ENTITY_CONFIG: Record<
       descricao: string;
       imagemUrl?: string | null;
       dificuldade?: number;
-    }) => Promise<void>;
+    }) => Promise<string>;
     deleteDb: (id: string) => Promise<void>;
     countDupDb: (descricao: string, excludeId?: string) => Promise<number>;
   }
@@ -49,7 +49,7 @@ const ENTITY_CONFIG: Record<
     },
     upsertDb: async (data) => {
       const { upsertCorDb } = await import("@/lib/data/lookup-admin-db");
-      await upsertCorDb(data);
+      return upsertCorDb(data);
     },
     deleteDb: async (id) => {
       const { deleteCorDb } = await import("@/lib/data/lookup-admin-db");
@@ -68,7 +68,7 @@ const ENTITY_CONFIG: Record<
     },
     upsertDb: async (data) => {
       const { upsertTipoVidroDb } = await import("@/lib/data/lookup-admin-db");
-      await upsertTipoVidroDb(data);
+      return upsertTipoVidroDb(data);
     },
     deleteDb: async (id) => {
       const { deleteTipoVidroDb } = await import("@/lib/data/lookup-admin-db");
@@ -93,7 +93,7 @@ const ENTITY_CONFIG: Record<
       const { upsertTipoEnvidracamentoDb } = await import(
         "@/lib/data/lookup-admin-db"
       );
-      await upsertTipoEnvidracamentoDb(data);
+      return upsertTipoEnvidracamentoDb(data);
     },
     deleteDb: async (id) => {
       const { deleteTipoEnvidracamentoDb } = await import(
@@ -116,7 +116,7 @@ const ENTITY_CONFIG: Record<
     },
     upsertDb: async (data) => {
       const { upsertAmbienteDb } = await import("@/lib/data/lookup-admin-db");
-      await upsertAmbienteDb(data);
+      return upsertAmbienteDb(data);
     },
     deleteDb: async (id) => {
       const { deleteAmbienteDb } = await import("@/lib/data/lookup-admin-db");
@@ -152,8 +152,9 @@ async function saveLookupInternal(
   _prev: AdminActionResult | null,
   formData: FormData,
 ): Promise<AdminActionResult> {
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch (err) {
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
   }
@@ -179,7 +180,16 @@ async function saveLookupInternal(
     if (dup > 0) {
       return { success: false, message: "Descrição já cadastrada" };
     }
-    await config.upsertDb({ id, descricao });
+    const savedId = await config.upsertDb({ id, descricao });
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: id ? AUDIT_ACTIONS.ADMIN_LOOKUP_UPDATED : AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED,
+      entityType: entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity,
+      entityId: savedId,
+      actorId: session.userId,
+      payload: { lookup: entity },
+    });
 
     revalidateLookupPaths(config.adminPath);
     return {
@@ -212,8 +222,9 @@ export async function saveTipoEnvidracamento(
   prev: AdminActionResult | null,
   formData: FormData,
 ): Promise<AdminActionResult> {
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch (err) {
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
   }
@@ -271,7 +282,7 @@ export async function saveTipoEnvidracamento(
       return { success: false, message: "Descrição já cadastrada" };
     }
 
-    await config.upsertDb({ id, descricao, imagemUrl, dificuldade });
+    const savedId = await config.upsertDb({ id, descricao, imagemUrl, dificuldade });
 
     if (
       previousImagemUrl &&
@@ -280,6 +291,15 @@ export async function saveTipoEnvidracamento(
     ) {
       await deleteTipoEnvidracamentoImage(previousImagemUrl);
     }
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: id ? AUDIT_ACTIONS.ADMIN_LOOKUP_UPDATED : AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED,
+      entityType: "tipo_envidracamento",
+      entityId: savedId,
+      actorId: session.userId,
+      payload: { lookup: "tipo_envidracamento" },
+    });
 
     revalidateLookupPaths(config.adminPath);
     return {
@@ -298,8 +318,9 @@ export async function deleteLookupItem(
   entity: LookupEntity,
   id: string,
 ): Promise<AdminActionResult> {
+  let session;
   try {
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch (err) {
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão" };
   }
@@ -327,6 +348,15 @@ export async function deleteLookupItem(
     } else {
       await config.deleteDb(id);
     }
+
+    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.ADMIN_LOOKUP_DELETED,
+      entityType: entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity,
+      entityId: id,
+      actorId: session.userId,
+      payload: { lookup: entity },
+    });
 
     revalidateLookupPaths(config.adminPath);
     return { success: true, message: "Registro removido" };
