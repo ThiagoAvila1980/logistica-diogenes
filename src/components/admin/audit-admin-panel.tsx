@@ -2,21 +2,13 @@
 
 import { useTransition } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Loader2, Search, X } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { getAuditActionLabel, formatAuditPayloadSummary } from "@/lib/audit/action-labels";
 import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 import type { AuditEventListResult } from "@/lib/data/audit-events";
@@ -32,7 +24,7 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const currentOs = searchParams.get("osNumber") || "";
+  const currentOs = searchParams.get("os") || "";
   const currentActor = searchParams.get("actorId") || "all";
   const currentAction = searchParams.get("action") || "all";
   const currentFrom = searchParams.get("from") || "";
@@ -47,9 +39,9 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
 
     params.set("page", "1");
 
-    const osNumber = formData.get("osNumber")?.toString().trim();
-    if (osNumber) params.set("osNumber", osNumber);
-    else params.delete("osNumber");
+    const os = formData.get("os")?.toString().trim();
+    if (os) params.set("os", os);
+    else params.delete("os");
 
     const actorId = formData.get("actorId")?.toString();
     if (actorId && actorId !== "all") params.set("actorId", actorId);
@@ -96,46 +88,36 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-5 items-end">
             <div className="space-y-1.5">
-              <Label htmlFor="osNumber">Nº da OS</Label>
+              <Label htmlFor="os">Nº da OS</Label>
               <Input
-                id="osNumber"
-                name="osNumber"
+                id="os"
+                name="os"
                 defaultValue={currentOs}
                 placeholder="Ex: 12345"
               />
             </div>
-            
+
             <div className="space-y-1.5">
               <Label htmlFor="actorId">Usuário</Label>
-              <Select name="actorId" defaultValue={currentActor}>
-                <SelectTrigger id="actorId">
-                  <SelectValue placeholder="Todos os usuários" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os usuários</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Select id="actorId" name="actorId" defaultValue={currentActor}>
+                <option value="all">Todos os usuários</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
               </Select>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="action">Ação</Label>
-              <Select name="action" defaultValue={currentAction}>
-                <SelectTrigger id="action">
-                  <SelectValue placeholder="Todas as ações" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as ações</SelectItem>
-                  {actions.map((a) => (
-                    <SelectItem key={a} value={a}>
-                      {getAuditActionLabel(a)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Select id="action" name="action" defaultValue={currentAction}>
+                <option value="all">Todas as ações</option>
+                {actions.map((a) => (
+                  <option key={a} value={a}>
+                    {getAuditActionLabel(a)}
+                  </option>
+                ))}
               </Select>
             </div>
 
@@ -195,7 +177,13 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
                 data.items.map((item) => (
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                      {format(new Date(item.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      {new Date(item.createdAt).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {item.actorName || <span className="italic text-muted-foreground">Sistema</span>}
@@ -203,7 +191,7 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
                     <td className="px-4 py-3 whitespace-nowrap font-medium">
                       {item.osNumber ? (
                         <Link 
-                          href={`/admin/auditoria?osNumber=${item.osNumber}`}
+                          href={`/admin/auditoria?os=${encodeURIComponent(item.osNumber)}`}
                           className="hover:underline text-primary"
                         >
                           {item.osNumber}

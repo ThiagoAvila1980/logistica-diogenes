@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth/session";
 import { listAuditEvents, listActiveUsersForAuditFilter } from "@/lib/data/audit-events";
 
 type SearchParams = Promise<{
-  osNumber?: string;
+  os?: string;
   measurementId?: string;
   actorId?: string;
   action?: string;
@@ -32,7 +32,7 @@ export default async function AdminAuditoriaPage({
   const to = params.to ? new Date(`${params.to}T23:59:59.999`) : null;
 
   const filters = {
-    osNumber: params.osNumber,
+    osNumber: params.os,
     measurementId: params.measurementId,
     actorId: params.actorId === "all" ? undefined : params.actorId,
     action: params.action === "all" ? undefined : params.action,
