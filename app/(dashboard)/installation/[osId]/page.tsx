@@ -5,7 +5,11 @@ import { listMeasurementLookups } from "@/lib/data/lookups";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canViewAllOrders, canEditMeasurementHeader } from "@/lib/auth/permissions";
+import {
+  canViewAllOrders,
+  canEditMeasurementHeader,
+  hasRole,
+} from "@/lib/auth/permissions";
 import { listActiveInstallers } from "@/lib/data/installers";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
@@ -14,6 +18,7 @@ import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { ServiceOrderManageActions } from "@/components/order/service-order-manage-actions";
 import { InstallationChecklist } from "@/components/installation/installation-checklist";
 import { InstallationServicePhotos } from "@/components/installation/installation-service-photos";
+import { getStepCompletionMetaForOs } from "@/lib/data/audit-events";
 import { Hammer } from "lucide-react";
 
 type Props = { params: Promise<{ osId: string }> };
@@ -27,12 +32,14 @@ export default async function InstallationOsPage({ params }: Props) {
   if (!order) notFound();
 
   const isManager = canViewAllOrders(session?.roles ?? []);
+  const isAdmin = hasRole(session?.roles ?? [], "admin");
   const canDelete = isManager;
   const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
-  const [detail, lookups] = await Promise.all([
+  const [detail, lookups, stepAuditMeta] = await Promise.all([
     getInstallationDetailForOs(osId, order.status),
     listMeasurementLookups(),
+    isAdmin ? getStepCompletionMetaForOs(osId) : Promise.resolve(undefined),
   ]);
   const installers = isManager
     ? await listActiveInstallers()
@@ -122,6 +129,7 @@ export default async function InstallationOsPage({ params }: Props) {
           lookups={lookups}
           installers={installers}
           canAssignInstaller={isManager}
+          stepAuditMeta={stepAuditMeta}
         />
 
         <InstallationServicePhotos

@@ -1,8 +1,15 @@
 import "server-only";
 
-import { and, asc, desc, eq, gte, ilike, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { auditEvents, measurements, users } from "@/db/schema";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
+import {
+  buildStepCompletionMetaMap,
+  type StepCompletionMetaMap,
+} from "@/lib/audit/format-step-audit";
+
+export type { StepCompletionMeta, StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
 
 export type AuditEventListFilters = {
   measurementId?: string | null;
@@ -116,4 +123,35 @@ export async function listActiveUsersForAuditFilter(): Promise<{ id: string; nam
     .from(users)
     .where(eq(users.active, true))
     .orderBy(asc(users.name));
+}
+
+const STEP_CHECKED_ACTIONS = [
+  AUDIT_ACTIONS.CUTTING_STEP_CHECKED,
+  AUDIT_ACTIONS.TRANSPORT_STEP_CHECKED,
+  AUDIT_ACTIONS.INSTALLATION_STEP_CHECKED,
+] as const;
+
+/** Último step_checked por vão+step, para indicadores nas checklists (admin). */
+export async function getStepCompletionMetaForOs(
+  osId: string,
+): Promise<StepCompletionMetaMap> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      itemId: auditEvents.itemId,
+      actorName: users.name,
+      createdAt: auditEvents.createdAt,
+      payload: auditEvents.payload,
+    })
+    .from(auditEvents)
+    .leftJoin(users, eq(auditEvents.actorId, users.id))
+    .where(
+      and(
+        eq(auditEvents.measurementId, osId),
+        inArray(auditEvents.action, [...STEP_CHECKED_ACTIONS]),
+      ),
+    )
+    .orderBy(desc(auditEvents.createdAt));
+
+  return buildStepCompletionMetaMap(rows);
 }

@@ -6,6 +6,7 @@ import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { CuttingChecklist } from "@/components/production/cutting-checklist";
 import { ProductionMeasurementMedia } from "@/components/production/production-measurement-media";
 import { CuttingNotesField } from "@/components/production/cutting-notes-field";
+import type { StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
 
 type Props = {
   osId: string;
@@ -15,6 +16,7 @@ type Props = {
   lookups: MeasurementLookups;
   cutterNotes: string | null;
   canEditDrawings?: boolean;
+  stepAuditMeta?: StepCompletionMetaMap;
 };
 
 export function CuttingDetailView({
@@ -25,6 +27,7 @@ export function CuttingDetailView({
   lookups,
   cutterNotes,
   canEditDrawings = false,
+  stepAuditMeta,
 }: Props) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(
     items.length > 0 ? (items[0]?.id ?? null) : null,
@@ -46,6 +49,7 @@ export function CuttingDetailView({
         lookups={lookups}
         selectedItemId={selectedItemId}
         onItemSelect={setSelectedItemId}
+        stepAuditMeta={stepAuditMeta}
       />
 
       <ProductionMeasurementMedia

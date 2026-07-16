@@ -20,6 +20,7 @@ import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { ServiceOrderManageActions } from "@/components/order/service-order-manage-actions";
 import { TransportChecklist } from "@/components/logistics/transport-checklist";
 import { SendToInstallationDialog } from "@/components/logistics/send-to-installation-dialog";
+import { getStepCompletionMetaForOs } from "@/lib/data/audit-events";
 import { Truck } from "lucide-react";
 
 type Props = { params: Promise<{ osId: string }> };
@@ -37,9 +38,10 @@ export default async function LogisticsOsPage({ params }: Props) {
   const canSendToInstallation = canViewAllOrders(session?.roles ?? []);
   const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
-  const [detail, lookups] = await Promise.all([
+  const [detail, lookups, stepAuditMeta] = await Promise.all([
     getTransportDetailForOs(osId, order.status),
     listMeasurementLookups(),
+    isAdmin ? getStepCompletionMetaForOs(osId) : Promise.resolve(undefined),
   ]);
   const vehicles = await listVehiclesForTransportSelection(osId);
 
@@ -118,6 +120,7 @@ export default async function LogisticsOsPage({ params }: Props) {
         drivers={drivers}
         canAssignDriver={isAdmin}
         canAssignVehicle={isAdmin}
+        stepAuditMeta={stepAuditMeta}
       />
 
       {canSendToInstallation && (

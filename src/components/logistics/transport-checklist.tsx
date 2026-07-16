@@ -30,7 +30,7 @@ import {
   getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
 import { VaoStepDriverSelect } from "@/components/logistics/vao-step-driver-select";
-import { VehicleSelector } from "@/components/logistics/vehicle-selector";
+import { TransportBulkDriverSelect } from "@/components/logistics/transport-bulk-driver-select";
 import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
 import {
@@ -38,6 +38,11 @@ import {
   type TransportStep,
 } from "@/lib/logistics/transport-item-gates";
 import { getVaoStepAssignment } from "@/lib/logistics/transport-step-assignment";
+import {
+  getStepAuditMeta,
+  StepAuditLine,
+} from "@/components/audit/step-audit-hint";
+import type { StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
 
 const TRANSPORT_STEPS: { key: TransportStep; label: string; shortLabel: string }[] = [
   { key: "perfilEstrutural", label: "Perfil estrutural", shortLabel: "Perfil Estrut." },
@@ -66,6 +71,8 @@ type Props = {
   drivers?: DriverOption[];
   canAssignDriver?: boolean;
   canAssignVehicle?: boolean;
+  /** Só preenchido para admin */
+  stepAuditMeta?: StepCompletionMetaMap;
 };
 
 export function TransportChecklist({
@@ -77,6 +84,7 @@ export function TransportChecklist({
   drivers = [],
   canAssignDriver = false,
   canAssignVehicle = true,
+  stepAuditMeta,
 }: Props) {
   const [progress, setProgress] = useState<Record<string, ItemTransportProgress>>(
     () =>
@@ -84,9 +92,6 @@ export function TransportChecklist({
         items.map((item) => [item.id, getItemTransportProgress(item)]),
       ),
   );
-  const [vehicleOverrides, setVehicleOverrides] = useState<
-    Record<string, string | null>
-  >({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -174,6 +179,9 @@ export function TransportChecklist({
             })}
           </div>
         </CardTitle>
+        {canAssignDriver && (
+          <TransportBulkDriverSelect osId={osId} drivers={drivers} />
+        )}
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -192,13 +200,6 @@ export function TransportChecklist({
               acessorios: false,
               vidros: false,
             };
-            const itemVehicleId =
-              item.id in vehicleOverrides
-                ? vehicleOverrides[item.id]
-                : (item.transportProgress?.vehicleId ?? null);
-            const itemVehicle = itemVehicleId
-              ? vehicles.find((v) => v.id === itemVehicleId)
-              : undefined;
             const gates = getItemTransportGates(item, osStatus);
             const doneSteps = TRANSPORT_STEPS.filter(({ key }) => itemProgress[key]).length;
             const itemAllDone = doneSteps === 4;
@@ -279,65 +280,136 @@ export function TransportChecklist({
                 {/* Conteúdo expansível */}
                 {isExpanded && (
                   <div className="px-3 pb-3">
-                    {/* Cada etapa: check + label, e o motorista/data dela diretamente abaixo */}
-                    <div className="space-y-2">
-                      {TRANSPORT_STEPS.map(({ key, label }) => {
+                    {/* Cada etapa: cabeçalho alinhado + atribuições */}
+                    <div className="space-y-2.5">
+                      {TRANSPORT_STEPS.map(({ key, label }, stepIndex) => {
                         const done = itemProgress[key];
                         const gate = gates[key];
                         const lKey = `${item.id}-${key}`;
                         const isLoading = loadingKey === lKey;
                         const isLocked = !gate.unlocked && !done;
                         const assignment = getVaoStepAssignment(item, key);
-                        const showAssignment = canAssignDriver || !!assignment.driverId;
+                        const showAssignment =
+                          canAssignDriver ||
+                          canAssignVehicle ||
+                          !!assignment.driverId ||
+                          !!assignment.vehicleId;
+                        const isPerfilTotal = key === "perfilTotal";
+                        const stepNumber = String(stepIndex + 1).padStart(2, "0");
+                        const statusLabel = done
+                          ? "Concluído"
+                          : isLocked
+                            ? "Bloqueado"
+                            : "Pendente";
 
                         return (
                           <div
                             key={key}
                             className={cn(
-                              "rounded-md border px-2.5 py-2 transition-colors",
+                              "overflow-hidden rounded-lg border transition-colors",
                               done
-                                ? "border-success-border bg-success-muted/40"
-                                : "border-border bg-background",
+                                ? "border-success-border bg-success-muted/30"
+                                : isPerfilTotal
+                                  ? "border-primary/35 bg-primary/4"
+                                  : "border-border/80 bg-background",
                             )}
                           >
-                            <div className="flex items-center gap-2">
-                              {isLoading ? (
-                                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
-                              ) : isLocked ? (
-                                <span title={gate.reason ?? undefined} className="shrink-0">
-                                  <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                                </span>
-                              ) : (
-                                <Checkbox
-                                  checked={done}
-                                  disabled={isLoading || (isLocked && !done)}
-                                  onCheckedChange={(v) =>
-                                    handleToggle(item.id, key, v === true)
-                                  }
-                                  className={cn(
-                                    "shrink-0",
-                                    done && "border-success bg-success",
-                                  )}
-                                  aria-label={`${label} — Vão ${vaoNumber}`}
-                                  title={gate.reason ?? undefined}
-                                />
+                            <div
+                              className={cn(
+                                "flex items-center gap-3 border-b px-3 py-2.5",
+                                done
+                                  ? "border-success-border/50 bg-success-muted/25"
+                                  : isPerfilTotal
+                                    ? "border-primary/15 bg-primary/6"
+                                    : "border-border/60 bg-muted/30",
                               )}
+                            >
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center">
+                                {isLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                ) : isLocked ? (
+                                  <span
+                                    title={gate.reason ?? undefined}
+                                    className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border bg-muted/40"
+                                  >
+                                    <Lock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                                  </span>
+                                ) : (
+                                  <Checkbox
+                                    checked={done}
+                                    disabled={isLoading || (isLocked && !done)}
+                                    onCheckedChange={(v) =>
+                                      handleToggle(item.id, key, v === true)
+                                    }
+                                    className={cn(
+                                      "h-[18px] w-[18px]",
+                                      done && "border-success bg-success",
+                                    )}
+                                    aria-label={`${label} — Vão ${vaoNumber}`}
+                                    title={gate.reason ?? undefined}
+                                  />
+                                )}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      "font-mono text-[10px] font-semibold tracking-wider",
+                                      done
+                                        ? "text-success-foreground/70"
+                                        : isPerfilTotal
+                                          ? "text-primary/70"
+                                          : "text-muted-foreground",
+                                    )}
+                                  >
+                                    {stepNumber}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "truncate text-sm leading-none",
+                                      isPerfilTotal ? "font-semibold" : "font-medium",
+                                      done
+                                        ? "text-success-foreground"
+                                        : isLocked
+                                          ? "text-muted-foreground"
+                                          : isPerfilTotal
+                                            ? "text-primary"
+                                            : "text-foreground",
+                                    )}
+                                  >
+                                    {label}
+                                  </span>
+                                </div>
+                                {done && (
+                                  <StepAuditLine
+                                    meta={getStepAuditMeta(
+                                      stepAuditMeta,
+                                      item.id,
+                                      key,
+                                    )}
+                                  />
+                                )}
+                              </div>
+
                               <span
                                 className={cn(
-                                  "text-xs font-medium leading-tight",
+                                  "shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide",
                                   done
-                                    ? "text-success-foreground"
+                                    ? "bg-success/15 text-success-foreground"
                                     : isLocked
-                                      ? "text-muted-foreground/60"
-                                      : "text-foreground",
+                                      ? "bg-muted text-muted-foreground"
+                                      : isPerfilTotal
+                                        ? "bg-primary/10 text-primary"
+                                        : "bg-background text-muted-foreground ring-1 ring-border",
                                 )}
                               >
-                                {label}
+                                {statusLabel}
                               </span>
                             </div>
 
                             {showAssignment && (
-                              <div className="mt-1.5 pl-6">
+                              <div className="px-3 py-2.5">
                                 <VaoStepDriverSelect
                                   osId={osId}
                                   itemId={item.id}
@@ -351,8 +423,11 @@ export function TransportChecklist({
                                       : null
                                   }
                                   scheduledDate={assignment.scheduledDate}
+                                  vehicleId={assignment.vehicleId}
                                   drivers={drivers}
-                                  canChange={canAssignDriver}
+                                  vehicles={vehicles}
+                                  canChangeDriver={canAssignDriver}
+                                  canChangeVehicle={canAssignVehicle}
                                 />
                               </div>
                             )}
@@ -367,26 +442,6 @@ export function TransportChecklist({
                       vaoLabel={`Vão ${vaoNumber}`}
                       initialNotes={item.transportProgress?.observacoes}
                     />
-
-                    {(canAssignVehicle || itemVehicleId) && (
-                      <div className="mt-2.5">
-                        <VehicleSelector
-                          osId={osId}
-                          itemId={item.id}
-                          vehicleId={itemVehicleId}
-                          vehiclePlate={itemVehicle?.plate ?? null}
-                          vehicleDescription={itemVehicle?.description ?? null}
-                          vehicles={vehicles}
-                          canChange={canAssignVehicle}
-                          onAssigned={(vehicleId) =>
-                            setVehicleOverrides((prev) => ({
-                              ...prev,
-                              [item.id]: vehicleId,
-                            }))
-                          }
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

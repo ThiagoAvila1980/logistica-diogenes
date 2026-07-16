@@ -12,6 +12,7 @@ import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { ServiceOrderManageActions } from "@/components/order/service-order-manage-actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { CuttingDetailView } from "@/components/production/cutting-detail-view";
+import { getStepCompletionMetaForOs } from "@/lib/data/audit-events";
 import { Scissors } from "lucide-react";
 
 type Props = { params: Promise<{ osId: string }> };
@@ -29,6 +30,9 @@ export default async function ProductionOsPage({ params }: Props) {
   const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
   const canDelete = canViewAllOrders(session?.roles ?? []);
   const isAdmin = hasRole(session?.roles ?? [], "admin");
+  const stepAuditMeta = isAdmin
+    ? await getStepCompletionMetaForOs(osId)
+    : undefined;
 
   const { measurement, cutterNotes } = detail;
 
@@ -80,6 +84,7 @@ export default async function ProductionOsPage({ params }: Props) {
             lookups={lookups}
             cutterNotes={cutterNotes}
             canEditDrawings={isAdmin}
+            stepAuditMeta={stepAuditMeta}
           />
         ) : (
           <Card>

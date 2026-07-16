@@ -42,6 +42,12 @@ import { VaoInstallerSelect } from "@/components/installation/vao-installer-sele
 import type { InstallerOption } from "@/lib/data/installers-db";
 import { CompleteInstallationVaoDialog } from "@/components/installation/complete-installation-vao-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  getStepAuditMeta,
+  StepAuditLine,
+  StepAuditTooltip,
+} from "@/components/audit/step-audit-hint";
+import type { StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
 
 type InstStep = "estrutural" | "vidros" | "acabamento";
 
@@ -193,6 +199,8 @@ type Props = {
   lookups?: MeasurementLookups;
   installers?: InstallerOption[];
   canAssignInstaller?: boolean;
+  /** Só preenchido para admin */
+  stepAuditMeta?: StepCompletionMetaMap;
 };
 
 export function InstallationChecklist({
@@ -203,6 +211,7 @@ export function InstallationChecklist({
   lookups,
   installers = [],
   canAssignInstaller = false,
+  stepAuditMeta,
 }: Props) {
   const isLatePhase =
     osStatus.startsWith("instalacao") || osStatus === "concluido";
@@ -380,13 +389,21 @@ export function InstallationChecklist({
                       )}
                     </span>
                   ) : (
-                    <Checkbox
-                      checked={done}
-                      disabled={isLoading}
-                      onCheckedChange={(v) => handleToggle(item.id, key, v === true)}
-                      className={cn("shrink-0", done && "border-success bg-success")}
-                      aria-label={`${key} — Vão ${vaoNumber}`}
-                    />
+                    <StepAuditTooltip
+                      meta={
+                        done
+                          ? getStepAuditMeta(stepAuditMeta, item.id, key)
+                          : undefined
+                      }
+                    >
+                      <Checkbox
+                        checked={done}
+                        disabled={isLoading}
+                        onCheckedChange={(v) => handleToggle(item.id, key, v === true)}
+                        className={cn("shrink-0", done && "border-success bg-success")}
+                        aria-label={`${key} — Vão ${vaoNumber}`}
+                      />
+                    </StepAuditTooltip>
                   )}
                 </div>
               );
@@ -485,6 +502,12 @@ export function InstallationChecklist({
                       <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground/60">
                         {gate.reason}
                       </p>
+                    )}
+                    {done && (
+                      <StepAuditLine
+                        meta={getStepAuditMeta(stepAuditMeta, item.id, key)}
+                        className="mt-0.5 text-[10px] leading-tight text-muted-foreground"
+                      />
                     )}
                   </div>
                   {!isLocked && !isLoading && (

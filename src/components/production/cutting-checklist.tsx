@@ -26,6 +26,11 @@ import {
   formatVaoItemFullLabel,
   getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
+import {
+  getStepAuditMeta,
+  StepAuditTooltip,
+} from "@/components/audit/step-audit-hint";
+import type { StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
 
 type Step = "corte" | "embalagem" | "acessorios" | "vidros";
 
@@ -54,9 +59,19 @@ type Props = {
   lookups?: MeasurementLookups;
   selectedItemId?: string | null;
   onItemSelect?: (itemId: string) => void;
+  /** Só preenchido para admin — metadados do último step_checked */
+  stepAuditMeta?: StepCompletionMetaMap;
 };
 
-export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemId, onItemSelect }: Props) {
+export function CuttingChecklist({
+  osId,
+  osStatus,
+  items,
+  lookups,
+  selectedItemId,
+  onItemSelect,
+  stepAuditMeta,
+}: Props) {
   const router = useRouter();
 
   const [progress, setProgress] = useState<Record<string, ItemProgress>>(
@@ -263,18 +278,26 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
                         {isLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         ) : (
-                          <Checkbox
-                            checked={done}
-                            disabled={isLoading}
-                            onCheckedChange={(v) =>
-                              handleToggle(item.id, key, v === true)
+                          <StepAuditTooltip
+                            meta={
+                              done
+                                ? getStepAuditMeta(stepAuditMeta, item.id, key)
+                                : undefined
                             }
-                            className={cn(
-                              "shrink-0",
-                              done && "border-success bg-success",
-                            )}
-                            aria-label={`${key} — Vão ${vaoNumber}`}
-                          />
+                          >
+                            <Checkbox
+                              checked={done}
+                              disabled={isLoading}
+                              onCheckedChange={(v) =>
+                                handleToggle(item.id, key, v === true)
+                              }
+                              className={cn(
+                                "shrink-0",
+                                done && "border-success bg-success",
+                              )}
+                              aria-label={`${key} — Vão ${vaoNumber}`}
+                            />
+                          </StepAuditTooltip>
                         )}
                       </div>
                     );
@@ -338,18 +361,26 @@ export function CuttingChecklist({ osId, osStatus, items, lookups, selectedItemI
                           {isLoading ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                           ) : (
-                            <Checkbox
-                              checked={done}
-                              disabled={isLoading}
-                              onCheckedChange={(v) =>
-                                handleToggle(item.id, key, v === true)
+                            <StepAuditTooltip
+                              meta={
+                                done
+                                  ? getStepAuditMeta(stepAuditMeta, item.id, key)
+                                  : undefined
                               }
-                              className={cn(
-                                "shrink-0",
-                                done && "border-success bg-success",
-                              )}
-                              aria-label={`${stepLabel} — Vão ${vaoNumber}`}
-                            />
+                            >
+                              <Checkbox
+                                checked={done}
+                                disabled={isLoading}
+                                onCheckedChange={(v) =>
+                                  handleToggle(item.id, key, v === true)
+                                }
+                                className={cn(
+                                  "shrink-0",
+                                  done && "border-success bg-success",
+                                )}
+                                aria-label={`${stepLabel} — Vão ${vaoNumber}`}
+                              />
+                            </StepAuditTooltip>
                           )}
                           <span
                             className={cn(
