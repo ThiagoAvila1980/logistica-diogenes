@@ -289,7 +289,7 @@ export function MeasurementItemCard({
             photoCount={photoCount}
           >
             <PhotoUpload
-              hint="Fotos desta medição (ambiente, detalhes, referências)."
+              hint="Fotos desta medição (ambiente, detalhes, referências). Use o lápis para desenhar sobre a foto."
               osId={osId}
               scope="measurements"
               existingUrls={savedPhotoUrls}
@@ -297,6 +297,7 @@ export function MeasurementItemCard({
               mode="form"
               disabled={disabled}
               showLabel={false}
+              allowAnnotate
               onUrlsChange={(urls) => updateField("photos", urls.length ? urls : undefined)}
               onFilesChange={onPendingFilesChange}
             />

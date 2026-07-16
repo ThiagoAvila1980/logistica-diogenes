@@ -55,10 +55,11 @@ export const itemInstallationProgressSchema = z.object({
 
 export type ItemInstallationProgress = z.infer<typeof itemInstallationProgressSchema>;
 
-/** Motorista e data designados para um item de ticagem específico do vão */
+/** Motorista, data e veículo designados para um item de ticagem específico do vão */
 export const transportStepAssignmentSchema = z.object({
   driverId: z.string().uuid().nullable().optional(),
   scheduledDate: z.string().nullable().optional(),
+  vehicleId: z.string().uuid().nullable().optional(),
 });
 
 export type TransportStepAssignment = z.infer<typeof transportStepAssignmentSchema>;
@@ -70,6 +71,11 @@ export const itemTransportProgressSchema = z.object({
   acessorios: z.boolean().default(false),
   vidros: z.boolean().default(false),
   observacoes: z.string().max(2000).optional(),
+  /**
+   * @deprecated Legado (veículo único por vão). Mantido como valor
+   * inicial (fallback) para itens de ticagem que ainda não têm um veículo
+   * definido individualmente em `stepAssignments`.
+   */
   vehicleId: z.string().uuid().nullable().optional(),
   /**
    * @deprecated Legado (motorista único por vão). Mantido como valor
@@ -79,7 +85,7 @@ export const itemTransportProgressSchema = z.object({
   driverId: z.string().uuid().nullable().optional(),
   /** @deprecated Legado (data única por vão). Ver `driverId`. */
   scheduledTransportDate: z.string().nullable().optional(),
-  /** Motorista e data por item de ticagem (perfil estrutural, perfil total, acessórios, vidros) */
+  /** Motorista, data e veículo por item de ticagem (perfil estrutural, perfil total, acessórios, vidros) */
   stepAssignments: z
     .object({
       perfilEstrutural: transportStepAssignmentSchema.optional(),

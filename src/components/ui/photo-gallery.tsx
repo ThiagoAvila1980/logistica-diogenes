@@ -30,6 +30,11 @@ export function PhotoGallery({
     );
   }
 
+  const gallery = displayUrls.map((entryUrl, entryIndex) => ({
+    src: entryUrl,
+    alt: `Foto ${entryIndex + 1}`,
+  }));
+
   return (
     <div className={cn("space-y-2", className)}>
       {showLabel && (
@@ -47,6 +52,8 @@ export function PhotoGallery({
               src={url}
               alt={`Foto ${index + 1}`}
               variant="thumbnail"
+              gallery={gallery}
+              galleryIndex={index}
             />
           </li>
         ))}

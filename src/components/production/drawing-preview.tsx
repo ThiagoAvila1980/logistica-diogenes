@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Expand } from "lucide-react";
+import { ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,20 @@ import { cn } from "@/lib/utils";
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 
+export type DrawingPreviewGalleryItem = {
+  src: string;
+  alt: string;
+};
+
 type DrawingPreviewProps = {
   src: string;
   alt: string;
   className?: string;
   variant?: "drawing" | "thumbnail";
+  /** Lista para navegar no lightbox como carrossel. */
+  gallery?: DrawingPreviewGalleryItem[];
+  /** Índice desta imagem na gallery. */
+  galleryIndex?: number;
 };
 
 function getTouchDistance(touches: React.TouchList) {
@@ -143,20 +152,78 @@ function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
+function resolveInitialIndex(
+  src: string,
+  gallery: DrawingPreviewGalleryItem[] | undefined,
+  galleryIndex: number | undefined,
+): number {
+  if (!gallery?.length) return 0;
+  if (
+    typeof galleryIndex === "number" &&
+    galleryIndex >= 0 &&
+    galleryIndex < gallery.length
+  ) {
+    return galleryIndex;
+  }
+  const found = gallery.findIndex((item) => item.src === src);
+  return found >= 0 ? found : 0;
+}
+
 export function DrawingPreview({
   src,
   alt,
   className,
   variant = "drawing",
+  gallery,
+  galleryIndex,
 }: DrawingPreviewProps) {
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(() =>
+    resolveInitialIndex(src, gallery, galleryIndex),
+  );
   const isThumbnail = variant === "thumbnail";
+
+  const slides =
+    gallery && gallery.length > 0
+      ? gallery
+      : [{ src, alt }];
+  const canNavigate = slides.length > 1;
+  const active = slides[activeIndex] ?? slides[0]!;
+
+  function openAtCurrent() {
+    setActiveIndex(resolveInitialIndex(src, gallery, galleryIndex));
+    setOpen(true);
+  }
+
+  function goTo(delta: number) {
+    if (!canNavigate) return;
+    setActiveIndex((current) => (current + delta + slides.length) % slides.length);
+  }
+
+  useEffect(() => {
+    if (!open || slides.length <= 1) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setActiveIndex(
+          (current) => (current - 1 + slides.length) % slides.length,
+        );
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setActiveIndex((current) => (current + 1) % slides.length);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, slides.length]);
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openAtCurrent}
         className={cn(
           "group relative block cursor-zoom-in border-0 p-0 text-left",
           isThumbnail
@@ -188,8 +255,47 @@ export function DrawingPreview({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[95vh] w-[min(96vw,1200px)] max-w-[96vw] gap-0 overflow-hidden p-2 sm:p-4">
-          <DialogTitle className="sr-only">{alt}</DialogTitle>
-          {open ? <PinchZoomImage src={src} alt={alt} /> : null}
+          <div className="mb-2 flex items-center justify-between gap-3 pr-10">
+            <DialogTitle className="truncate text-sm font-medium">
+              {active.alt}
+            </DialogTitle>
+            {canNavigate && (
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                {activeIndex + 1} / {slides.length}
+              </span>
+            )}
+          </div>
+
+          <div className="relative">
+            {open ? (
+              <PinchZoomImage
+                key={`${active.src}-${activeIndex}`}
+                src={active.src}
+                alt={active.alt}
+              />
+            ) : null}
+
+            {canNavigate && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => goTo(-1)}
+                  className="absolute left-1 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground shadow-sm transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:left-2"
+                  aria-label="Foto anterior"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTo(1)}
+                  className="absolute right-1 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background/90 text-foreground shadow-sm transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:right-2"
+                  aria-label="Próxima foto"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

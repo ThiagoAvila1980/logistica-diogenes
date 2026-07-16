@@ -1,12 +1,18 @@
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import {
+  TRANSPORT_STEPS,
+  getVaoStepAssignment,
+} from "@/lib/logistics/transport-step-assignment";
 
 export function collectVehicleIdsFromMeasurementItems(
   items: MeasurementLineItem[] | null | undefined,
 ): string[] {
   const ids = new Set<string>();
   for (const item of items ?? []) {
-    const vehicleId = item.transportProgress?.vehicleId;
-    if (vehicleId) ids.add(vehicleId);
+    for (const step of TRANSPORT_STEPS) {
+      const vehicleId = getVaoStepAssignment(item, step).vehicleId;
+      if (vehicleId) ids.add(vehicleId);
+    }
   }
   return [...ids];
 }

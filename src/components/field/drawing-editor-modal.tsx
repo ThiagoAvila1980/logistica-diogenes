@@ -24,6 +24,8 @@ export type DrawingEditorModalProps = {
   templateKey?: number;
   isDirty: boolean;
   disabled?: boolean;
+  /** Título do cabeçalho (padrão: Novo desenho / Desenho N). */
+  title?: string;
   onSave: (base64: string) => void;
   onDirtyChange: (dirty: boolean) => void;
   onClose: () => void;
@@ -39,6 +41,7 @@ export function DrawingEditorModal({
   templateKey,
   isDirty,
   disabled,
+  title: titleProp,
   onSave,
   onDirtyChange,
   onClose,
@@ -60,7 +63,8 @@ export function DrawingEditorModal({
     onClose();
   }
 
-  const title = isNew ? "Novo desenho" : `Desenho ${drawingNumber}`;
+  const title =
+    titleProp ?? (isNew ? "Novo desenho" : `Desenho ${drawingNumber}`);
 
   const modal = (
     <div

@@ -18,15 +18,15 @@ export const TRANSPORT_STEP_LABELS: Record<TransportStep, string> = {
 export type VaoStepAssignment = {
   driverId: string | null;
   scheduledDate: string | null;
+  vehicleId: string | null;
 };
 
 /**
- * Motorista e data designados para um item de ticagem específico do vão.
+ * Motorista, data e veículo designados para um item de ticagem específico do vão.
  *
- * Vãos criados antes desta funcionalidade só tinham motorista/data no nível
- * do vão (`transportProgress.driverId`/`scheduledTransportDate`). Esse valor
- * legado é usado como padrão inicial de TODOS os itens até que cada um seja
- * sobrescrito individualmente em `stepAssignments`.
+ * Vãos criados antes desta funcionalidade só tinham motorista/data/veículo no
+ * nível do vão. Esse valor legado é usado como padrão inicial de TODOS os
+ * itens até que cada um seja sobrescrito individualmente em `stepAssignments`.
  */
 export function getVaoStepAssignment(
   item: Pick<MeasurementLineItem, "transportProgress">,
@@ -37,11 +37,17 @@ export function getVaoStepAssignment(
     return {
       driverId: explicit.driverId ?? null,
       scheduledDate: explicit.scheduledDate ?? null,
+      // Dados antigos podem ter stepAssignments sem vehicleId — usa o legado do vão.
+      vehicleId:
+        "vehicleId" in explicit
+          ? (explicit.vehicleId ?? null)
+          : (item.transportProgress?.vehicleId ?? null),
     };
   }
   return {
     driverId: item.transportProgress?.driverId ?? null,
     scheduledDate: item.transportProgress?.scheduledTransportDate ?? null,
+    vehicleId: item.transportProgress?.vehicleId ?? null,
   };
 }
 

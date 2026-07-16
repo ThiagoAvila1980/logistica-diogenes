@@ -1,11 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Camera, ImageIcon, Loader2, X } from "lucide-react";
-import { uploadPhotos } from "@/actions/upload-actions";
+import { Camera, ImageIcon, Loader2, Pencil, X } from "lucide-react";
+import {
+  resolveUploadDisplayUrlAction,
+  uploadPhotos,
+} from "@/actions/upload-actions";
+import { DrawingEditorModal } from "@/components/field/drawing-editor-modal";
+import { DrawingPreview } from "@/components/production/drawing-preview";
 import { UPLOAD_MAX_FILES } from "@/lib/upload/config";
 import type { UploadScope } from "@/lib/upload/config";
-import { DrawingPreview } from "@/components/production/drawing-preview";
+import { dataUrlToFile } from "@/lib/upload/data-url-to-file";
+import {
+  shouldResolveUploadUrlClientSide,
+  toBrowserDisplayUrl,
+} from "@/lib/upload/display-url-client";
+import {
+  fileIdentityKey,
+  mergePendingPhotoItems,
+} from "@/lib/upload/merge-pending-photo-items";
 import { cn } from "@/lib/utils";
 
 export type PhotoUploadItem = {
@@ -43,6 +56,8 @@ type PhotoUploadProps = {
   showLabel?: boolean;
   onUrlsChange?: (urls: string[]) => void;
   onFilesChange?: (files: File[]) => void;
+  /** Permite desenhar sobre a foto (mesmo editor da medição). */
+  allowAnnotate?: boolean;
   className?: string;
 };
 
@@ -66,6 +81,7 @@ export function PhotoUpload({
   showLabel = true,
   onUrlsChange,
   onFilesChange,
+  allowAnnotate = false,
   className,
 }: PhotoUploadProps) {
   const sources =
@@ -82,29 +98,43 @@ export function PhotoUpload({
   );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [annotatingId, setAnnotatingId] = useState<string | null>(null);
+  const [annotateDirty, setAnnotateDirty] = useState(false);
+  const [editorImageUrl, setEditorImageUrl] = useState<string | null>(null);
+  const [editorLoading, setEditorLoading] = useState(false);
+  const [annotateSaving, setAnnotateSaving] = useState(false);
   const onUrlsChangeRef = useRef(onUrlsChange);
   const onFilesChangeRef = useRef(onFilesChange);
   const lastNotifiedUrlsRef = useRef<string | null>(null);
   const lastNotifiedFilesRef = useRef<string | null>(null);
-  const hydratedPendingRef = useRef(false);
 
   onUrlsChangeRef.current = onUrlsChange;
   onFilesChangeRef.current = onFilesChange;
 
-  // Injeta arquivos pendentes reidratados (ex.: blobs offline do IndexedDB)
-  // assim que chegarem — só uma vez, para não reaparecer após o usuário remover.
-  useEffect(() => {
-    if (hydratedPendingRef.current) return;
-    if (!initialPendingFiles?.length) return;
-    hydratedPendingRef.current = true;
+  const annotatingItem = annotatingId
+    ? items.find((item) => item.id === annotatingId)
+    : undefined;
+  const annotatingIndex = annotatingId
+    ? items.findIndex((item) => item.id === annotatingId)
+    : -1;
 
-    setItems((prev) => {
-      const pending: PhotoUploadItem[] = initialPendingFiles.map((file) => {
-        const preview = URL.createObjectURL(file);
-        return { id: newId(), url: preview, preview, file };
-      });
-      return [...prev, ...pending].slice(0, maxFiles);
-    });
+  // Reidrata arquivos pendentes (ex.: IndexedDB offline). Deduplica contra a
+  // lista local para não ecoar de volta os arquivos que o próprio componente
+  // acabou de notificar via onFilesChange.
+  useEffect(() => {
+    if (!initialPendingFiles?.length) return;
+
+    setItems((prev) =>
+      mergePendingPhotoItems(
+        prev,
+        initialPendingFiles,
+        (file) => {
+          const preview = URL.createObjectURL(file);
+          return { id: newId(), url: preview, preview, file };
+        },
+        maxFiles,
+      ),
+    );
   }, [initialPendingFiles, maxFiles]);
 
   useEffect(() => {
@@ -160,6 +190,98 @@ export function PhotoUpload({
     });
   };
 
+  async function startAnnotate(item: PhotoUploadItem) {
+    if (disabled || uploading || annotateSaving) return;
+    setError(null);
+    setAnnotateDirty(false);
+    setAnnotatingId(item.id);
+
+    const raw = (item.preview ?? item.url).trim();
+    if (!shouldResolveUploadUrlClientSide(raw)) {
+      setEditorImageUrl(toBrowserDisplayUrl(raw));
+      setEditorLoading(false);
+      return;
+    }
+
+    setEditorLoading(true);
+    setEditorImageUrl(null);
+    try {
+      const resolved = await resolveUploadDisplayUrlAction(raw);
+      setEditorImageUrl(
+        resolved?.trim() ? toBrowserDisplayUrl(resolved) : null,
+      );
+      if (!resolved?.trim()) {
+        setError("Não foi possível abrir a foto para edição");
+        setAnnotatingId(null);
+      }
+    } catch {
+      setError("Não foi possível abrir a foto para edição");
+      setAnnotatingId(null);
+    } finally {
+      setEditorLoading(false);
+    }
+  }
+
+  function closeAnnotate() {
+    if (annotateSaving) return;
+    setAnnotatingId(null);
+    setAnnotateDirty(false);
+    setEditorImageUrl(null);
+    setEditorLoading(false);
+  }
+
+  async function handleAnnotateSave(base64: string) {
+    if (!annotatingId) return;
+    setAnnotateSaving(true);
+    setError(null);
+
+    try {
+      const ext = base64.includes("image/png") ? "png" : "webp";
+      const file = dataUrlToFile(base64, `foto-anotada-${Date.now()}.${ext}`);
+
+      if (mode === "instant") {
+        const fd = new FormData();
+        fd.set("osId", osId);
+        fd.set("scope", scope);
+        fd.append("photos", file);
+        const res = await uploadPhotos(fd);
+        if (!res.success || !res.urls[0]) {
+          setError(res.success ? "Falha ao salvar foto editada" : res.message);
+          return;
+        }
+        setItems((prev) =>
+          prev.map((item) => {
+            if (item.id !== annotatingId) return item;
+            if (item.preview) URL.revokeObjectURL(item.preview);
+            return { id: newId(), url: res.urls[0]! };
+          }),
+        );
+      } else {
+        const preview = URL.createObjectURL(file);
+        setItems((prev) =>
+          prev.map((item) => {
+            if (item.id !== annotatingId) return item;
+            if (item.preview) URL.revokeObjectURL(item.preview);
+            return {
+              id: newId(),
+              url: preview,
+              preview,
+              file,
+            };
+          }),
+        );
+      }
+
+      setAnnotateDirty(false);
+      setAnnotatingId(null);
+      setEditorImageUrl(null);
+    } catch {
+      setError("Não foi possível salvar a foto editada");
+    } finally {
+      setAnnotateSaving(false);
+    }
+  }
+
   const handleFiles = async (fileList: FileList | null) => {
     if (!fileList?.length || disabled || uploading) return;
     setError(null);
@@ -171,7 +293,18 @@ export function PhotoUpload({
       return;
     }
 
-    const batch = incoming.slice(0, slotsLeft);
+    const existingKeys = new Set(
+      items.filter((item) => item.file).map((item) => fileIdentityKey(item.file!)),
+    );
+    const uniqueIncoming = incoming.filter(
+      (file) => !existingKeys.has(fileIdentityKey(file)),
+    );
+    const batch = uniqueIncoming.slice(0, slotsLeft);
+    if (batch.length === 0) {
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      if (filesInputRef.current) filesInputRef.current.value = "";
+      return;
+    }
 
     if (mode === "instant") {
       setUploading(true);
@@ -223,6 +356,10 @@ export function PhotoUpload({
     !pickerDisabled &&
       "hover:border-primary/50 hover:bg-muted/50 active:scale-[0.99]",
   );
+  const gallery = items.map((entry, entryIndex) => ({
+    src: entry.preview ?? entry.url,
+    alt: `Foto ${entryIndex + 1}`,
+  }));
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -246,12 +383,30 @@ export function PhotoUpload({
                 src={item.preview ?? item.url}
                 alt={`Foto ${index + 1}`}
                 variant="thumbnail"
+                gallery={gallery}
+                galleryIndex={index}
               />
+              {allowAnnotate && (
+                <button
+                  type="button"
+                  className="absolute left-1 top-1 z-10 rounded-full bg-overlay/60 p-1 text-primary-foreground hover:bg-overlay/80 disabled:opacity-50"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void startAnnotate(item);
+                  }}
+                  disabled={disabled || uploading || annotateSaving}
+                  aria-label={`Editar foto ${index + 1}`}
+                  title="Desenhar sobre a foto"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
               <button
                 type="button"
                 className="absolute right-1 top-1 z-10 rounded-full bg-overlay/60 p-1 text-primary-foreground hover:bg-overlay/80"
                 onClick={() => removeItem(item.id)}
-                disabled={disabled || uploading}
+                disabled={disabled || uploading || annotateSaving}
                 aria-label="Remover foto"
               >
                 <X className="h-3.5 w-3.5" />
@@ -259,6 +414,24 @@ export function PhotoUpload({
             </li>
           ))}
         </ul>
+      )}
+
+      {annotatingItem && (
+        <DrawingEditorModal
+          drawingId={annotatingItem.id}
+          drawingNumber={annotatingIndex + 1}
+          isNew={false}
+          title={`Editar foto ${annotatingIndex + 1}`}
+          initialImageUrl={editorImageUrl}
+          imageLoading={editorLoading}
+          isDirty={annotateDirty}
+          disabled={annotateSaving}
+          onSave={(base64) => {
+            void handleAnnotateSave(base64);
+          }}
+          onDirtyChange={setAnnotateDirty}
+          onClose={closeAnnotate}
+        />
       )}
 
       {items.length < maxFiles && (
