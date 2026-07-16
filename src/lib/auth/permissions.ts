@@ -176,6 +176,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     label: "Visualização de telas",
     match: "/admin/permissions",
   },
+  { href: "/admin/auditoria", label: "Auditoria", match: "/admin/auditoria" },
 ];
 
 export const REPORTS_NAV_ITEMS: NavItem[] = [

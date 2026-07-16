@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ShieldCheck,
   Users,
+  History,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ import {
 const ADMINISTRATIVE_ICONS: Record<string, LucideIcon> = {
   "/admin/users": Users,
   "/admin/permissions": ShieldCheck,
+  "/admin/auditoria": History,
 };
 
 type AdministrativeNavSectionProps = {

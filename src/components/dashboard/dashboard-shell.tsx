@@ -23,6 +23,7 @@ function getMobileTitle(pathname: string): string {
     return "Tipo de envidraçamento";
   }
   if (pathname.startsWith("/admin/permissions")) return "Visualização de telas";
+  if (pathname.startsWith("/admin/auditoria")) return "Auditoria";
   if (pathname.startsWith("/reports/services")) return "Jornada dos serviços";
   if (pathname.startsWith("/reports/kpis")) return "Indicadores Operacionais";
   if (pathname.startsWith("/reports/backlog")) return "Pendências e Prazos";
