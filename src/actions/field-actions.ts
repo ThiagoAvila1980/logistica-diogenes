@@ -22,7 +22,6 @@ import {
 import { requireRole } from "@/lib/auth/require-role";
 import { authErrorMessage } from "@/lib/auth/auth-error";
 import { recordWorkEvent } from "@/lib/performance/scoring";
-import { getSession } from "@/lib/auth/session";
 import { generateServiceOrderNumber } from "@/actions/service-order";
 import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { AUDIT_ACTIONS } from "@/lib/audit/actions";
@@ -175,35 +174,39 @@ export async function createMeasurementFromPdf(
     const finalTelefoneInitial = clientPhone?.trim() || null;
     const finalEnderecoInitial = clientAddress?.trim() || null;
 
-    const [created] = await db
-      .insert(measurements)
-      .values({
-        number,
-        type: measurementType,
-        status: "pendente",
-        etapa,
-        priority,
-        assignedUserId: null,
-        description: description ?? "Medição",
-        scheduledDate: scheduled,
-        budgetReference: finalBudgetRefInitial,
-        cliente: finalClienteInitial,
-        telefone: finalTelefoneInitial,
-        endereco: finalEnderecoInitial,
-        numeroOrcamento: finalBudgetRefInitial,
-        photos: [],
-      })
-      .returning({ id: measurements.id, number: measurements.number });
+    const created = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(measurements)
+        .values({
+          number,
+          type: measurementType,
+          status: "pendente",
+          etapa,
+          priority,
+          assignedUserId: null,
+          description: description ?? "Medição",
+          scheduledDate: scheduled,
+          budgetReference: finalBudgetRefInitial,
+          cliente: finalClienteInitial,
+          telefone: finalTelefoneInitial,
+          endereco: finalEnderecoInitial,
+          numeroOrcamento: finalBudgetRefInitial,
+          photos: [],
+        })
+        .returning({ id: measurements.id, number: measurements.number });
 
-    if (!created) {
-      return { success: false, message: "Não foi possível criar a medição." };
-    }
+      if (!row) {
+        throw new Error("Não foi possível criar a medição.");
+      }
 
-    await recordAuditEvent(db, {
-      actorId: session.userId,
-      action: AUDIT_ACTIONS.FIELD_MEASUREMENT_CREATED,
-      measurementId: created.id,
-      payload: { number: created.number },
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.FIELD_MEASUREMENT_CREATED,
+        measurementId: row.id,
+        payload: { number: row.number },
+      });
+
+      return row;
     });
 
     if (pdfFile) {
@@ -323,28 +326,30 @@ export async function updateMeasurementHeader(
 
   try {
     const db = getDb();
-    await db
-      .update(measurements)
-      .set({
-        cliente: clientName.trim(),
-        telefone: clientPhone?.trim() || null,
-        endereco: clientAddress?.trim() || null,
-        budgetReference: budgetRef,
-        numeroOrcamento: budgetRef,
-        updatedAt: new Date(),
-      })
-      .where(eq(measurements.id, osId));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(measurements)
+        .set({
+          cliente: clientName.trim(),
+          telefone: clientPhone?.trim() || null,
+          endereco: clientAddress?.trim() || null,
+          budgetReference: budgetRef,
+          numeroOrcamento: budgetRef,
+          updatedAt: new Date(),
+        })
+        .where(eq(measurements.id, osId));
 
-    await recordAuditEvent(db, {
-      actorId: session.userId,
-      action: AUDIT_ACTIONS.FIELD_HEADER_UPDATED,
-      measurementId: osId,
-      payload: {
-        clientName: clientName.trim(),
-        clientPhone: clientPhone?.trim() || null,
-        clientAddress: clientAddress?.trim() || null,
-        budgetReference: budgetRef,
-      },
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.FIELD_HEADER_UPDATED,
+        measurementId: osId,
+        payload: {
+          clientName: clientName.trim(),
+          clientPhone: clientPhone?.trim() || null,
+          clientAddress: clientAddress?.trim() || null,
+          budgetReference: budgetRef,
+        },
+      });
     });
 
     const { revalidateOSRoutes } = await import("@/lib/revalidate");
@@ -408,16 +413,18 @@ export async function deleteMeasurement(
 
     await purgeAllOsFiles(osId, urls);
 
-    await recordAuditEvent(db, {
-      actorId: session.userId,
-      action: AUDIT_ACTIONS.FIELD_MEASUREMENT_DELETED,
-      measurementId: osId,
-      payload: {
-        osNumber: measRow?.number ?? order.number,
-      },
-    });
+    await db.transaction(async (tx) => {
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.FIELD_MEASUREMENT_DELETED,
+        measurementId: osId,
+        payload: {
+          osNumber: measRow?.number ?? order.number,
+        },
+      });
 
-    await db.delete(measurements).where(eq(measurements.id, osId));
+      await tx.delete(measurements).where(eq(measurements.id, osId));
+    });
 
     revalidateOSRoutes(osId);
 
@@ -546,42 +553,44 @@ export async function saveFieldMeasurement(
 
     const photos = aggregateMeasurementPhotos(itemsToSave);
 
-    await db
-      .update(measurements)
-      .set({
-        type: measurementType,
-        items: itemsToSave,
-        notes: notes ?? null,
-        photos,
-        status: "medida",
-        etapa: osStatusFromMeasurementType(measurementType),
-        priority: priorityField.priority,
-        clientUpdatedAt: clientUpdatedAt ? new Date(clientUpdatedAt) : null,
-        deviceId: deviceId ?? null,
-        updatedAt: new Date(),
-      })
-      .where(eq(measurements.id, osId));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(measurements)
+        .set({
+          type: measurementType,
+          items: itemsToSave,
+          notes: notes ?? null,
+          photos,
+          status: "medida",
+          etapa: osStatusFromMeasurementType(measurementType),
+          priority: priorityField.priority,
+          clientUpdatedAt: clientUpdatedAt ? new Date(clientUpdatedAt) : null,
+          deviceId: deviceId ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(measurements.id, osId));
 
-    await recordAuditEvent(db, {
-      actorId: session.userId,
-      action: AUDIT_ACTIONS.FIELD_MEASUREMENT_SAVED,
-      measurementId: osId,
-      payload: {
-        type: measurementType,
-        itemsCount: itemsToSave.length,
-        photosCount: photos.length,
-      },
-    });
-
-    // Pontuação: medicao ao salvar medição de campo
-    if (order.assignedUserId) {
-      await recordWorkEvent(db, {
-        userId: order.assignedUserId,
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.FIELD_MEASUREMENT_SAVED,
         measurementId: osId,
-        itemId: "__os__",
-        eventType: "medicao",
+        payload: {
+          type: measurementType,
+          itemsCount: itemsToSave.length,
+          photosCount: photos.length,
+        },
       });
-    }
+
+      // Pontuação: medicao ao salvar medição de campo
+      if (order.assignedUserId) {
+        await recordWorkEvent(tx, {
+          userId: order.assignedUserId,
+          measurementId: osId,
+          itemId: "__os__",
+          eventType: "medicao",
+        });
+      }
+    });
 
     revalidatePath("/field");
     revalidatePath(`/field/${osId}`);
