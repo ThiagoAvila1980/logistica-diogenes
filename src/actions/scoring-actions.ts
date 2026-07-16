@@ -8,6 +8,8 @@ import { scoringRules } from "@/db/schema";
 import type { WorkEventType, ScoringRule } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
 import type { ScoringActionResult } from "@/lib/performance/scoring-actions-types";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 
 // ─── Action: ler regras ───────────────────────────────────────────────────────
 
@@ -47,8 +49,6 @@ export async function updateScoringRuleAction(
 
     try {
     const db = getDb();
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
     
     await db.transaction(async (tx) => {
       await tx

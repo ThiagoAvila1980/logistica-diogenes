@@ -8,6 +8,9 @@ import { getSession } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { rolesEqual } from "@/lib/auth/permissions";
 import type { UserRole } from "@/db/schema";
+import { getDb } from "@/db";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 import { listAdminUsers } from "@/lib/data/users-admin";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
 
@@ -95,16 +98,16 @@ export async function createUser(
       return { success: false, message: "E-mail já cadastrado" };
     }
     const passwordHash = await hashPassword(password);
-    const newUserId = await createUserDb({ name, email, roles, phone, passwordHash });
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      const newUserId = await createUserDb({ name, email, roles, phone, passwordHash }, tx);
 
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    await recordAuditEvent(getDb(), {
-      action: AUDIT_ACTIONS.ADMIN_USER_CREATED,
-      entityType: "user",
-      entityId: newUserId,
-      actorId: session.userId,
+      await recordAuditEvent(tx, {
+        action: AUDIT_ACTIONS.ADMIN_USER_CREATED,
+        entityType: "user",
+        entityId: newUserId,
+        actorId: session.userId,
+      });
     });
 
     revalidatePath("/admin/users");
@@ -177,17 +180,17 @@ export async function updateUser(
     if (password && password.length >= 6) {
       patch.passwordHash = await hashPassword(password);
     }
-    await updateUserDb(id, patch);
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      await updateUserDb(id, patch, tx);
 
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    await recordAuditEvent(getDb(), {
-      action: AUDIT_ACTIONS.ADMIN_USER_UPDATED,
-      entityType: "user",
-      entityId: id,
-      actorId: session.userId,
-      payload: { fields: Object.keys(patch) },
+      await recordAuditEvent(tx, {
+        action: AUDIT_ACTIONS.ADMIN_USER_UPDATED,
+        entityType: "user",
+        entityId: id,
+        actorId: session.userId,
+        payload: { fields: Object.keys(patch) },
+      });
     });
 
     revalidatePath("/admin/users");
@@ -235,16 +238,17 @@ export async function deleteUser(userId: string): Promise<AdminActionResult> {
         message: "Não é possível remover o último administrador do sistema",
       };
     }
-    await deleteUserDb(id.data);
+    
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      await deleteUserDb(id.data, tx);
 
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    await recordAuditEvent(getDb(), {
-      action: AUDIT_ACTIONS.ADMIN_USER_DELETED,
-      entityType: "user",
-      entityId: id.data,
-      actorId: session.userId,
+      await recordAuditEvent(tx, {
+        action: AUDIT_ACTIONS.ADMIN_USER_DELETED,
+        entityType: "user",
+        entityId: id.data,
+        actorId: session.userId,
+      });
     });
 
     revalidatePath("/admin/users");

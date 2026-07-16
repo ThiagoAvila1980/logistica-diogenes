@@ -106,8 +106,9 @@ export async function getRoleScreenMatrix(): Promise<RoleScreenMatrix> {
  */
 export async function saveRoleScreenMatrix(
   updates: Partial<Record<Exclude<UserRole, "admin">, ScreenKey[]>>,
+  tx?: any
 ): Promise<void> {
-  const db = getDb();
+  const db = tx ?? getDb();
 
   const roles = Object.keys(updates) as Exclude<UserRole, "admin">[];
 

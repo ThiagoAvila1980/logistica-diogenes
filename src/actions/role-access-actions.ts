@@ -7,6 +7,9 @@ import { saveRoleScreenMatrix } from "@/lib/auth/role-access";
 import { SCREEN_KEYS, type ScreenKey } from "@/lib/auth/screens";
 import type { UserRole } from "@/db/schema";
 import { logger } from "@/lib/logger";
+import { getDb } from "@/db";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 
 export type RoleAccessActionResult =
   | { success: true; message: string }
@@ -47,22 +50,22 @@ export async function saveRoleAccessMatrix(
   }
 
   try {
-    await saveRoleScreenMatrix(updates);
-
     let cellCount = 0;
     for (const role in updates) {
       cellCount += updates[role as keyof typeof updates]?.length ?? 0;
     }
 
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    await recordAuditEvent(getDb(), {
-      action: AUDIT_ACTIONS.ADMIN_ROLE_ACCESS_UPDATED,
-      entityType: "role_screen",
-      entityId: "matrix",
-      actorId: session.userId,
-      payload: { cellCount },
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      await saveRoleScreenMatrix(updates, tx);
+
+      await recordAuditEvent(tx, {
+        action: AUDIT_ACTIONS.ADMIN_ROLE_ACCESS_UPDATED,
+        entityType: "role_screen",
+        entityId: "matrix",
+        actorId: session.userId,
+        payload: { cellCount },
+      });
     });
 
     revalidatePath("/admin/permissions");

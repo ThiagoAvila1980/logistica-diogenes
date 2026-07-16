@@ -37,11 +37,13 @@ export async function listCoresAdminDb(): Promise<LookupAdminRow[]> {
   }));
 }
 
+export type AnyDb = any;
+
 export async function upsertCorDb(data: {
   id?: string;
   descricao: string;
-}): Promise<string> {
-  const db = getDb();
+}, tx?: AnyDb): Promise<string> {
+  const db = tx ?? getDb();
   const descricao = data.descricao.trim();
   if (data.id) {
     await db
@@ -54,8 +56,8 @@ export async function upsertCorDb(data: {
   return inserted.id;
 }
 
-export async function deleteCorDb(id: string): Promise<void> {
-  const db = getDb();
+export async function deleteCorDb(id: string, tx?: AnyDb): Promise<void> {
+  const db = tx ?? getDb();
   await db.delete(cores).where(eq(cores.idCor, id));
 }
 
@@ -97,8 +99,8 @@ export async function listTipoVidroAdminDb(): Promise<LookupAdminRow[]> {
 export async function upsertTipoVidroDb(data: {
   id?: string;
   descricao: string;
-}): Promise<string> {
-  const db = getDb();
+}, tx?: AnyDb): Promise<string> {
+  const db = tx ?? getDb();
   const descricao = data.descricao.trim();
   if (data.id) {
     await db
@@ -111,8 +113,8 @@ export async function upsertTipoVidroDb(data: {
   return inserted.id;
 }
 
-export async function deleteTipoVidroDb(id: string): Promise<void> {
-  const db = getDb();
+export async function deleteTipoVidroDb(id: string, tx?: AnyDb): Promise<void> {
+  const db = tx ?? getDb();
   await db.delete(tipoVidro).where(eq(tipoVidro.idTipoVidro, id));
 }
 
@@ -186,8 +188,8 @@ export async function upsertTipoEnvidracamentoDb(data: {
   descricao: string;
   imagemUrl?: string | null;
   dificuldade?: number;
-}): Promise<string> {
-  const db = getDb();
+}, tx?: AnyDb): Promise<string> {
+  const db = tx ?? getDb();
   const descricao = data.descricao.trim();
   const imagemUrl = data.imagemUrl ?? null;
   const dificuldade = data.dificuldade ?? 1;
@@ -202,8 +204,8 @@ export async function upsertTipoEnvidracamentoDb(data: {
   return inserted.id;
 }
 
-export async function deleteTipoEnvidracamentoDb(id: string): Promise<void> {
-  const db = getDb();
+export async function deleteTipoEnvidracamentoDb(id: string, tx?: AnyDb): Promise<void> {
+  const db = tx ?? getDb();
   await db
     .delete(tipoEnvidracamento)
     .where(eq(tipoEnvidracamento.idTipoEnvidracamento, id));
@@ -252,8 +254,8 @@ export async function listAmbientesAdminDb(): Promise<LookupAdminRow[]> {
 export async function upsertAmbienteDb(data: {
   id?: string;
   descricao: string;
-}): Promise<string> {
-  const db = getDb();
+}, tx?: AnyDb): Promise<string> {
+  const db = tx ?? getDb();
   const descricao = data.descricao.trim();
   if (data.id) {
     await db
@@ -266,8 +268,8 @@ export async function upsertAmbienteDb(data: {
   return inserted.id;
 }
 
-export async function deleteAmbienteDb(id: string): Promise<void> {
-  const db = getDb();
+export async function deleteAmbienteDb(id: string, tx?: AnyDb): Promise<void> {
+  const db = tx ?? getDb();
   await db.delete(ambientes).where(eq(ambientes.idAmbiente, id));
 }
 

@@ -12,8 +12,11 @@ import {
 } from "@/lib/upload/catalog-image";
 import { isPersistedUploadUrl } from "@/lib/upload/storage";
 import { normalizePersistedUploadUrl } from "@/lib/upload/resolve-display-url";
-import type { LookupAdminRow } from "@/lib/data/lookup-admin-db";
+import type { LookupAdminRow, AnyDb } from "@/lib/data/lookup-admin-db";
 import type { AdminActionResult } from "@/actions/vehicle-actions";
+import { getDb } from "@/db";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 
 export type LookupEntity = "cores" | "tipo_vidro" | "tipo_envidracamento" | "ambientes";
 
@@ -36,8 +39,8 @@ const ENTITY_CONFIG: Record<
       descricao: string;
       imagemUrl?: string | null;
       dificuldade?: number;
-    }) => Promise<string>;
-    deleteDb: (id: string) => Promise<void>;
+    }, tx?: AnyDb) => Promise<string>;
+    deleteDb: (id: string, tx?: AnyDb) => Promise<void>;
     countDupDb: (descricao: string, excludeId?: string) => Promise<number>;
   }
 > = {
@@ -47,13 +50,13 @@ const ENTITY_CONFIG: Record<
       const { listCoresAdminDb } = await import("@/lib/data/lookup-admin-db");
       return listCoresAdminDb();
     },
-    upsertDb: async (data) => {
+    upsertDb: async (data, tx) => {
       const { upsertCorDb } = await import("@/lib/data/lookup-admin-db");
-      return upsertCorDb(data);
+      return upsertCorDb(data, tx);
     },
-    deleteDb: async (id) => {
+    deleteDb: async (id, tx) => {
       const { deleteCorDb } = await import("@/lib/data/lookup-admin-db");
-      await deleteCorDb(id);
+      await deleteCorDb(id, tx);
     },
     countDupDb: async (descricao, excludeId) => {
       const { countCorByDescricaoDb } = await import("@/lib/data/lookup-admin-db");
@@ -66,13 +69,13 @@ const ENTITY_CONFIG: Record<
       const { listTipoVidroAdminDb } = await import("@/lib/data/lookup-admin-db");
       return listTipoVidroAdminDb();
     },
-    upsertDb: async (data) => {
+    upsertDb: async (data, tx) => {
       const { upsertTipoVidroDb } = await import("@/lib/data/lookup-admin-db");
-      return upsertTipoVidroDb(data);
+      return upsertTipoVidroDb(data, tx);
     },
-    deleteDb: async (id) => {
+    deleteDb: async (id, tx) => {
       const { deleteTipoVidroDb } = await import("@/lib/data/lookup-admin-db");
-      await deleteTipoVidroDb(id);
+      await deleteTipoVidroDb(id, tx);
     },
     countDupDb: async (descricao, excludeId) => {
       const { countTipoVidroByDescricaoDb } = await import(
@@ -89,17 +92,17 @@ const ENTITY_CONFIG: Record<
       );
       return listTipoEnvidracamentoAdminDb();
     },
-    upsertDb: async (data) => {
+    upsertDb: async (data, tx) => {
       const { upsertTipoEnvidracamentoDb } = await import(
         "@/lib/data/lookup-admin-db"
       );
-      return upsertTipoEnvidracamentoDb(data);
+      return upsertTipoEnvidracamentoDb(data, tx);
     },
-    deleteDb: async (id) => {
+    deleteDb: async (id, tx) => {
       const { deleteTipoEnvidracamentoDb } = await import(
         "@/lib/data/lookup-admin-db"
       );
-      await deleteTipoEnvidracamentoDb(id);
+      await deleteTipoEnvidracamentoDb(id, tx);
     },
     countDupDb: async (descricao, excludeId) => {
       const { countTipoEnvidracamentoByDescricaoDb } = await import(
@@ -114,13 +117,13 @@ const ENTITY_CONFIG: Record<
       const { listAmbientesAdminDb } = await import("@/lib/data/lookup-admin-db");
       return listAmbientesAdminDb();
     },
-    upsertDb: async (data) => {
+    upsertDb: async (data, tx) => {
       const { upsertAmbienteDb } = await import("@/lib/data/lookup-admin-db");
-      return upsertAmbienteDb(data);
+      return upsertAmbienteDb(data, tx);
     },
-    deleteDb: async (id) => {
+    deleteDb: async (id, tx) => {
       const { deleteAmbienteDb } = await import("@/lib/data/lookup-admin-db");
-      await deleteAmbienteDb(id);
+      await deleteAmbienteDb(id, tx);
     },
     countDupDb: async (descricao, excludeId) => {
       const { countAmbienteByDescricaoDb } = await import(
@@ -180,18 +183,20 @@ async function saveLookupInternal(
     if (dup > 0) {
       return { success: false, message: "Descrição já cadastrada" };
     }
-    const savedId = await config.upsertDb({ id, descricao });
+    
+    let savedId: string;
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      savedId = await config.upsertDb({ id, descricao }, tx);
 
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    const normalizedEntity = entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity;
-    await recordAuditEvent(getDb(), {
-      action: id ? AUDIT_ACTIONS.ADMIN_LOOKUP_UPDATED : AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED,
-      entityType: normalizedEntity,
-      entityId: savedId,
-      actorId: session.userId,
-      payload: { lookup: normalizedEntity },
+      const normalizedEntity = entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity;
+      await recordAuditEvent(tx, {
+        action: id ? AUDIT_ACTIONS.ADMIN_LOOKUP_UPDATED : AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED,
+        entityType: normalizedEntity,
+        entityId: savedId,
+        actorId: session.userId,
+        payload: { lookup: normalizedEntity },
+      });
     });
 
     revalidateLookupPaths(config.adminPath);
@@ -285,7 +290,19 @@ export async function saveTipoEnvidracamento(
       return { success: false, message: "Descrição já cadastrada" };
     }
 
-    const savedId = await config.upsertDb({ id, descricao, imagemUrl, dificuldade });
+    let savedId: string;
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      savedId = await config.upsertDb({ id, descricao, imagemUrl, dificuldade }, tx);
+
+      await recordAuditEvent(tx, {
+        action: id ? AUDIT_ACTIONS.ADMIN_LOOKUP_UPDATED : AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED,
+        entityType: "tipo_envidracamento",
+        entityId: savedId,
+        actorId: session.userId,
+        payload: { lookup: "tipo_envidracamento" },
+      });
+    });
 
     if (
       previousImagemUrl &&
@@ -294,17 +311,6 @@ export async function saveTipoEnvidracamento(
     ) {
       await deleteTipoEnvidracamentoImage(previousImagemUrl);
     }
-
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    await recordAuditEvent(getDb(), {
-      action: id ? AUDIT_ACTIONS.ADMIN_LOOKUP_UPDATED : AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED,
-      entityType: "tipo_envidracamento",
-      entityId: savedId,
-      actorId: session.userId,
-      payload: { lookup: "tipo_envidracamento" },
-    });
 
     revalidateLookupPaths(config.adminPath);
     return {
@@ -341,30 +347,32 @@ export async function deleteLookupItem(
         message: "Registro em uso em medições — não pode ser removido",
       };
     }
+
+    let imagemUrl: string | null = null;
     if (entity === "tipo_envidracamento") {
       const { getTipoEnvidracamentoImagemUrlDb } = await import(
         "@/lib/data/lookup-admin-db"
       );
-      const imagemUrl = await getTipoEnvidracamentoImagemUrlDb(id);
-      await config.deleteDb(id);
-      if (imagemUrl && isPersistedUploadUrl(imagemUrl)) {
-        await deleteTipoEnvidracamentoImage(imagemUrl);
-      }
-    } else {
-      await config.deleteDb(id);
+      imagemUrl = await getTipoEnvidracamentoImagemUrlDb(id);
     }
 
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    const normalizedEntity = entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity;
-    await recordAuditEvent(getDb(), {
-      action: AUDIT_ACTIONS.ADMIN_LOOKUP_DELETED,
-      entityType: normalizedEntity,
-      entityId: id,
-      actorId: session.userId,
-      payload: { lookup: normalizedEntity },
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      await config.deleteDb(id, tx);
+
+      const normalizedEntity = entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity;
+      await recordAuditEvent(tx, {
+        action: AUDIT_ACTIONS.ADMIN_LOOKUP_DELETED,
+        entityType: normalizedEntity,
+        entityId: id,
+        actorId: session.userId,
+        payload: { lookup: normalizedEntity },
+      });
     });
+
+    if (entity === "tipo_envidracamento" && imagemUrl && isPersistedUploadUrl(imagemUrl)) {
+      await deleteTipoEnvidracamentoImage(imagemUrl);
+    }
 
     revalidateLookupPaths(config.adminPath);
     return { success: true, message: "Registro removido" };

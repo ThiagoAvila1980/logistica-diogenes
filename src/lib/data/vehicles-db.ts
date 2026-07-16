@@ -176,13 +176,15 @@ export async function listVehiclesForTransportSelectionDb(
   );
 }
 
+export type AnyDb = any;
+
 export async function upsertVehicleDb(data: {
   id?: string;
   description: string;
   plate: string;
   active?: boolean;
-}): Promise<string> {
-  const db = getDb();
+}, tx?: AnyDb): Promise<string> {
+  const db = tx ?? getDb();
   const plate = data.plate.trim().toUpperCase();
   const values = {
     description: data.description.trim(),
@@ -200,8 +202,8 @@ export async function upsertVehicleDb(data: {
   }
 }
 
-export async function deleteVehicleDb(id: string): Promise<void> {
-  const db = getDb();
+export async function deleteVehicleDb(id: string, tx?: AnyDb): Promise<void> {
+  const db = tx ?? getDb();
   await db.delete(vehicles).where(eq(vehicles.id, id));
 }
 

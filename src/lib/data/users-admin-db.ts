@@ -31,14 +31,16 @@ export async function listAdminUsersDb(): Promise<AdminUserRow[]> {
   }));
 }
 
+export type AnyDb = any;
+
 export async function createUserDb(data: {
   name: string;
   email: string;
   roles: AdminUserRow["roles"];
   phone?: string | null;
   passwordHash: string;
-}): Promise<string> {
-  const db = getDb();
+}, tx?: AnyDb): Promise<string> {
+  const db = tx ?? getDb();
   const [inserted] = await db.insert(users).values({
     name: data.name.trim(),
     email: data.email.trim().toLowerCase(),
@@ -60,8 +62,9 @@ export async function updateUserDb(
     active: boolean;
     passwordHash: string;
   }>,
+  tx?: AnyDb
 ): Promise<void> {
-  const db = getDb();
+  const db = tx ?? getDb();
   const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (data.name != null) patch.name = data.name.trim();
   if (data.email != null) patch.email = data.email.trim().toLowerCase();
@@ -85,8 +88,8 @@ export async function countUsersByEmailDb(
   return rows.filter((r) => r.id !== excludeId).length;
 }
 
-export async function deleteUserDb(id: string): Promise<void> {
-  const db = getDb();
+export async function deleteUserDb(id: string, tx?: AnyDb): Promise<void> {
+  const db = tx ?? getDb();
   await db.delete(users).where(eq(users.id, id));
 }
 

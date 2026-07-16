@@ -5,6 +5,9 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth/require-role";
 import { authErrorMessage } from "@/lib/auth/auth-error";
 import { listVehicles } from "@/lib/data/vehicles";
+import { getDb } from "@/db";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 
 const vehicleSchema = z.object({
   id: z.string().uuid().optional(),
@@ -75,16 +78,17 @@ export async function saveVehicle(
         };
       }
     }
-    const savedId = await upsertVehicleDb({ id, description, plate, active });
+    
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      const savedId = await upsertVehicleDb({ id, description, plate, active }, tx);
 
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    await recordAuditEvent(getDb(), {
-      action: id ? AUDIT_ACTIONS.ADMIN_VEHICLE_UPDATED : AUDIT_ACTIONS.ADMIN_VEHICLE_CREATED,
-      entityType: "vehicle",
-      entityId: savedId,
-      actorId: session.userId,
+      await recordAuditEvent(tx, {
+        action: id ? AUDIT_ACTIONS.ADMIN_VEHICLE_UPDATED : AUDIT_ACTIONS.ADMIN_VEHICLE_CREATED,
+        entityType: "vehicle",
+        entityId: savedId,
+        actorId: session.userId,
+      });
     });
 
     revalidatePath("/admin/vehicles");
@@ -116,16 +120,16 @@ export async function deleteVehicle(vehicleId: string): Promise<AdminActionResul
     if (await isVehicleInUseDb(vehicleId)) {
       return { success: false, message: "Veículo em uso no transporte" };
     }
-    await deleteVehicleDb(vehicleId);
+    const db = getDb();
+    await db.transaction(async (tx) => {
+      await deleteVehicleDb(vehicleId, tx);
 
-    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
-    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
-    const { getDb } = await import("@/db");
-    await recordAuditEvent(getDb(), {
-      action: AUDIT_ACTIONS.ADMIN_VEHICLE_DELETED,
-      entityType: "vehicle",
-      entityId: vehicleId,
-      actorId: session.userId,
+      await recordAuditEvent(tx, {
+        action: AUDIT_ACTIONS.ADMIN_VEHICLE_DELETED,
+        entityType: "vehicle",
+        entityId: vehicleId,
+        actorId: session.userId,
+      });
     });
 
     revalidatePath("/admin/vehicles");
