@@ -241,15 +241,17 @@ export async function assignVehicleToTransportAction(
     }
 
     const { assignVehicleToTransportDb } = await import("@/lib/data/vehicles-db");
-    await assignVehicleToTransportDb(osId, vehicleId, session.userId);
+    await db.transaction(async (tx) => {
+      await assignVehicleToTransportDb(tx, osId, vehicleId, session.userId);
 
-    await recordAuditEvent(db, {
-      actorId: session.userId,
-      action: vehicleId
-        ? AUDIT_ACTIONS.TRANSPORT_VEHICLE_ASSIGNED
-        : AUDIT_ACTIONS.TRANSPORT_VEHICLE_UNASSIGNED,
-      measurementId: osId,
-      payload: { vehicleId },
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: vehicleId
+          ? AUDIT_ACTIONS.TRANSPORT_VEHICLE_ASSIGNED
+          : AUDIT_ACTIONS.TRANSPORT_VEHICLE_UNASSIGNED,
+        measurementId: osId,
+        payload: { vehicleId },
+      });
     });
 
     revalidateOSRoutes(osId);
@@ -688,114 +690,5 @@ export async function assignDriverToVaoAction(
     }
     logger.error("assignDriverToVaoAction failed", { osId, itemId, step, err });
     return { success: false, message: "Erro ao atribuir motorista ao vão" };
-  }
-}
-
-const assignDriverToAllVaosSchema = z.object({
-  osId: z.string().uuid(),
-  driverId: z.string().uuid().nullable(),
-});
-
-export async function assignDriverToAllVaosAction(
-  raw: z.infer<typeof assignDriverToAllVaosSchema>,
-): Promise<AssignDriverToVaoResult> {
-  const parsed = assignDriverToAllVaosSchema.safeParse(raw);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message: "Requisição inválida. Recarregue a página e tente novamente.",
-    };
-  }
-
-  let session: SessionUser;
-  try {
-    session = await requireRole(["admin"]);
-  } catch {
-    return { success: false, message: "Sem permissão para esta ação" };
-  }
-
-  const { osId, driverId } = parsed.data;
-
-  if (driverId) {
-    const db = getDb();
-    const [driver] = await db
-      .select({ id: users.id, active: users.active, roles: users.roles })
-      .from(users)
-      .where(and(eq(users.id, driverId), eq(users.active, true)))
-      .limit(1);
-
-    if (!driver || !driver.roles.includes("motorista")) {
-      return { success: false, message: "Motorista não encontrado ou inativo" };
-    }
-  }
-
-  try {
-    const db = getDb();
-    const [orderRow] = await db
-      .select({ etapa: measurements.etapa })
-      .from(measurements)
-      .where(eq(measurements.id, osId))
-      .limit(1);
-    if (!orderRow) return { success: false, message: "OS não encontrada" };
-
-    const isLatePhase = isTransportOrLater(orderRow.etapa);
-
-    const { applyDriverToAllVaoSteps } = await import(
-      "@/lib/logistics/apply-driver-to-all-vaos"
-    );
-
-    await db.transaction(async (tx) => {
-      const [meas] = await tx
-        .select({ items: measurements.items })
-        .from(measurements)
-        .where(eq(measurements.id, osId))
-        .for("update")
-        .limit(1);
-
-      if (!meas) throw new WorkflowActionError("OS não encontrada");
-
-      const items = (meas.items as MeasurementLineItem[]) ?? [];
-      const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
-        isLatePhase,
-      );
-
-      if (!canOperateTransportModule(orderRow.etapa, cuttingSteps)) {
-        throw new WorkflowActionError(
-          "Aguardando conclusão do corte para liberar transporte",
-        );
-      }
-
-      const updatedItems = applyDriverToAllVaoSteps(items, driverId ?? null);
-
-      await tx
-        .update(measurements)
-        .set({ items: updatedItems, updatedAt: new Date() })
-        .where(eq(measurements.id, osId));
-
-      for (const item of items) {
-        await recordAuditEvent(tx, {
-          actorId: session.userId,
-          action: driverId
-            ? AUDIT_ACTIONS.TRANSPORT_DRIVER_ASSIGNED
-            : AUDIT_ACTIONS.TRANSPORT_DRIVER_UNASSIGNED,
-          measurementId: osId,
-          itemId: item.id,
-          payload: {
-            driverId,
-            bulk: true,
-          },
-        });
-      }
-    });
-
-    revalidateOSRoutes(osId);
-    return { success: true };
-  } catch (err) {
-    if (err instanceof WorkflowActionError) {
-      return { success: false, message: err.message };
-    }
-    logger.error("assignDriverToAllVaosAction failed", { osId, err });
-    return { success: false, message: "Erro ao atribuir motorista a todos os vãos" };
   }
 }

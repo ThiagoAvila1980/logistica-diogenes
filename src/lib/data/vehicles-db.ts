@@ -217,13 +217,13 @@ export async function countVehiclesByPlateDb(
 }
 
 export async function assignVehicleToTransportDb(
+  tx: any, // Accepts the transaction or db instance
   osId: string,
   vehicleId: string,
   driverId?: string | null,
 ): Promise<void> {
-  const db = getDb();
   const plate = await getVehiclePlateDb(vehicleId);
-  const [existing] = await db
+  const [existing] = await tx
     .select({ id: transportLogs.id })
     .from(transportLogs)
     .where(eq(transportLogs.idMedicao, osId))
@@ -237,11 +237,11 @@ export async function assignVehicleToTransportDb(
   };
 
   if (existing) {
-    await db
+    await tx
       .update(transportLogs)
       .set(values)
       .where(eq(transportLogs.id, existing.id));
   } else {
-    await db.insert(transportLogs).values({ idMedicao: osId, ...values });
+    await tx.insert(transportLogs).values({ idMedicao: osId, ...values });
   }
 }
