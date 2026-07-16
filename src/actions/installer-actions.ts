@@ -2,6 +2,8 @@
 
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 import { requireRole } from "@/lib/auth/require-role";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getServiceOrderById } from "@/lib/data/orders";
@@ -29,9 +31,10 @@ export async function assignInstallerToVaoAction(
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
+  let session;
   try {
     // Atribuir instalador ao vão é decisão de gestão — admin ou gerente.
-    await requireRole(["admin", "gerente"]);
+    session = await requireRole(["admin", "gerente"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -80,6 +83,16 @@ export async function assignInstallerToVaoAction(
         .update(measurements)
         .set({ items: updatedItems, updatedAt: new Date() })
         .where(eq(measurements.id, osId));
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: installerId
+          ? AUDIT_ACTIONS.INSTALLATION_INSTALLER_ASSIGNED
+          : AUDIT_ACTIONS.INSTALLATION_INSTALLER_UNASSIGNED,
+        measurementId: osId,
+        itemId,
+        payload: { installerId, scheduledInstallationDate },
+      });
     });
 
     revalidateOSRoutes(osId);
@@ -112,9 +125,10 @@ export async function sendVaosToInstallationAction(
     return { success: false, message: msg };
   }
 
+  let session;
   try {
     // Enviar vãos para instalação é decisão de gestão — admin ou gerente.
-    await requireRole(["admin", "gerente"]);
+    session = await requireRole(["admin", "gerente"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -161,6 +175,13 @@ export async function sendVaosToInstallationAction(
         .update(measurements)
         .set({ items: updatedItems, updatedAt: new Date() })
         .where(eq(measurements.id, osId));
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.INSTALLATION_VAOS_SENT,
+        measurementId: osId,
+        payload: { itemIds: selectedItemIds },
+      });
     });
 
     revalidateOSRoutes(osId);

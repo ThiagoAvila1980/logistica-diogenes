@@ -2,6 +2,8 @@
 
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS, stepCheckAction } from "@/lib/audit/actions";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getDb } from "@/lib/db";
 import { installationLogs, measurements } from "@/db/schema";
@@ -46,8 +48,9 @@ export async function updateItemInstallationStepAction(
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
+  let session;
   try {
-    await requireRole(["admin", "gerente", "instalador"]);
+    session = await requireRole(["admin", "gerente", "instalador"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -176,6 +179,14 @@ export async function updateItemInstallationStepAction(
           done: false,
         });
       }
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: stepCheckAction("installation", done),
+        measurementId: osId,
+        itemId,
+        payload: { step, done },
+      });
     });
 
     revalidateOSRoutes(osId);
@@ -208,8 +219,9 @@ export async function completeInstallationVaoAction(
     return { success: false, message: "Requisição inválida. Recarregue a página e tente novamente." };
   }
 
+  let session;
   try {
-    await requireRole(["admin", "gerente", "instalador"]);
+    session = await requireRole(["admin", "gerente", "instalador"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -280,6 +292,14 @@ export async function completeInstallationVaoAction(
         eventType: "instalacao_vao",
         idTipoEnvidracamento: updatedItem?.idTipoEnvidracamento,
         done: true,
+      });
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.INSTALLATION_VAO_COMPLETED,
+        measurementId: osId,
+        itemId,
+        payload: { concluido: true },
       });
     });
 

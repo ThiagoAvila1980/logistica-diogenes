@@ -1,6 +1,8 @@
 "use server";
 
 import { eq } from "drizzle-orm";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getServiceOrderById } from "@/lib/data/orders";
@@ -36,11 +38,11 @@ const saveDailyNoteSchema = z.object({
 });
 
 async function upsertInstallationServicePhotosDb(
+  tx: any,
   osId: string,
   servicePhotos: string[],
 ): Promise<void> {
-  const db = getDb();
-  const [existing] = await db
+  const [existing] = await tx
     .select({ id: installationLogs.id, photos: installationLogs.photos })
     .from(installationLogs)
     .where(eq(installationLogs.idMedicao, osId))
@@ -52,12 +54,12 @@ async function upsertInstallationServicePhotosDb(
   };
 
   if (existing) {
-    await db
+    await tx
       .update(installationLogs)
       .set({ photos })
       .where(eq(installationLogs.id, existing.id));
   } else {
-    await db.insert(installationLogs).values({ idMedicao: osId, photos });
+    await tx.insert(installationLogs).values({ idMedicao: osId, photos });
   }
 }
 
@@ -70,8 +72,9 @@ export async function saveInstallationServicePhotos(
     return { success: false, message: "Dados inválidos." };
   }
 
+  let session;
   try {
-    await requireRole(["admin", "gerente", "instalador"]);
+    session = await requireRole(["admin", "gerente", "instalador"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação." };
   }
@@ -103,7 +106,14 @@ export async function saveInstallationServicePhotos(
   }
 
   try {
-    await upsertInstallationServicePhotosDb(osId, photos);
+    await db.transaction(async (tx) => {
+      await upsertInstallationServicePhotosDb(tx, osId, photos);
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.INSTALLATION_PHOTOS_UPDATED,
+        measurementId: osId,
+      });
+    });
     revalidatePath("/installation");
     revalidatePath(`/installation/${osId}`);
     revalidatePath("/dashboard");
@@ -114,17 +124,17 @@ export async function saveInstallationServicePhotos(
 }
 
 async function upsertInstallationDailyNoteDb(
+  tx: any,
   osId: string,
   note: InstallationDailyNote,
 ): Promise<void> {
-  const db = getDb();
-  const [existing] = await db
+  const [existing] = await tx
     .select({ id: installationLogs.id, dailyNotes: installationLogs.dailyNotes })
     .from(installationLogs)
     .where(eq(installationLogs.idMedicao, osId))
     .limit(1);
 
-  const currentNotes = existing?.dailyNotes ?? [];
+  const currentNotes: InstallationDailyNote[] = (existing?.dailyNotes as InstallationDailyNote[]) ?? [];
   const index = currentNotes.findIndex((entry) => entry.date === note.date);
   const nextNotes =
     index >= 0
@@ -132,21 +142,22 @@ async function upsertInstallationDailyNoteDb(
       : [...currentNotes, note].sort((a, b) => b.date.localeCompare(a.date));
 
   if (existing) {
-    await db
+    await tx
       .update(installationLogs)
       .set({ dailyNotes: nextNotes })
       .where(eq(installationLogs.id, existing.id));
   } else {
-    await db.insert(installationLogs).values({ idMedicao: osId, dailyNotes: nextNotes });
+    await tx.insert(installationLogs).values({ idMedicao: osId, dailyNotes: nextNotes });
   }
 }
 
 async function assertCanSaveInstallationData(osId: string): Promise<
-  | { ok: true }
+  | { ok: true; session: any }
   | { ok: false; message: string }
 > {
+  let session;
   try {
-    await requireRole(["admin", "gerente", "instalador"]);
+    session = await requireRole(["admin", "gerente", "instalador"]);
   } catch {
     return { ok: false, message: "Sem permissão para esta ação." };
   }
@@ -176,7 +187,7 @@ async function assertCanSaveInstallationData(osId: string): Promise<
     };
   }
 
-  return { ok: true };
+  return { ok: true, session };
 }
 
 export async function saveInstallationDailyNote(input: {
@@ -207,28 +218,39 @@ export async function saveInstallationDailyNote(input: {
     return { success: false, message: "Dados inválidos." };
   }
 
+  let finalNote: InstallationDailyNote | undefined;
   try {
     const db = getDb();
-    const [existing] = await db
-      .select({ dailyNotes: installationLogs.dailyNotes })
-      .from(installationLogs)
-      .where(eq(installationLogs.idMedicao, osId))
-      .limit(1);
+    await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ dailyNotes: installationLogs.dailyNotes })
+        .from(installationLogs)
+        .where(eq(installationLogs.idMedicao, osId))
+        .limit(1);
 
-    const previous = existing?.dailyNotes?.find((entry) => entry.date === date);
-    const note: InstallationDailyNote = {
-      date,
-      text,
-      createdAt: previous?.createdAt ?? now,
-      updatedAt: now,
-    };
+      const previous = (existing?.dailyNotes as InstallationDailyNote[])?.find((entry) => entry.date === date);
+      const note: InstallationDailyNote = {
+        date,
+        text,
+        createdAt: previous?.createdAt ?? now,
+        updatedAt: now,
+      };
+      finalNote = note;
 
-    await upsertInstallationDailyNoteDb(osId, note);
+      await upsertInstallationDailyNoteDb(tx, osId, note);
+
+      await recordAuditEvent(tx, {
+        actorId: gate.session.userId,
+        action: AUDIT_ACTIONS.INSTALLATION_NOTES_UPDATED,
+        measurementId: osId,
+        payload: { date },
+      });
+    });
 
     revalidatePath("/installation");
     revalidatePath(`/installation/${osId}`);
     revalidatePath("/dashboard");
-    return { success: true, message: "Observação salva.", note };
+    return { success: true, message: "Observação salva.", note: finalNote! };
   } catch {
     return { success: false, message: "Erro ao salvar observação." };
   }
