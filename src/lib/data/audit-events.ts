@@ -23,6 +23,8 @@ export type AuditEventListItem = {
   actorName: string | null;
   measurementId: string | null;
   osNumber: string | null;
+  cliente: string | null;
+  itemId: string | null;
   entityType: string | null;
   entityId: string | null;
   payload: Record<string, unknown>;
@@ -82,6 +84,8 @@ export async function listAuditEvents(
       actorName: users.name,
       measurementId: auditEvents.measurementId,
       osNumber: measurements.number,
+      cliente: measurements.cliente,
+      itemId: auditEvents.itemId,
       entityType: auditEvents.entityType,
       entityId: auditEvents.entityId,
       payload: auditEvents.payload,

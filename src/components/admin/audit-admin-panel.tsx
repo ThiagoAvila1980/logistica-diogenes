@@ -31,6 +31,14 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
   const currentTo = searchParams.get("to") || "";
   
   const hasOsFilter = !!currentOs;
+  const hasAnyFilter =
+    hasOsFilter ||
+    currentActor !== "all" ||
+    currentAction !== "all" ||
+    !!currentFrom ||
+    !!currentTo;
+  const osCliente =
+    data.items.find((i) => i.osNumber && i.cliente)?.cliente ?? null;
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -69,17 +77,23 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
   return (
     <div className="space-y-4">
       {hasOsFilter && (
-        <div className="rounded-lg border border-accent bg-accent/20 px-4 py-3 text-sm flex items-center justify-between">
+        <div className="rounded-lg border border-accent bg-accent/20 px-4 py-3 text-sm flex items-center justify-between gap-3">
           <span>
-            Mostrando resultados apenas para OS <strong>{currentOs}</strong>.
+            Histórico da OS <strong>{currentOs}</strong>
+            {osCliente ? (
+              <>
+                {" "}
+                — <span className="text-muted-foreground">{osCliente}</span>
+              </>
+            ) : null}
           </span>
           <Link
             href={pathname}
-            className="text-primary hover:underline flex items-center gap-1 font-medium"
+            className="text-primary hover:underline flex items-center gap-1 font-medium shrink-0"
             prefetch={false}
           >
             <X className="h-4 w-4" />
-            Limpar filtros
+            Ver todas as OS
           </Link>
         </div>
       )}
@@ -162,7 +176,7 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
                 <th className="px-4 py-3 font-medium">Usuário</th>
                 <th className="px-4 py-3 font-medium">OS</th>
                 <th className="px-4 py-3 font-medium">Ação</th>
-                <th className="px-4 py-3 font-medium">Entidade</th>
+                <th className="px-4 py-3 font-medium">Vão</th>
                 <th className="px-4 py-3 font-medium">Detalhes</th>
               </tr>
             </thead>
@@ -170,7 +184,9 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
               {data.items.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                    Nenhum registro encontrado para os filtros atuais.
+                    {hasAnyFilter
+                      ? "Nenhum evento com esses filtros."
+                      : "Nenhum evento registrado ainda."}
                   </td>
                 </tr>
               ) : (
@@ -186,18 +202,18 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
                       })}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {item.actorName || <span className="italic text-muted-foreground">Sistema</span>}
+                      {item.actorName || <span className="italic text-muted-foreground">—</span>}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap font-medium">
                       {item.osNumber ? (
-                        <Link 
+                        <Link
                           href={`/admin/auditoria?os=${encodeURIComponent(item.osNumber)}`}
                           className="hover:underline text-primary"
                         >
                           {item.osNumber}
                         </Link>
                       ) : (
-                        <span className="text-muted-foreground">-</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -206,16 +222,25 @@ export function AuditAdminPanel({ data, users }: AuditAdminPanelProps) {
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-muted-foreground text-xs">
-                      {item.entityId ? (
-                        <span title={`${item.entityType || 'Entidade'}: ${item.entityId}`}>
-                          {item.entityId.slice(0, 8)}...
+                      {item.itemId ? (
+                        <span title={item.itemId}>
+                          {item.itemId.length > 12
+                            ? `${item.itemId.slice(0, 8)}…`
+                            : item.itemId}
+                        </span>
+                      ) : item.entityId ? (
+                        <span title={`${item.entityType ?? "entidade"}: ${item.entityId}`}>
+                          {item.entityType ?? item.entityId.slice(0, 8)}
                         </span>
                       ) : (
-                        "-"
+                        "—"
                       )}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-[300px] truncate" title={formatAuditPayloadSummary(item.action, item.payload)}>
-                      {formatAuditPayloadSummary(item.action, item.payload) || "-"}
+                    <td
+                      className="px-4 py-3 text-muted-foreground max-w-[300px] truncate"
+                      title={formatAuditPayloadSummary(item.action, item.payload)}
+                    >
+                      {formatAuditPayloadSummary(item.action, item.payload) || "—"}
                     </td>
                   </tr>
                 ))
