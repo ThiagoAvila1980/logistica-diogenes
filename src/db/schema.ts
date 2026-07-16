@@ -389,6 +389,36 @@ export const workEvents = pgTable(
   ],
 );
 
+/** Trilha append-only de auditoria operacional e admin */
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    actorId: uuid("actor_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull(),
+    measurementId: uuid("measurement_id").references(() => measurements.id, {
+      onDelete: "set null",
+    }),
+    itemId: text("item_id"),
+    entityType: text("entity_type"),
+    entityId: text("entity_id"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("idx_audit_events_measurement_created").on(t.measurementId, t.createdAt),
+    index("idx_audit_events_actor_created").on(t.actorId, t.createdAt),
+    index("idx_audit_events_action_created").on(t.action, t.createdAt),
+    index("idx_audit_events_entity").on(t.entityType, t.entityId),
+  ],
+);
+
+export type AuditEvent = typeof auditEvents.$inferSelect;
+
 // ─── Role screen access ────────────────────────────────────────────────────────
 
 /** Matriz configurável de acesso tela x papel. admin não é armazenado (acesso total implícito). */
