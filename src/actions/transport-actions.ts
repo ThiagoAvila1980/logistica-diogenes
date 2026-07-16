@@ -26,6 +26,9 @@ import { getVaoStepAssignment } from "@/lib/logistics/transport-step-assignment"
 import type { TransportStep } from "@/lib/logistics/transport-item-gates";
 import type { SessionUser } from "@/lib/auth/session-types";
 
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS, stepCheckAction } from "@/lib/audit/actions";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type UpdateTransportStepResult =
@@ -165,6 +168,16 @@ export async function assignVehicleToVaoAction(
         .update(measurements)
         .set({ items: updatedItems, updatedAt: new Date() })
         .where(eq(measurements.id, osId));
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: vehicleId
+          ? AUDIT_ACTIONS.TRANSPORT_VEHICLE_ASSIGNED
+          : AUDIT_ACTIONS.TRANSPORT_VEHICLE_UNASSIGNED,
+        measurementId: osId,
+        itemId,
+        payload: { vehicleId },
+      });
     });
 
     revalidateOSRoutes(osId);
@@ -229,6 +242,16 @@ export async function assignVehicleToTransportAction(
 
     const { assignVehicleToTransportDb } = await import("@/lib/data/vehicles-db");
     await assignVehicleToTransportDb(osId, vehicleId, session.userId);
+
+    await recordAuditEvent(db, {
+      actorId: session.userId,
+      action: vehicleId
+        ? AUDIT_ACTIONS.TRANSPORT_VEHICLE_ASSIGNED
+        : AUDIT_ACTIONS.TRANSPORT_VEHICLE_UNASSIGNED,
+      measurementId: osId,
+      payload: { vehicleId },
+    });
+
     revalidateOSRoutes(osId);
     return { success: true };
   } catch (err) {
@@ -378,6 +401,14 @@ export async function updateItemTransportStepAction(
           done,
         });
       }
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: stepCheckAction("transport", done),
+        measurementId: osId,
+        itemId,
+        payload: { step, done },
+      });
     });
 
     revalidateOSRoutes(osId);
@@ -476,6 +507,14 @@ export async function updateItemTransportNotesAction(
         .update(measurements)
         .set({ items: updatedItems, updatedAt: new Date() })
         .where(eq(measurements.id, osId));
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.TRANSPORT_NOTES_UPDATED,
+        measurementId: osId,
+        itemId,
+        payload: { observacoes: trimmedNotes },
+      });
     });
 
     revalidateOSRoutes(osId);
@@ -497,6 +536,7 @@ const assignDriverToVaoSchema = z.object({
   step: z.enum(["perfilEstrutural", "perfilTotal", "acessorios", "vidros"]),
   driverId: z.string().uuid().nullable(),
   scheduledTransportDate: z.string().nullable(),
+  vehicleId: z.string().uuid().nullable().optional(),
 });
 
 export async function assignDriverToVaoAction(
@@ -510,16 +550,18 @@ export async function assignDriverToVaoAction(
     };
   }
 
+  let session: SessionUser;
   try {
     // Atribuir motorista a um item do vão é decisão de gestão — somente admin
     // (alinhado ao `canAssignDriver={isAdmin}` da UI; drivers só são
     // listados para admin).
-    await requireRole(["admin"]);
+    session = await requireRole(["admin"]);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
 
-  const { osId, itemId, step, driverId, scheduledTransportDate } = parsed.data;
+  const { osId, itemId, step, driverId, scheduledTransportDate, vehicleId } =
+    parsed.data;
 
   if (scheduledTransportDate) {
     const d = new Date(scheduledTransportDate);
@@ -536,6 +578,19 @@ export async function assignDriverToVaoAction(
 
     if (!driver || !driver.roles.includes("motorista")) {
       return { success: false, message: "Motorista não encontrado ou inativo" };
+    }
+  }
+
+  if (vehicleId) {
+    const db = getDb();
+    const [vehicle] = await db
+      .select({ id: vehicles.id, active: vehicles.active })
+      .from(vehicles)
+      .where(and(eq(vehicles.id, vehicleId), eq(vehicles.active, true)))
+      .limit(1);
+
+    if (!vehicle) {
+      return { success: false, message: "Veículo não encontrado ou inativo" };
     }
   }
 
@@ -572,8 +627,12 @@ export async function assignDriverToVaoAction(
         );
       }
 
-      const itemExists = items.some((item) => item.id === itemId);
-      if (!itemExists) throw new WorkflowActionError("Vão não encontrado");
+      const targetItem = items.find((item) => item.id === itemId);
+      if (!targetItem) throw new WorkflowActionError("Vão não encontrado");
+
+      const currentAssignment = getVaoStepAssignment(targetItem, step);
+      const nextVehicleId =
+        vehicleId !== undefined ? (vehicleId ?? null) : currentAssignment.vehicleId;
 
       const updatedItems = items.map((item) => {
         if (item.id !== itemId) return item;
@@ -592,6 +651,7 @@ export async function assignDriverToVaoAction(
               [step]: {
                 driverId: driverId ?? null,
                 scheduledDate: scheduledTransportDate ?? null,
+                vehicleId: nextVehicleId,
               },
             },
           },
@@ -602,6 +662,22 @@ export async function assignDriverToVaoAction(
         .update(measurements)
         .set({ items: updatedItems, updatedAt: new Date() })
         .where(eq(measurements.id, osId));
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: driverId
+          ? AUDIT_ACTIONS.TRANSPORT_DRIVER_ASSIGNED
+          : AUDIT_ACTIONS.TRANSPORT_DRIVER_UNASSIGNED,
+        measurementId: osId,
+        itemId,
+        payload: {
+          step,
+          driverId,
+          previousDriverId: currentAssignment.driverId,
+          scheduledDate: scheduledTransportDate,
+          vehicleId: nextVehicleId,
+        },
+      });
     });
 
     revalidateOSRoutes(osId);
@@ -612,5 +688,114 @@ export async function assignDriverToVaoAction(
     }
     logger.error("assignDriverToVaoAction failed", { osId, itemId, step, err });
     return { success: false, message: "Erro ao atribuir motorista ao vão" };
+  }
+}
+
+const assignDriverToAllVaosSchema = z.object({
+  osId: z.string().uuid(),
+  driverId: z.string().uuid().nullable(),
+});
+
+export async function assignDriverToAllVaosAction(
+  raw: z.infer<typeof assignDriverToAllVaosSchema>,
+): Promise<AssignDriverToVaoResult> {
+  const parsed = assignDriverToAllVaosSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Requisição inválida. Recarregue a página e tente novamente.",
+    };
+  }
+
+  let session: SessionUser;
+  try {
+    session = await requireRole(["admin"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const { osId, driverId } = parsed.data;
+
+  if (driverId) {
+    const db = getDb();
+    const [driver] = await db
+      .select({ id: users.id, active: users.active, roles: users.roles })
+      .from(users)
+      .where(and(eq(users.id, driverId), eq(users.active, true)))
+      .limit(1);
+
+    if (!driver || !driver.roles.includes("motorista")) {
+      return { success: false, message: "Motorista não encontrado ou inativo" };
+    }
+  }
+
+  try {
+    const db = getDb();
+    const [orderRow] = await db
+      .select({ etapa: measurements.etapa })
+      .from(measurements)
+      .where(eq(measurements.id, osId))
+      .limit(1);
+    if (!orderRow) return { success: false, message: "OS não encontrada" };
+
+    const isLatePhase = isTransportOrLater(orderRow.etapa);
+
+    const { applyDriverToAllVaoSteps } = await import(
+      "@/lib/logistics/apply-driver-to-all-vaos"
+    );
+
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
+
+      if (!meas) throw new WorkflowActionError("OS não encontrada");
+
+      const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const cuttingSteps = effectiveCuttingSteps(
+        aggregateCuttingStepsFromItems(items),
+        isLatePhase,
+      );
+
+      if (!canOperateTransportModule(orderRow.etapa, cuttingSteps)) {
+        throw new WorkflowActionError(
+          "Aguardando conclusão do corte para liberar transporte",
+        );
+      }
+
+      const updatedItems = applyDriverToAllVaoSteps(items, driverId ?? null);
+
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
+
+      for (const item of items) {
+        await recordAuditEvent(tx, {
+          actorId: session.userId,
+          action: driverId
+            ? AUDIT_ACTIONS.TRANSPORT_DRIVER_ASSIGNED
+            : AUDIT_ACTIONS.TRANSPORT_DRIVER_UNASSIGNED,
+          measurementId: osId,
+          itemId: item.id,
+          payload: {
+            driverId,
+            bulk: true,
+          },
+        });
+      }
+    });
+
+    revalidateOSRoutes(osId);
+    return { success: true };
+  } catch (err) {
+    if (err instanceof WorkflowActionError) {
+      return { success: false, message: err.message };
+    }
+    logger.error("assignDriverToAllVaosAction failed", { osId, err });
+    return { success: false, message: "Erro ao atribuir motorista a todos os vãos" };
   }
 }
