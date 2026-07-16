@@ -116,8 +116,8 @@ export function FieldOrderCard({ order }: FieldOrderCardProps) {
         <PrintMeasurementMenu osId={order.id} />
       </div>
 
-      {/* Linha de pedido: somente para medições do tipo orçamento */}
-      {!isFinal && (
+      {/* Linha de pedido: somente para medições do tipo final */}
+      {isFinal && (
         <>
           <div className="mx-4 border-t border-border/60" />
           <Link

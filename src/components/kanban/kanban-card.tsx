@@ -167,7 +167,7 @@ export function KanbanCard({
                   {displayNumber}
                 </Link>
                 <div className="flex shrink-0 items-center gap-0.5">
-                  {isMeasurementColumn && !isFinal && (
+                  {isMeasurementColumn && isFinal && (
                     <Link
                       href={`/field/${os.id}/pedidos`}
                       className={cn(

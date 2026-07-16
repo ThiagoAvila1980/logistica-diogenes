@@ -41,7 +41,7 @@ export type KanbanOrderItem = {
   updatedAt: Date;
   /** true quando o medidor já registrou itens de medição (items não vazio). */
   hasMeasurement: boolean;
-  /** Status do pedido de material (somente relevante para orçamentos). */
+  /** Status do pedido de material (somente relevante para medições final). */
   pedidoStatus: PedidoStatus;
   /** Presente quando a medição está no plano de corte */
   cuttingSteps: CuttingSteps | null;
