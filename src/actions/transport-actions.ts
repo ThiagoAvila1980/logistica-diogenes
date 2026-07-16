@@ -538,7 +538,6 @@ const assignDriverToVaoSchema = z.object({
   step: z.enum(["perfilEstrutural", "perfilTotal", "acessorios", "vidros"]),
   driverId: z.string().uuid().nullable(),
   scheduledTransportDate: z.string().nullable(),
-  vehicleId: z.string().uuid().nullable().optional(),
 });
 
 export async function assignDriverToVaoAction(
@@ -562,7 +561,7 @@ export async function assignDriverToVaoAction(
     return { success: false, message: "Sem permissão para esta ação" };
   }
 
-  const { osId, itemId, step, driverId, scheduledTransportDate, vehicleId } =
+  const { osId, itemId, step, driverId, scheduledTransportDate } =
     parsed.data;
 
   if (scheduledTransportDate) {
@@ -580,19 +579,6 @@ export async function assignDriverToVaoAction(
 
     if (!driver || !driver.roles.includes("motorista")) {
       return { success: false, message: "Motorista não encontrado ou inativo" };
-    }
-  }
-
-  if (vehicleId) {
-    const db = getDb();
-    const [vehicle] = await db
-      .select({ id: vehicles.id, active: vehicles.active })
-      .from(vehicles)
-      .where(and(eq(vehicles.id, vehicleId), eq(vehicles.active, true)))
-      .limit(1);
-
-    if (!vehicle) {
-      return { success: false, message: "Veículo não encontrado ou inativo" };
     }
   }
 
@@ -633,8 +619,6 @@ export async function assignDriverToVaoAction(
       if (!targetItem) throw new WorkflowActionError("Vão não encontrado");
 
       const currentAssignment = getVaoStepAssignment(targetItem, step);
-      const nextVehicleId =
-        vehicleId !== undefined ? (vehicleId ?? null) : currentAssignment.vehicleId;
 
       const updatedItems = items.map((item) => {
         if (item.id !== itemId) return item;
@@ -653,7 +637,6 @@ export async function assignDriverToVaoAction(
               [step]: {
                 driverId: driverId ?? null,
                 scheduledDate: scheduledTransportDate ?? null,
-                vehicleId: nextVehicleId,
               },
             },
           },
@@ -677,7 +660,6 @@ export async function assignDriverToVaoAction(
           driverId,
           previousDriverId: currentAssignment.driverId,
           scheduledDate: scheduledTransportDate,
-          vehicleId: nextVehicleId,
         },
       });
     });
