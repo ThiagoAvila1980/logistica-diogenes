@@ -52,5 +52,4 @@ next-env.d.ts
 /site/.next/
 /site/next-env.d.ts
 
-# lockfile só na raiz (app principal usa npm install no CI)
-/package-lock.json
+# lockfile versionado para installs reproduzíveis no Coolify/CI.

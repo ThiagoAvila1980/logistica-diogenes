@@ -77,7 +77,7 @@ describe("formatAuditPayloadSummary", () => {
       formatAuditPayloadSummary(AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED, {
         lookup: "tipo_envidracamento",
       }),
-    ).toMatch(/tipo_envidracamento|envidracamento/i);
+    ).toMatch(/tipo.*envidraçamento/i);
     expect(
       formatAuditPayloadSummary(AUDIT_ACTIONS.ADMIN_ROLE_ACCESS_UPDATED, {
         cellCount: 12,

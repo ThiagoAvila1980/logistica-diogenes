@@ -12,7 +12,7 @@ providers = ["node"]
 # Coolify/Nixpacks define NODE_ENV=production — sem isso o npm omite
 # devDependencies e o build quebra ao carregar @tailwindcss/postcss.
 [phases.install]
-cmds = ["npm install --include=dev"]
+cmds = ["npm ci --include=dev --no-audit --no-fund"]
 
 [phases.build]
 cmds = ["npm run build"]
