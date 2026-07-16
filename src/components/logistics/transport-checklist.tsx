@@ -30,7 +30,6 @@ import {
   getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
 import { VaoStepDriverSelect } from "@/components/logistics/vao-step-driver-select";
-import { TransportBulkDriverSelect } from "@/components/logistics/transport-bulk-driver-select";
 import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
 import {
@@ -179,9 +178,6 @@ export function TransportChecklist({
             })}
           </div>
         </CardTitle>
-        {canAssignDriver && (
-          <TransportBulkDriverSelect osId={osId} drivers={drivers} />
-        )}
       </CardHeader>
 
       <CardContent className="space-y-3">
