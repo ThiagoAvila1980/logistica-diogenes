@@ -1,6 +1,9 @@
 # temp scripts (ex.: geração de favicon — nunca commitar node_modules)
 .tmp-favicon/
 
+# git worktrees locais
+.worktrees/
+
 # dependencies
 /node_modules
 /.pnp
