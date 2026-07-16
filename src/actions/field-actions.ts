@@ -24,6 +24,8 @@ import { authErrorMessage } from "@/lib/auth/auth-error";
 import { recordWorkEvent } from "@/lib/performance/scoring";
 import { getSession } from "@/lib/auth/session";
 import { generateServiceOrderNumber } from "@/actions/service-order";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 import {
   FINAL_MEASUREMENT_TYPE,
   ORCAMENTO_MEASUREMENT_TYPE,
@@ -105,8 +107,9 @@ function parsePriorityField(formData: FormData) {
 export async function createMeasurementFromPdf(
   formData: FormData,
 ): Promise<CreateMeasurementResult> {
+  let session;
   try {
-    await requireRole(["admin", "gerente"]);
+    session = await requireRole(["admin", "gerente"]);
   } catch (err) {
     return {
       success: false,
@@ -196,6 +199,13 @@ export async function createMeasurementFromPdf(
       return { success: false, message: "Não foi possível criar a medição." };
     }
 
+    await recordAuditEvent(db, {
+      actorId: session.userId,
+      action: AUDIT_ACTIONS.FIELD_MEASUREMENT_CREATED,
+      measurementId: created.id,
+      payload: { number: created.number },
+    });
+
     if (pdfFile) {
       const { savePdfAndParseHeader } = await import("@/lib/upload/save-pdf");
       const { header, error: parseWarning } = await savePdfAndParseHeader(
@@ -270,8 +280,9 @@ export async function createMeasurementFromPdf(
 export async function updateMeasurementHeader(
   formData: FormData,
 ): Promise<UpdateMeasurementHeaderResult> {
+  let session;
   try {
-    await requireRole(["admin", "gerente"]);
+    session = await requireRole(["admin", "gerente"]);
   } catch (err) {
     return {
       success: false,
@@ -324,6 +335,18 @@ export async function updateMeasurementHeader(
       })
       .where(eq(measurements.id, osId));
 
+    await recordAuditEvent(db, {
+      actorId: session.userId,
+      action: AUDIT_ACTIONS.FIELD_HEADER_UPDATED,
+      measurementId: osId,
+      payload: {
+        clientName: clientName.trim(),
+        clientPhone: clientPhone?.trim() || null,
+        clientAddress: clientAddress?.trim() || null,
+        budgetReference: budgetRef,
+      },
+    });
+
     const { revalidateOSRoutes } = await import("@/lib/revalidate");
     revalidateOSRoutes(osId);
     return { success: true };
@@ -344,8 +367,9 @@ export async function updateMeasurementHeader(
 export async function deleteMeasurement(
   osId: string,
 ): Promise<DeleteMeasurementResult> {
+  let session;
   try {
-    await requireRole(["admin", "gerente"]);
+    session = await requireRole(["admin", "gerente"]);
   } catch (err) {
     return {
       success: false,
@@ -368,6 +392,7 @@ export async function deleteMeasurement(
 
     const [measRow] = await db
       .select({
+        number: measurements.number,
         photos: measurements.photos,
         items: measurements.items,
       })
@@ -382,6 +407,15 @@ export async function deleteMeasurement(
     });
 
     await purgeAllOsFiles(osId, urls);
+
+    await recordAuditEvent(db, {
+      actorId: session.userId,
+      action: AUDIT_ACTIONS.FIELD_MEASUREMENT_DELETED,
+      measurementId: osId,
+      payload: {
+        osNumber: measRow?.number ?? order.number,
+      },
+    });
 
     await db.delete(measurements).where(eq(measurements.id, osId));
 
@@ -401,8 +435,9 @@ export async function deleteMeasurement(
 export async function saveFieldMeasurement(
   formData: FormData,
 ): Promise<SaveFieldMeasurementResult> {
+  let session;
   try {
-    await requireRole(["admin", "gerente", "medidor"]);
+    session = await requireRole(["admin", "gerente", "medidor"]);
   } catch (err) {
     return { success: false, message: authErrorMessage(err) ?? "Sem permissão para registrar medição." };
   }
@@ -467,7 +502,6 @@ export async function saveFieldMeasurement(
   }
 
   const typeLabel = getMeasurementActionLabel(measurementType);
-  const session = await getSession();
 
   let itemsToSave = items;
   try {
@@ -527,6 +561,17 @@ export async function saveFieldMeasurement(
         updatedAt: new Date(),
       })
       .where(eq(measurements.id, osId));
+
+    await recordAuditEvent(db, {
+      actorId: session.userId,
+      action: AUDIT_ACTIONS.FIELD_MEASUREMENT_SAVED,
+      measurementId: osId,
+      payload: {
+        type: measurementType,
+        itemsCount: itemsToSave.length,
+        photosCount: photos.length,
+      },
+    });
 
     // Pontuação: medicao ao salvar medição de campo
     if (order.assignedUserId) {

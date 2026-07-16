@@ -33,9 +33,11 @@ import {
 } from "@/lib/workflow/stage-revert";
 import { buildVaoItemSubtitle, getVaoNumber } from "@/lib/measurement/vao-item-subtitle";
 import { logger } from "@/lib/logger";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 
 async function requireStageRevertPermission() {
-  await requireRole(["gerente", "admin"]);
+  return await requireRole(["gerente", "admin"]);
 }
 
 // ─── Action: listar vãos para o modal de "voltar etapa" ─────────────────────
@@ -141,8 +143,9 @@ export async function revertOSPhaseForVaosAction(
     return { success: false, message: msg };
   }
 
+  let session;
   try {
-    await requireStageRevertPermission();
+    session = await requireStageRevertPermission();
   } catch (err) {
     const message = authErrorMessage(err);
     if (message) return { success: false, message };
@@ -201,11 +204,19 @@ export async function revertOSPhaseForVaosAction(
         measurementId: osId,
         fromStatus,
         toStatus: targetStatus,
+        changedById: session.userId,
         metadata: {
           source: "kanban_manual_revert_per_vao",
           phase,
           revertedItemIds: itemIds,
         },
+      });
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.OS_STAGE_REVERTED,
+        measurementId: osId,
+        payload: { phase, fromStatus, toStatus: targetStatus, revertedItemIds: itemIds },
       });
 
       const eventTypeByPhase: Record<

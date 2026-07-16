@@ -32,6 +32,8 @@ import { requireRole } from "@/lib/auth/require-role";
 import { getSession } from "@/lib/auth/session";
 import { listKanbanOrders, type KanbanOrderItem } from "@/lib/data/kanban";
 import { revalidateOSRoutes } from "@/lib/revalidate";
+import { recordAuditEvent } from "@/lib/audit/record-audit-event";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 
 const VALID_OS_STATUSES = new Set(osStatus.enumValues);
 
@@ -123,8 +125,9 @@ export async function moveOSCard(
   osId: string,
   targetStatus: string,
 ): Promise<MoveOSCardResult> {
+  let session;
   try {
-    await requireRole(["gerente", "admin"]);
+    session = await requireRole(["gerente", "admin"]);
   } catch (err) {
     const message = authErrorMessage(err);
     if (message) {
@@ -194,7 +197,15 @@ export async function moveOSCard(
         measurementId: osId,
         fromStatus,
         toStatus: target,
+        changedById: session.userId,
         metadata: { source: "kanban_drag" },
+      });
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.OS_STAGE_CHANGED,
+        measurementId: osId,
+        payload: { fromStatus, toStatus: target, source: "kanban_drag" },
       });
     });
 
