@@ -77,8 +77,10 @@ export async function saveVehicle(
     }
     const savedId = await upsertVehicleDb({ id, description, plate, active });
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    await recordAuditEvent(getDb(), {
       action: id ? AUDIT_ACTIONS.ADMIN_VEHICLE_UPDATED : AUDIT_ACTIONS.ADMIN_VEHICLE_CREATED,
       entityType: "vehicle",
       entityId: savedId,
@@ -116,8 +118,10 @@ export async function deleteVehicle(vehicleId: string): Promise<AdminActionResul
     }
     await deleteVehicleDb(vehicleId);
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    await recordAuditEvent(getDb(), {
       action: AUDIT_ACTIONS.ADMIN_VEHICLE_DELETED,
       entityType: "vehicle",
       entityId: vehicleId,

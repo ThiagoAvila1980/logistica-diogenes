@@ -97,8 +97,10 @@ export async function createUser(
     const passwordHash = await hashPassword(password);
     const newUserId = await createUserDb({ name, email, roles, phone, passwordHash });
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    await recordAuditEvent(getDb(), {
       action: AUDIT_ACTIONS.ADMIN_USER_CREATED,
       entityType: "user",
       entityId: newUserId,
@@ -177,8 +179,10 @@ export async function updateUser(
     }
     await updateUserDb(id, patch);
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    await recordAuditEvent(getDb(), {
       action: AUDIT_ACTIONS.ADMIN_USER_UPDATED,
       entityType: "user",
       entityId: id,
@@ -233,8 +237,10 @@ export async function deleteUser(userId: string): Promise<AdminActionResult> {
     }
     await deleteUserDb(id.data);
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    await recordAuditEvent(getDb(), {
       action: AUDIT_ACTIONS.ADMIN_USER_DELETED,
       entityType: "user",
       entityId: id.data,

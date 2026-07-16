@@ -182,13 +182,16 @@ async function saveLookupInternal(
     }
     const savedId = await config.upsertDb({ id, descricao });
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    const normalizedEntity = entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity;
+    await recordAuditEvent(getDb(), {
       action: id ? AUDIT_ACTIONS.ADMIN_LOOKUP_UPDATED : AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED,
-      entityType: entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity,
+      entityType: normalizedEntity,
       entityId: savedId,
       actorId: session.userId,
-      payload: { lookup: entity },
+      payload: { lookup: normalizedEntity },
     });
 
     revalidateLookupPaths(config.adminPath);
@@ -292,8 +295,10 @@ export async function saveTipoEnvidracamento(
       await deleteTipoEnvidracamentoImage(previousImagemUrl);
     }
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    await recordAuditEvent(getDb(), {
       action: id ? AUDIT_ACTIONS.ADMIN_LOOKUP_UPDATED : AUDIT_ACTIONS.ADMIN_LOOKUP_CREATED,
       entityType: "tipo_envidracamento",
       entityId: savedId,
@@ -349,13 +354,16 @@ export async function deleteLookupItem(
       await config.deleteDb(id);
     }
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    const normalizedEntity = entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity;
+    await recordAuditEvent(getDb(), {
       action: AUDIT_ACTIONS.ADMIN_LOOKUP_DELETED,
-      entityType: entity === "cores" ? "cor" : entity === "ambientes" ? "ambiente" : entity,
+      entityType: normalizedEntity,
       entityId: id,
       actorId: session.userId,
-      payload: { lookup: entity },
+      payload: { lookup: normalizedEntity },
     });
 
     revalidateLookupPaths(config.adminPath);

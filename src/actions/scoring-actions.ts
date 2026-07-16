@@ -47,22 +47,26 @@ export async function updateScoringRuleAction(
 
     try {
     const db = getDb();
-    await db
-      .update(scoringRules)
-      .set({
-        points: parsed.data.points,
-        active: parsed.data.active,
-        updatedAt: new Date(),
-      })
-      .where(eq(scoringRules.eventType, parsed.data.eventType as WorkEventType));
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    
+    await db.transaction(async (tx) => {
+      await tx
+        .update(scoringRules)
+        .set({
+          points: parsed.data.points,
+          active: parsed.data.active,
+          updatedAt: new Date(),
+        })
+        .where(eq(scoringRules.eventType, parsed.data.eventType as WorkEventType));
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
-      action: AUDIT_ACTIONS.ADMIN_SCORING_RULE_UPDATED,
-      entityType: "scoring_rule",
-      entityId: parsed.data.eventType,
-      actorId: session.userId,
-      payload: { points: parsed.data.points, active: parsed.data.active },
+      await recordAuditEvent(tx, {
+        action: AUDIT_ACTIONS.ADMIN_SCORING_RULE_UPDATED,
+        entityType: "scoring_rule",
+        entityId: parsed.data.eventType,
+        actorId: session.userId,
+        payload: { points: parsed.data.points, active: parsed.data.active },
+      });
     });
 
     revalidatePath("/admin/scoring");

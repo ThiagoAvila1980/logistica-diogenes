@@ -54,11 +54,13 @@ export async function saveRoleAccessMatrix(
       cellCount += updates[role as keyof typeof updates]?.length ?? 0;
     }
 
-    const { recordAuditEvent, AUDIT_ACTIONS } = await import("@/lib/audit/audit-logger");
-    await recordAuditEvent({
+    const { recordAuditEvent } = await import("@/lib/audit/record-audit-event");
+    const { AUDIT_ACTIONS } = await import("@/lib/audit/actions");
+    const { getDb } = await import("@/db");
+    await recordAuditEvent(getDb(), {
       action: AUDIT_ACTIONS.ADMIN_ROLE_ACCESS_UPDATED,
-      entityType: "system",
-      entityId: "role_access",
+      entityType: "role_screen",
+      entityId: "matrix",
       actorId: session.userId,
       payload: { cellCount },
     });
