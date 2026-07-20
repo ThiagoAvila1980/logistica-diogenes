@@ -25,8 +25,9 @@ function explainFetchError(err: unknown, agentUrl: string): string {
   const agentHttp = agentUrl.startsWith("http://");
   if (pageHttps && agentHttp) {
     return (
-      "O site está em HTTPS e o agente em HTTP — o navegador bloqueia (conteúdo misto). " +
-      "Abra o Diógenes em http:// (IP local / rede) ou use o app Capacitor para testar o agente."
+      "O site está em HTTPS (produção) e o agente em HTTP — o navegador bloqueia a chamada (conteúdo misto). " +
+      "Solução: exponha o agente em HTTPS (túnel Cloudflare no PC da impressora) e use essa URL https://… no diálogo. " +
+      "Alternativa: app Capacitor ou abrir o Diógenes em http:// na rede local."
     );
   }
   const msg = err instanceof Error ? err.message : String(err);

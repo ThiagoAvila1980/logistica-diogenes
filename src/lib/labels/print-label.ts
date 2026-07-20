@@ -1,26 +1,22 @@
 /**
- * Orquestra impressão de etiqueta: Método A (rede/agente) primeiro;
- * Método B (Bluetooth nativo) como fallback.
+ * Orquestra impressão de etiqueta via fila no servidor (HTTPS).
+ * O agente Windows busca o job e imprime na USB.
  */
 
-import { printRawViaAgent, hasPrintAgentConfigured } from "@/lib/labels/network-print";
-import {
-  printLabelRaw as printLabelRawBluetooth,
-  type PrintLabelResult as BluetoothPrintResult,
-} from "@/lib/labels/bluetooth-print";
-
 export type PrintLabelResult =
-  | { ok: true; channel: "network" | "bluetooth"; printer?: string }
+  | { ok: true; channel: "queue"; jobId: string; printer?: string }
   | {
       ok: false;
-      code:
-        | "no_agent"
-        | "agent_unreachable"
-        | "print_failed"
-        | "not_native"
-        | "no_printer";
+      code: "enqueue_failed" | "print_failed" | "timeout" | "agent_offline";
       message: string;
+      jobId?: string;
     };
+
+export type LabelPrintJobStatus =
+  | "pending"
+  | "printing"
+  | "done"
+  | "failed";
 
 export async function fetchLabelRaw(
   osId: string,
@@ -57,36 +53,106 @@ export async function fetchLabelRaw(
   };
 }
 
-export async function printLabelRaw(raw: string): Promise<PrintLabelResult> {
-  if (hasPrintAgentConfigured()) {
-    const network = await printRawViaAgent(raw);
-    if (network.ok) {
-      return { ok: true, channel: "network", printer: network.printer };
-    }
-    // Se agente configurado mas falhou, não mascara — reporta o erro do agente.
+async function enqueueLabelPrintJob(
+  osId: string,
+  itemId: string,
+): Promise<
+  | { ok: true; jobId: string }
+  | { ok: false; message: string }
+> {
+  const res = await fetch("/api/label-print-jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ osId, itemId }),
+    cache: "no-store",
+  });
+  const body = (await res.json().catch(() => null)) as {
+    error?: string;
+    job?: { id?: string };
+  } | null;
+  if (!res.ok) {
     return {
       ok: false,
-      code: network.code,
-      message: network.message,
+      message: body?.error ?? `Falha ao enfileirar (${res.status})`,
     };
   }
-
-  const bt: BluetoothPrintResult = await printLabelRawBluetooth(raw);
-  if (bt.ok) return { ok: true, channel: "bluetooth" };
-  return {
-    ok: false,
-    code: bt.code,
-    message: bt.message,
-  };
+  const jobId = body?.job?.id;
+  if (!jobId) {
+    return { ok: false, message: "Resposta sem id do job." };
+  }
+  return { ok: true, jobId };
 }
 
+async function fetchJobStatus(jobId: string): Promise<{
+  status: LabelPrintJobStatus;
+  error: string | null;
+} | null> {
+  const res = await fetch(`/api/label-print-jobs/${encodeURIComponent(jobId)}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  const body = (await res.json()) as {
+    job?: { status?: LabelPrintJobStatus; error?: string | null };
+  };
+  if (!body.job?.status) return null;
+  return { status: body.job.status, error: body.job.error ?? null };
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Enfileira a etiqueta e espera o agente imprimir (até timeoutMs).
+ */
 export async function fetchAndPrintVaoLabel(
   osId: string,
   itemId: string,
+  options?: { timeoutMs?: number; pollMs?: number },
 ): Promise<PrintLabelResult> {
-  const label = await fetchLabelRaw(osId, itemId);
-  if (!label.ok) {
-    return { ok: false, code: "print_failed", message: label.message };
+  const timeoutMs = options?.timeoutMs ?? 60_000;
+  const pollMs = options?.pollMs ?? 1_200;
+
+  const enqueued = await enqueueLabelPrintJob(osId, itemId);
+  if (!enqueued.ok) {
+    return {
+      ok: false,
+      code: "enqueue_failed",
+      message: enqueued.message,
+    };
   }
-  return printLabelRaw(label.raw);
+
+  const { jobId } = enqueued;
+  const deadline = Date.now() + timeoutMs;
+  let sawPrinting = false;
+
+  while (Date.now() < deadline) {
+    const job = await fetchJobStatus(jobId);
+    if (!job) {
+      await sleep(pollMs);
+      continue;
+    }
+    if (job.status === "printing") sawPrinting = true;
+    if (job.status === "done") {
+      return { ok: true, channel: "queue", jobId };
+    }
+    if (job.status === "failed") {
+      return {
+        ok: false,
+        code: "print_failed",
+        message: job.error || "Falha na impressão no PC da impressora.",
+        jobId,
+      };
+    }
+    await sleep(pollMs);
+  }
+
+  return {
+    ok: false,
+    code: sawPrinting ? "timeout" : "agent_offline",
+    message: sawPrinting
+      ? "A impressora demorou demais. Confira o PC e a fila do Windows."
+      : "Nenhum PC da impressora respondeu. Confira se o impressao.bat está rodando no computador da Thermal LABEL.",
+    jobId,
+  };
 }

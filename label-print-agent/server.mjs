@@ -1,15 +1,22 @@
 /**
- * Agente local de impressão de etiquetas (Método A).
- * Roda no Windows com a POS-9220-L (ou similar) no USB.
+ * Agente local de impressão de etiquetas.
  *
+ * Modo fila (produção HTTPS):
+ *   Define LABEL_PRINT_API_URL + LABEL_PRINT_AGENT_TOKEN
+ *   O agente busca jobs em /api/agent/label-print/claim e imprime na USB.
+ *
+ * Modo local (diagnóstico):
  *   GET  /health
  *   GET  /printers
- *   POST /print   { "raw": "^XA...", "printer": "opcional" }
+ *   POST /print   { "raw": "...", "printer": "opcional" }
  *
  * Variáveis:
  *   LABEL_PRINT_PORT      (default 9101)
- *   LABEL_PRINT_PRINTER   nome da impressora no Windows (obrigatório se houver várias)
- *   LABEL_PRINT_TOKEN     se definido, exige header X-Print-Token
+ *   LABEL_PRINT_PRINTER   nome da impressora no Windows
+ *   LABEL_PRINT_TOKEN     token das rotas locais (opcional)
+ *   LABEL_PRINT_API_URL   ex.: https://www.diogenesvidros.com.br
+ *   LABEL_PRINT_AGENT_TOKEN  mesmo valor do servidor Next.js
+ *   LABEL_PRINT_POLL_MS   intervalo do poll (default 2000)
  */
 
 import http from "node:http";
@@ -26,6 +33,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.LABEL_PRINT_PORT || 9101);
 const DEFAULT_PRINTER = (process.env.LABEL_PRINT_PRINTER || "").trim();
 const TOKEN = (process.env.LABEL_PRINT_TOKEN || "").trim();
+const API_URL = (process.env.LABEL_PRINT_API_URL || "").replace(/\/+$/, "");
+const AGENT_TOKEN = (process.env.LABEL_PRINT_AGENT_TOKEN || "").trim();
+const POLL_MS = Math.max(800, Number(process.env.LABEL_PRINT_POLL_MS || 2000));
 const PS1 = join(__dirname, "send-raw.ps1");
 
 function corsHeaders() {
@@ -148,6 +158,81 @@ async function resolvePrinter(requested) {
   );
 }
 
+async function reportJobResult(jobId, payload) {
+  const res = await fetch(`${API_URL}/api/agent/label-print/${jobId}/result`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Print-Token": AGENT_TOKEN,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error(
+      `[label-print-agent] falha ao reportar job ${jobId}: HTTP ${res.status} ${text}`,
+    );
+  }
+}
+
+async function pollQueueOnce() {
+  const res = await fetch(`${API_URL}/api/agent/label-print/claim`, {
+    method: "GET",
+    headers: { "X-Print-Token": AGENT_TOKEN },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error(
+      `[label-print-agent] claim falhou: HTTP ${res.status} ${text.slice(0, 200)}`,
+    );
+    return;
+  }
+  const data = await res.json();
+  const job = data?.job;
+  if (!job?.id || typeof job.raw !== "string") return;
+
+  console.log(
+    `[label-print-agent] job ${job.id} — imprimindo (${Buffer.byteLength(job.raw, "utf8")} bytes)`,
+  );
+  try {
+    const printer = await resolvePrinter(null);
+    await sendRawToPrinter(printer, job.raw);
+    await reportJobResult(job.id, { ok: true });
+    console.log(`[label-print-agent] job ${job.id} OK → ${printer}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[label-print-agent] job ${job.id} falhou: ${message}`);
+    await reportJobResult(job.id, { ok: false, error: message });
+  }
+}
+
+function startQueuePoller() {
+  if (!API_URL || !AGENT_TOKEN) {
+    console.log(
+      "[label-print-agent] fila remota DESLIGADA (defina LABEL_PRINT_API_URL e LABEL_PRINT_AGENT_TOKEN)",
+    );
+    return;
+  }
+  console.log(
+    `[label-print-agent] fila remota: ${API_URL} (poll ${POLL_MS}ms)`,
+  );
+  let busy = false;
+  setInterval(() => {
+    if (busy) return;
+    busy = true;
+    void pollQueueOnce()
+      .catch((err) => {
+        console.error(
+          "[label-print-agent] erro no poll:",
+          err instanceof Error ? err.message : err,
+        );
+      })
+      .finally(() => {
+        busy = false;
+      });
+  }, POLL_MS);
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "OPTIONS") {
@@ -163,6 +248,8 @@ const server = http.createServer(async (req, res) => {
         service: "diogenes-label-print-agent",
         defaultPrinter: DEFAULT_PRINTER || null,
         port: PORT,
+        queueMode: Boolean(API_URL && AGENT_TOKEN),
+        apiUrl: API_URL || null,
       });
       return;
     }
@@ -198,7 +285,6 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Etiqueta TSPL mínima para diagnosticar driver/fila Windows
     if (
       (req.method === "POST" || req.method === "GET") &&
       url.pathname === "/test"
@@ -239,4 +325,5 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(
     "[label-print-agent] GET /health  GET /printers  POST /print  GET|POST /test",
   );
+  startQueuePoller();
 });

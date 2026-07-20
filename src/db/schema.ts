@@ -455,6 +455,46 @@ export const pedidos = pgTable(
 
 export type Pedido = typeof pedidos.$inferSelect;
 
+// ─── Fila de impressão de etiquetas ────────────────────────────────────────────
+
+export const labelPrintJobStatus = pgEnum("label_print_job_status", [
+  "pending",
+  "printing",
+  "done",
+  "failed",
+]);
+
+export type LabelPrintJobStatus = (typeof labelPrintJobStatus.enumValues)[number];
+
+/** Jobs de etiqueta: o browser enfileira; o agente Windows no PC imprime via USB */
+export const labelPrintJobs = pgTable(
+  "label_print_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    measurementId: uuid("measurement_id")
+      .references(() => measurements.id, { onDelete: "cascade" })
+      .notNull(),
+    itemId: text("item_id").notNull(),
+    raw: text("raw").notNull(),
+    status: labelPrintJobStatus("status").notNull().default("pending"),
+    error: text("error"),
+    createdById: uuid("created_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("idx_label_print_jobs_status_created").on(t.status, t.createdAt),
+    index("idx_label_print_jobs_measurement").on(t.measurementId),
+  ],
+);
+
+export type LabelPrintJob = typeof labelPrintJobs.$inferSelect;
+
 // ─── Role screen access ────────────────────────────────────────────────────────
 
 /** Matriz configurável de acesso tela x papel. admin não é armazenado (acesso total implícito). */
