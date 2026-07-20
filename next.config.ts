@@ -58,7 +58,16 @@ const nextConfig: NextConfig = {
       headers: securityHeaders,
     },
   ],
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
+  serverExternalPackages: [
+    "pdf-parse",
+    "pdfjs-dist",
+    "@napi-rs/canvas",
+    "qrcode",
+  ],
+  transpilePackages: [
+    "@capacitor/core",
+    "@kduma-autoid/capacitor-bluetooth-printer",
+  ],
   outputFileTracingIncludes: {
     "/field": ["./node_modules/pdf-parse/dist/worker/**/*"],
     "/field/[osId]": ["./node_modules/pdf-parse/dist/worker/**/*"],

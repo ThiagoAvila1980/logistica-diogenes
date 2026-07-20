@@ -1,0 +1,11 @@
+{
+  "name": "diogenes-label-print-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agente local Windows — recebe ZPL/TSPL e imprime na USB (Método A)",
+  "scripts": {
+    "start": "node server.mjs",
+    "start:example": "set LABEL_PRINT_PRINTER=POS-9220-L&& node server.mjs"
+  }
+}

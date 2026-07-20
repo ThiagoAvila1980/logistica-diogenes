@@ -19,6 +19,7 @@ import {
   advanceCuttingToTransportAction,
 } from "@/actions/cutting-actions";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
+import { PrintVaoLabelButton } from "@/components/production/print-vao-label-button";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import {
@@ -242,30 +243,41 @@ export function CuttingChecklist({
               >
                 {/* Linha desktop: label + 4 checkboxes em colunas */}
                 <div className="hidden items-center gap-2 sm:grid sm:grid-cols-[1fr_repeat(4,56px)]">
-                  <div className="min-w-0">
-                    <p
-                      className={cn(
-                        "text-xs font-semibold leading-tight",
-                        itemAllDone
-                          ? "text-success-foreground"
-                          : "text-foreground",
-                      )}
-                    >
-                      Vão {vaoNumber}
-                    </p>
-                    <p
-                      className="mt-0.5 truncate text-xs text-muted-foreground"
-                      title={fullLabel}
-                    >
-                      {subtitle.spec}
-                    </p>
-                    {subtitle.dims ? (
+                  <div className="flex min-w-0 items-start gap-2">
+                    <div className="min-w-0 flex-1">
                       <p
-                        className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums"
-                        title={subtitle.dims}
+                        className={cn(
+                          "text-xs font-semibold leading-tight",
+                          itemAllDone
+                            ? "text-success-foreground"
+                            : "text-foreground",
+                        )}
                       >
-                        {subtitle.dims}
+                        Vão {vaoNumber}
                       </p>
+                      <p
+                        className="mt-0.5 truncate text-xs text-muted-foreground"
+                        title={fullLabel}
+                      >
+                        {subtitle.spec}
+                      </p>
+                      {subtitle.dims ? (
+                        <p
+                          className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums"
+                          title={subtitle.dims}
+                        >
+                          {subtitle.dims}
+                        </p>
+                      ) : null}
+                    </div>
+                    {itemProgress.embalagem ? (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <PrintVaoLabelButton
+                          osId={osId}
+                          itemId={item.id}
+                          vaoNumber={vaoNumber}
+                        />
+                      </div>
                     ) : null}
                   </div>
 
@@ -333,13 +345,25 @@ export function CuttingChecklist({
                         </p>
                       ) : null}
                     </div>
-                    {itemAllDone ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-                    ) : (
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        {doneSteps}/4
-                      </Badge>
-                    )}
+                    <div
+                      className="flex shrink-0 items-center gap-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {itemProgress.embalagem ? (
+                        <PrintVaoLabelButton
+                          osId={osId}
+                          itemId={item.id}
+                          vaoNumber={vaoNumber}
+                        />
+                      ) : null}
+                      {itemAllDone ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+                      ) : (
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          {doneSteps}/4
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-4 gap-1.5" onClick={(e) => e.stopPropagation()}>
