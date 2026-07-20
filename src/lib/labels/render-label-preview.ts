@@ -1,8 +1,36 @@
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { createCanvas, loadImage, GlobalFonts } from "@napi-rs/canvas";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import QRCode from "qrcode";
 import type { LabelContent } from "@/lib/labels/build-label-zpl";
 import type { LabelProfile } from "@/lib/labels/label-profile";
 import { sanitizeTsplText } from "@/lib/labels/build-label-tspl";
+
+const FONT_REGULAR = "DiogenesLabel";
+const FONT_BOLD = "DiogenesLabelBold";
+
+let fontsReady = false;
+
+function ensurePreviewFonts() {
+  if (fontsReady) return;
+  const dir = join(process.cwd(), "assets", "fonts");
+  const regular = join(dir, "DejaVuSans.ttf");
+  const bold = join(dir, "DejaVuSans-Bold.ttf");
+
+  if (existsSync(regular)) {
+    GlobalFonts.registerFromPath(regular, FONT_REGULAR);
+  }
+  if (existsSync(bold)) {
+    GlobalFonts.registerFromPath(bold, FONT_BOLD);
+  }
+  fontsReady = true;
+}
+
+function fontCss(size: number, bold: boolean) {
+  const family = bold ? FONT_BOLD : FONT_REGULAR;
+  // Fallback se a TTF não estiver no deploy
+  return `${bold ? "700" : "500"} ${size}px ${family}, DejaVu Sans, sans-serif`;
+}
 
 /**
  * Prévia PNG alinhada ao layout TSPL (rótulo + valor; vão em 3 linhas).
@@ -11,6 +39,8 @@ export async function renderLabelPreviewPng(
   content: LabelContent,
   profile: LabelProfile,
 ): Promise<Buffer> {
+  ensurePreviewFonts();
+
   const pxPerMm = 3.8;
   const width = Math.round(profile.widthMm * pxPerMm);
   const height = Math.round(profile.heightMm * pxPerMm);
@@ -30,7 +60,7 @@ export async function renderLabelPreviewPng(
   ctx.textBaseline = "top";
 
   const drawLine = (text: string, size: number, bold = false) => {
-    ctx.font = `${bold ? "700" : "500"} ${size}px sans-serif`;
+    ctx.font = fontCss(size, bold);
     const safe = sanitizeTsplText(text) || "-";
     ctx.fillText(safe, pad, y, width - pad * 2);
     y += size + Math.round(size * 0.28);
@@ -75,11 +105,11 @@ export async function renderLabelPreviewPng(
     ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
   } catch {
     ctx.strokeRect(qrX, qrY, qrSize, qrSize);
-    ctx.font = `700 ${valueSize}px sans-serif`;
+    ctx.font = fontCss(valueSize, true);
     ctx.fillText("QR", qrX + qrSize / 3, qrY + qrSize / 2.5);
   }
 
-  ctx.font = `500 ${Math.round(labelSize * 0.9)}px sans-serif`;
+  ctx.font = fontCss(Math.round(labelSize * 0.9), false);
   ctx.fillStyle = "#555555";
   ctx.fillText(
     `${profile.widthMm}x${profile.heightMm}mm`,

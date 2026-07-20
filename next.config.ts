@@ -71,6 +71,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/field": ["./node_modules/pdf-parse/dist/worker/**/*"],
     "/field/[osId]": ["./node_modules/pdf-parse/dist/worker/**/*"],
+    "/api/labels/[osId]": ["./assets/fonts/**/*"],
   },
   experimental: {
     serverActions: {
