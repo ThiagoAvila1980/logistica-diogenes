@@ -14,6 +14,10 @@ out
 site/node_modules
 site/.next
 
+# Capacitor Android — só para build local do app nativo
+android
+capacitor-www
+
 # Env e uploads locais
 .env
 .env.*

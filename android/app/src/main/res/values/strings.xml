@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Logística Diógenes</string>
-    <string name="title_activity_main">Logística Diógenes</string>
-    <string name="package_name">br.com.vidracariadiogenes.logistica</string>
-    <string name="custom_url_scheme">br.com.vidracariadiogenes.logistica</string>
-</resources>
