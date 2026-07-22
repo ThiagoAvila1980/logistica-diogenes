@@ -49,15 +49,13 @@ export default async function InstallationOsPage({ params }: Props) {
 
   const visibleItems = isManager
     ? detail.items
-    : detail.items.filter((item) => {
-        const hasPerVaoAssignment = detail.items.some(
-          (i) => i.installationProgress?.installerId,
-        );
-        if (!hasPerVaoAssignment) {
-          return order.assignedUserId === session?.userId;
-        }
-        return item.installationProgress?.installerId === session?.userId;
-      });
+    : detail.items.filter(
+        (item) => item.installationProgress?.installerId === session?.userId,
+      );
+
+  if (!isManager && visibleItems.length === 0) {
+    notFound();
+  }
 
   const header = (
     <ServiceOrderHeader
