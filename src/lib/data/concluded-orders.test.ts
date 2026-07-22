@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   filterConcludedOrdersForInstaller,
+  installerIdsFromMeasurementItems,
+  mapMeasurementItemsToVaoProgress,
   type ConcludedOrderItem,
 } from "./concluded-orders";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import {
   canAccessConcludedPage,
   canViewAllConcludedOrders,
@@ -210,5 +213,67 @@ describe("filterConcludedOrdersForInstaller", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]?.vaos.map((v) => v.id)).toEqual(["v1"]);
+  });
+});
+
+describe("mapMeasurementItemsToVaoProgress", () => {
+  it("não usa assignedUserId da OS como installerId do vão", () => {
+    const items = [
+      {
+        id: "item-1",
+        installationProgress: {
+          installerId: undefined,
+          estrutural: true,
+          vidros: false,
+          acabamento: false,
+          concluido: true,
+        },
+      },
+    ] as MeasurementLineItem[];
+
+    const vaos = mapMeasurementItemsToVaoProgress(items);
+
+    expect(vaos).toHaveLength(1);
+    expect(vaos[0]?.installerId).toBeNull();
+  });
+
+  it("preserva installerId por vão quando presente", () => {
+    const items = [
+      {
+        id: "item-1",
+        installationProgress: {
+          installerId: "inst-per-vao",
+          estrutural: true,
+          vidros: false,
+          acabamento: false,
+          concluido: true,
+        },
+      },
+    ] as MeasurementLineItem[];
+
+    expect(mapMeasurementItemsToVaoProgress(items)[0]?.installerId).toBe(
+      "inst-per-vao",
+    );
+  });
+});
+
+describe("installerIdsFromMeasurementItems", () => {
+  it("coleta só installerIds dos itens, sem fallback", () => {
+    const items = [
+      {
+        id: "a",
+        installationProgress: { installerId: "inst-a" },
+      },
+      {
+        id: "b",
+        installationProgress: {},
+      },
+      {
+        id: "c",
+        installationProgress: { installerId: "inst-c" },
+      },
+    ] as MeasurementLineItem[];
+
+    expect(installerIdsFromMeasurementItems(items)).toEqual(["inst-a", "inst-c"]);
   });
 });
