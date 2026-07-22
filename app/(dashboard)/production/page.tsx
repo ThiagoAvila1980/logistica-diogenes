@@ -5,13 +5,13 @@ import { listServiceOrders } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { hasPendingCuttingWorkOnItems } from "@/lib/workflow/aggregates";
 import { getSession } from "@/lib/auth/session";
-import { canViewAllOrders } from "@/lib/auth/permissions";
+import { canDeleteMeasurement } from "@/lib/auth/permissions";
 
 const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
 
 export default async function ProductionIndexPage() {
   const session = await getSession();
-  const canDelete = canViewAllOrders(session?.roles ?? []);
+  const canDelete = canDeleteMeasurement(session?.roles ?? []);
   const allOrders = await listServiceOrders();
   const candidateOrders = allOrders.filter(
     (o) =>

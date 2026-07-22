@@ -94,3 +94,5 @@ import { StatusWizard } from "@/components/workflow/status-wizard";
 
 <StatusWizard currentStatus="cortes" overdueSteps={["medicao_final"]} />
 ```
+## Servidor para impressora thermica
+ - um arquivo bat em inicializar que executa ooutro arquivo bat (impressão.bat), esse arquivo sobe o servidor de impressão buscando na fila de impressão da aplicação web os pedidos gerados pela aplicação.

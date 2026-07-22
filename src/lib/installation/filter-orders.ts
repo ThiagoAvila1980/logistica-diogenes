@@ -1,6 +1,6 @@
 import type { OrderListItem } from "@/lib/data/types";
 import type { UserRole } from "@/lib/auth/permissions";
-import { canViewAllOrders } from "@/lib/auth/permissions";
+import { canViewAllOrders, hasRole } from "@/lib/auth/permissions";
 import {
   isTransportPhaseStatus,
 } from "@/lib/transport-gates";
@@ -14,7 +14,9 @@ export function isInstallationIndexCandidate(
   if (order.status === "concluido") return false;
   if (order.status.startsWith("instalacao")) return true;
   if (isTransportPhaseStatus(order.status)) {
-    return canViewAllOrders(roles);
+    // Admin/gerente: pool para designar. Instalador: só chega aqui se já
+    // tiver vão designado (canAccessOrder + hasPendingInstallationWorkForInstaller).
+    return canViewAllOrders(roles) || hasRole(roles, "instalador");
   }
   return false;
 }

@@ -91,6 +91,30 @@ describe("isActiveTransportListing", () => {
     ).toBe(false);
   });
 
+  it("para motorista, remove OS quando não há trabalho pendente dele", () => {
+    expect(
+      isActiveTransportListing(
+        makeOrder({ status: "transporte_levar_vidro" }),
+        {
+          ...completedTransport,
+          transporteConcluido: false,
+          levarVidros: false,
+        },
+        { hasOperatorPendingWork: false },
+      ),
+    ).toBe(false);
+  });
+
+  it("para motorista, mantém OS quando ainda há trabalho pendente dele", () => {
+    expect(
+      isActiveTransportListing(
+        makeOrder(),
+        completedTransport,
+        { hasOperatorPendingWork: true },
+      ),
+    ).toBe(true);
+  });
+
   it("mantém instalação e concluído sem checar transporte", () => {
     expect(
       isActiveTransportListing(

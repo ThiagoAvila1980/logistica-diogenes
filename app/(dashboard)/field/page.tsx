@@ -7,11 +7,13 @@ import { SyncStatusBar } from "@/components/offline/sync-status-bar";
 import { FieldCacheHydrator } from "@/components/offline/field-cache-hydrator";
 import { Ruler } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
-import { hasAnyRole } from "@/lib/auth/permissions";
+import { canDeleteMeasurement, hasAnyRole } from "@/lib/auth/permissions";
 
 export default async function FieldIndexPage() {
   const session = await getSession();
-  const canCreate = hasAnyRole(session?.roles ?? [], ["admin", "gerente"]);
+  const roles = session?.roles ?? [];
+  const canCreate = hasAnyRole(roles, ["admin", "gerente"]);
+  const canDelete = canDeleteMeasurement(roles);
 
   const [allOrders, lookups] = await Promise.all([
     listServiceOrders(),
@@ -26,7 +28,7 @@ export default async function FieldIndexPage() {
       </PageHeading>
 
       <SyncStatusBar />
-      <FieldOrderIndex orders={fieldOrders} canDelete={canCreate} />
+      <FieldOrderIndex orders={fieldOrders} canDelete={canDelete} />
       <FieldCacheHydrator orders={fieldOrders} lookups={lookups} />
     </div>
   );

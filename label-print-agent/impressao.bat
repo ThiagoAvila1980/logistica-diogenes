@@ -11,7 +11,7 @@ REM URL do site em producao (sem barra no final)
 set LABEL_PRINT_API_URL=https://www.diogenesvidros.com.br
 
 REM DEVE ser o mesmo valor de LABEL_PRINT_AGENT_TOKEN no servidor (Coolify / .env)
-set LABEL_PRINT_AGENT_TOKEN=troque-pelo-mesmo-token-do-servidor
+set LABEL_PRINT_AGENT_TOKEN=x8yItnWNoVPwpYwdnTZaMVqyjApJmY0HvlNc9ksbYiU
 
 echo.
 echo ========================================

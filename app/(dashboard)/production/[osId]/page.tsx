@@ -4,7 +4,7 @@ import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
-import { canEditMeasurementHeader, canViewAllOrders, hasRole } from "@/lib/auth/permissions";
+import { canDeleteMeasurement, canEditMeasurementHeader, hasRole } from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
 import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
@@ -27,9 +27,10 @@ export default async function ProductionOsPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
-  const canDelete = canViewAllOrders(session?.roles ?? []);
-  const isAdmin = hasRole(session?.roles ?? [], "admin");
+  const roles = session?.roles ?? [];
+  const canEditHeader = canEditMeasurementHeader(roles);
+  const canDelete = canDeleteMeasurement(roles);
+  const isAdmin = hasRole(roles, "admin");
   const stepAuditMeta = isAdmin
     ? await getStepCompletionMetaForOs(osId)
     : undefined;

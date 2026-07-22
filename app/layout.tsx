@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { UrlMaskProvider } from "@/components/navigation/url-mask-provider";
 import "./globals.css";
@@ -52,7 +53,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans`}
       >
-        <UrlMaskProvider>{children}</UrlMaskProvider>
+        <Suspense fallback={null}>
+          <UrlMaskProvider>{children}</UrlMaskProvider>
+        </Suspense>
       </body>
     </html>
   );

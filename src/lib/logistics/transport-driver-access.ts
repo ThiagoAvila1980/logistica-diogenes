@@ -4,12 +4,16 @@ import { measurements, transportLogs } from "@/db/schema";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { SessionUser } from "@/lib/auth/session-types";
 import { canViewAllOrders, hasAnyRole } from "@/lib/auth/permissions";
+import type { UserRole } from "@/db/schema";
 import type { TransportStep } from "./transport-item-gates";
 import {
+  TRANSPORT_STEPS,
   collectVaoStepDriverIds,
   getVaoStepAssignment,
 } from "./transport-step-assignment";
+import { selectCuttingLineItems } from "@/lib/workflow/aggregates";
 
+export type TransportDriverOption = { id: string; name: string };
 export function collectDriverIdsFromMeasurementItems(
   items: MeasurementLineItem[] | null | undefined,
 ): string[] {
@@ -129,4 +133,38 @@ export function filterVaoItemsForSession<
   if (!hasAnyRole(session.roles, ["motorista"])) return items;
 
   return items.filter((item) => isDriverAssignedToAnyStep(item, session.userId));
+}
+
+/**
+ * Há etapa de transporte incompleta designada a este motorista?
+ * Usado para tirar a OS da listagem dele quando o trabalho dele acabou,
+ * mesmo que outros motoristas ainda tenham pendências na mesma OS.
+ */
+export function hasPendingTransportWorkForDriver(
+  items: MeasurementLineItem[],
+  driverId: string,
+): boolean {
+  for (const item of selectCuttingLineItems(items)) {
+    for (const step of TRANSPORT_STEPS) {
+      if (getVaoStepAssignment(item, step).driverId !== driverId) continue;
+      if (item.transportProgress?.[step] !== true) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Lista usada para resolver nomes no checklist de transporte.
+ * Admin/gerente: todos os motoristas ativos.
+ * Motorista: só ele (o select de atribuição continua bloqueado; o campo
+ * somente-leitura precisa do nome).
+ */
+export function driversForTransportViewer(
+  roles: readonly UserRole[],
+  session: { userId: string; name: string } | null,
+  allDrivers: TransportDriverOption[],
+): TransportDriverOption[] {
+  if (canViewAllOrders(roles)) return allDrivers;
+  if (!session) return [];
+  return [{ id: session.userId, name: session.name }];
 }

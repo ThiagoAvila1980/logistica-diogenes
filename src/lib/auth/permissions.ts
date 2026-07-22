@@ -137,6 +137,11 @@ export function canViewAllOrders(roles: readonly UserRole[]): boolean {
   return hasAnyRole(roles, ["admin", "gerente"]);
 }
 
+/** Exclusão permanente de OS/orçamento — somente admin. */
+export function canDeleteMeasurement(roles: readonly UserRole[]): boolean {
+  return hasRole(roles, "admin");
+}
+
 export function canEditMeasurementHeader(roles: readonly UserRole[]): boolean {
   return canViewAllOrders(roles);
 }

@@ -6,6 +6,7 @@ import { canOperateInstallationModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
 import {
+  canDeleteMeasurement,
   canViewAllOrders,
   canEditMeasurementHeader,
   hasRole,
@@ -31,10 +32,11 @@ export default async function InstallationOsPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const isManager = canViewAllOrders(session?.roles ?? []);
-  const isAdmin = hasRole(session?.roles ?? [], "admin");
-  const canDelete = isManager;
-  const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
+  const roles = session?.roles ?? [];
+  const isManager = canViewAllOrders(roles);
+  const isAdmin = hasRole(roles, "admin");
+  const canDelete = canDeleteMeasurement(roles);
+  const canEditHeader = canEditMeasurementHeader(roles);
 
   const [detail, lookups, stepAuditMeta] = await Promise.all([
     getInstallationDetailForOs(osId, order.status),

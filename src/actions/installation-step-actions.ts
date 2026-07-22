@@ -275,7 +275,12 @@ export async function completeInstallationVaoAction(
         const prev = i.installationProgress ?? { estrutural: false, vidros: false, acabamento: false };
         return {
           ...i,
-          installationProgress: { ...prev, concluido: true },
+          installationProgress: {
+            ...prev,
+            concluido: true,
+            // Garante atribuição ao quem concluiu (filtro de /concluded).
+            installerId: prev.installerId ?? session.userId,
+          },
         };
       });
 

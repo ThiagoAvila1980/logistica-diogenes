@@ -4,6 +4,7 @@ import {
   canOperateVaoStepAsSession,
   collectDriverIdsFromMeasurementItems,
   filterVaoItemsForSession,
+  hasPendingTransportWorkForDriver,
   mergeDriverIds,
 } from "./transport-driver-access";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
@@ -160,6 +161,64 @@ describe("transport-driver-access", () => {
         makeSession(["motorista"], "motorista-a"),
       );
       expect(result.map((i) => i.id)).toEqual(["a"]);
+    });
+  });
+
+  describe("hasPendingTransportWorkForDriver", () => {
+    const full = {
+      perfilEstrutural: true,
+      perfilTotal: true,
+      acessorios: true,
+      vidros: true,
+    };
+
+    it("retorna false quando o motorista concluiu todas as etapas designadas a ele", () => {
+      const items = [
+        {
+          id: "a",
+          qty: 1,
+          largura: 1,
+          altura: 1,
+          transportProgress: { ...full, driverId: "motorista-a" },
+        },
+        {
+          id: "b",
+          qty: 1,
+          largura: 1,
+          altura: 1,
+          // Outro motorista ainda pendente — não deve manter a OS na lista do motorista-a
+          transportProgress: {
+            perfilEstrutural: false,
+            perfilTotal: false,
+            acessorios: false,
+            vidros: false,
+            driverId: "motorista-b",
+          },
+        },
+      ] as MeasurementLineItem[];
+
+      expect(hasPendingTransportWorkForDriver(items, "motorista-a")).toBe(false);
+      expect(hasPendingTransportWorkForDriver(items, "motorista-b")).toBe(true);
+    });
+
+    it("retorna true se ainda há etapa designada ao motorista incompleta", () => {
+      const items = [
+        {
+          id: "a",
+          qty: 1,
+          largura: 1,
+          altura: 1,
+          transportProgress: {
+            perfilEstrutural: true,
+            perfilTotal: true,
+            acessorios: true,
+            vidros: false,
+            driverId: "motorista-a",
+          },
+        },
+      ] as MeasurementLineItem[];
+
+      expect(hasPendingTransportWorkForDriver(items, "motorista-a")).toBe(true);
     });
   });
 });

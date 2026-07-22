@@ -17,11 +17,20 @@ export function isLogisticsIndexCandidate(
   return isInstallationPhaseStatus(order.status);
 }
 
+type OperatorListingOptions = {
+  /** Quando definido (ex.: motorista), manda na decisão em vez do agregado global. */
+  hasOperatorPendingWork?: boolean;
+};
+
 /** Espelha o kanban: transporte concluído some da coluna/módulo de transporte. */
 export function isActiveTransportListing(
   order: OrderListItem,
   transportSteps: TransportSteps | null,
+  options?: OperatorListingOptions,
 ): boolean {
   if (!isTransportPhaseStatus(order.status)) return true;
+  if (options?.hasOperatorPendingWork !== undefined) {
+    return options.hasOperatorPendingWork;
+  }
   return transportSteps?.transporteConcluido !== true;
 }

@@ -63,16 +63,27 @@ describe("isInstallationIndexCandidate", () => {
     ).toBe(false);
   });
 
-  it("exclui transporte da listagem do instalador", () => {
+  it("inclui transporte para instalador (aparece só após designação por vão)", () => {
+    // Candidato de status: a filtragem por installerId ocorre em canAccessOrder /
+    // hasPendingInstallationWorkForInstaller — sem vão no nome, a OS não chega aqui.
     expect(
       isInstallationIndexCandidate(
         makeOrder({ status: "transporte_levar_vidro" }),
         ["instalador"],
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it("inclui transporte em paralelo apenas para admin/gerente", () => {
+  it("inclui transporte para motorista+instalador (caso Bruno / OS em transporte_perfil)", () => {
+    expect(
+      isInstallationIndexCandidate(
+        makeOrder({ status: "transporte_perfil" }),
+        ["motorista", "instalador"],
+      ),
+    ).toBe(true);
+  });
+
+  it("inclui transporte em paralelo para admin/gerente e instalador", () => {
     expect(
       isInstallationIndexCandidate(
         makeOrder({ status: "transporte_levar_vidro" }),
@@ -83,6 +94,12 @@ describe("isInstallationIndexCandidate", () => {
       isInstallationIndexCandidate(
         makeOrder({ status: "transporte_levar_vidro" }),
         ["admin"],
+      ),
+    ).toBe(true);
+    expect(
+      isInstallationIndexCandidate(
+        makeOrder({ status: "transporte_levar_vidro" }),
+        ["gerente"],
       ),
     ).toBe(true);
   });

@@ -4,11 +4,12 @@ import { getTransportDetailForOs } from "@/lib/data/transport-detail";
 import { listMeasurementLookups } from "@/lib/data/lookups";
 import { listVehiclesForTransportSelection } from "@/lib/data/vehicles";
 import { listActiveDrivers } from "@/lib/data/drivers";
-import { filterVaoItemsForSession } from "@/lib/logistics/transport-driver-access";
+import { driversForTransportViewer, filterVaoItemsForSession } from "@/lib/logistics/transport-driver-access";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
 import {
+  canDeleteMeasurement,
   canEditMeasurementHeader,
   canViewAllOrders,
   hasRole,
@@ -33,19 +34,25 @@ export default async function LogisticsOsPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const isAdmin = hasRole(session?.roles ?? [], "admin");
-  const canDelete = canViewAllOrders(session?.roles ?? []);
-  const canSendToInstallation = canViewAllOrders(session?.roles ?? []);
-  const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
+  const roles = session?.roles ?? [];
+  const isAdmin = hasRole(roles, "admin");
+  const canDelete = canDeleteMeasurement(roles);
+  const canSendToInstallation = canViewAllOrders(roles);
+  const canEditHeader = canEditMeasurementHeader(roles);
 
-  const [detail, lookups, stepAuditMeta] = await Promise.all([
+  const [detail, lookups, stepAuditMeta, allDrivers] = await Promise.all([
     getTransportDetailForOs(osId, order.status),
     listMeasurementLookups(),
     isAdmin ? getStepCompletionMetaForOs(osId) : Promise.resolve(undefined),
+    listActiveDrivers(),
   ]);
   const vehicles = await listVehiclesForTransportSelection(osId);
 
-  const drivers = isAdmin ? await listActiveDrivers() : [];
+  const drivers = driversForTransportViewer(
+    roles,
+    session ? { userId: session.userId, name: session.name } : null,
+    allDrivers,
+  );
   const visibleItems = filterVaoItemsForSession(detail.items, session);
 
   const header = (

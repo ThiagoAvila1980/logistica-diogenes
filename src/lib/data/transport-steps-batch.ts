@@ -5,9 +5,23 @@ import type { TransportSteps } from "@/lib/transport-gates";
 import { aggregateTransportStepsFromItems } from "@/lib/workflow/aggregates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 
+export type TransportListingProgress = {
+  steps: TransportSteps;
+  items: MeasurementLineItem[];
+};
+
 export async function getTransportStepsForOrders(
   osIds: string[],
 ): Promise<Record<string, TransportSteps>> {
+  const data = await getTransportListingProgressForOrders(osIds);
+  return Object.fromEntries(
+    Object.entries(data).map(([id, entry]) => [id, entry.steps]),
+  );
+}
+
+export async function getTransportListingProgressForOrders(
+  osIds: string[],
+): Promise<Record<string, TransportListingProgress>> {
   if (osIds.length === 0) return {};
 
   const db = getDb();
@@ -22,7 +36,13 @@ export async function getTransportStepsForOrders(
   return Object.fromEntries(
     rows.map((row) => {
       const items = (row.items as MeasurementLineItem[] | null) ?? [];
-      return [row.id, aggregateTransportStepsFromItems(items)];
+      return [
+        row.id,
+        {
+          items,
+          steps: aggregateTransportStepsFromItems(items),
+        },
+      ];
     }),
   );
 }

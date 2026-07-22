@@ -367,14 +367,14 @@ export async function updateMeasurementHeader(
 
 /**
  * Exclui medição por completo: arquivos no storage + registro (cascade).
- * Apenas admin/gerente; permitido em qualquer etapa do fluxo.
+ * Apenas admin; permitido em qualquer etapa do fluxo (com confirmação na UI).
  */
 export async function deleteMeasurement(
   osId: string,
 ): Promise<DeleteMeasurementResult> {
   let session;
   try {
-    session = await requireRole(["admin", "gerente"]);
+    session = await requireRole(["admin"]);
   } catch (err) {
     return {
       success: false,

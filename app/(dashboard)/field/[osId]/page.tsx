@@ -6,7 +6,7 @@ import { FieldMeasurementForm } from "@/components/field/field-measurement-form"
 import { FieldMeasurementPastStage } from "@/components/field/field-measurement-past-stage";
 import { FieldDetailCacheHydrator } from "@/components/offline/field-detail-cache-hydrator";
 import { getSession } from "@/lib/auth/session";
-import { hasAnyRole } from "@/lib/auth/permissions";
+import { canDeleteMeasurement, hasAnyRole } from "@/lib/auth/permissions";
 
 type Props = { params: Promise<{ osId: string }> };
 
@@ -16,11 +16,13 @@ export default async function FieldOsPage({ params }: Props) {
   if (!order) notFound();
 
   const session = await getSession();
-  const canManage = hasAnyRole(session?.roles ?? [], ["admin", "gerente"]);
+  const roles = session?.roles ?? [];
+  const canManage = hasAnyRole(roles, ["admin", "gerente"]);
+  const canDelete = canDeleteMeasurement(roles);
 
   if (!order.status.startsWith("medicao")) {
     if (canManage) {
-      return <FieldMeasurementPastStage order={order} />;
+      return <FieldMeasurementPastStage order={order} canDelete={canDelete} />;
     }
 
     return (
@@ -50,7 +52,7 @@ export default async function FieldOsPage({ params }: Props) {
         lookups={lookups}
         draftsByType={draftsByType}
         canEditHeader={canManage}
-        canDelete={canManage}
+        canDelete={canDelete}
         canSendToCutting={canManage}
       />
       <FieldDetailCacheHydrator

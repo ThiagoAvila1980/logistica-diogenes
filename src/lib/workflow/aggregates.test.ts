@@ -160,6 +160,22 @@ describe("aggregateTransportStepsFromItems", () => {
     const items = [item("a", { transportProgress: full }), item("b", { transportProgress: full })];
     expect(aggregateTransportStepsFromItems(items).transporteConcluido).toBe(true);
   });
+
+  it("ignora vãos fora do plano de corte ao calcular transporteConcluido", () => {
+    const full = {
+      perfilEstrutural: true,
+      perfilTotal: true,
+      acessorios: true,
+      vidros: true,
+    };
+    const items = [
+      item("a", { sentToCutting: true, transportProgress: full }),
+      item("b", { sentToCutting: true, transportProgress: full }),
+      // Vão medido mas não enviado ao corte — não deve bloquear o transporte
+      item("c", { sentToCutting: false }),
+    ];
+    expect(aggregateTransportStepsFromItems(items).transporteConcluido).toBe(true);
+  });
 });
 
 describe("selectInstallationLineItems", () => {
@@ -236,6 +252,20 @@ describe("installation vão conclusion", () => {
       item("b", { installationProgress: { ...allSteps, concluido: true } }),
     ];
     expect(aggregateAllVaosInstallationConcluded(allConfirmed)).toBe(true);
+  });
+
+  it("aggregateAllVaosInstallationConcluded ignora vãos não enviados à instalação", () => {
+    const items = [
+      item("a", {
+        installationProgress: { ...allSteps, concluido: true },
+      }),
+      item("b", {
+        installationProgress: { ...allSteps, concluido: true },
+      }),
+      // Ainda não enviado — não deve impedir a OS de sair da listagem
+      item("c"),
+    ];
+    expect(aggregateAllVaosInstallationConcluded(items)).toBe(true);
   });
 });
 

@@ -24,29 +24,46 @@ export function getAppBaseUrl(): string {
   );
 }
 
+/** Pathname sem query/hash, para validar prefixos internos. */
+export function stripSearchAndHash(path: string): string {
+  const withoutHash = path.split("#")[0] ?? path;
+  return withoutHash.split("?")[0] ?? withoutHash;
+}
+
 export function isValidInternalPath(path: string): boolean {
   if (!path.startsWith("/") || path.startsWith("//")) return false;
   if (path.includes("://")) return false;
 
+  const pathOnly = stripSearchAndHash(path);
   return INTERNAL_PATH_PREFIXES.some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+    (prefix) => pathOnly === prefix || pathOnly.startsWith(`${prefix}/`),
   );
+}
+
+/** Monta rota interna preservando filtros da query string. */
+export function buildInternalRoute(pathname: string, search = ""): string {
+  const pathOnly = stripSearchAndHash(pathname) || "/";
+  const trimmed = search.trim();
+  if (!trimmed || trimmed === "?") return pathOnly;
+  const query = trimmed.startsWith("?") ? trimmed.slice(1) : trimmed;
+  return query ? `${pathOnly}?${query}` : pathOnly;
 }
 
 const PUBLIC_UNMASKED_PATHS = new Set(["/login", "/unauthorized"]);
 
 export function isMaskablePath(pathname: string): boolean {
+  const pathOnly = stripSearchAndHash(pathname);
   if (
-    !pathname ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api")
+    !pathOnly ||
+    pathOnly.startsWith("/_next") ||
+    pathOnly.startsWith("/api")
   ) {
     return false;
   }
 
-  if (pathname === "/" || PUBLIC_UNMASKED_PATHS.has(pathname)) return false;
+  if (pathOnly === "/" || PUBLIC_UNMASKED_PATHS.has(pathOnly)) return false;
 
-  return isValidInternalPath(pathname);
+  return isValidInternalPath(pathOnly);
 }
 
 export function parseGotoParam(search: string): string | null {
@@ -79,12 +96,13 @@ export function readStoredRoute(): string | null {
   }
 }
 
-export function writeStoredRoute(pathname: string): void {
+export function writeStoredRoute(route: string): void {
   if (typeof window === "undefined") return;
-  if (!isMaskablePath(pathname)) return;
+  if (!isMaskablePath(stripSearchAndHash(route))) return;
+  if (!isValidInternalPath(route)) return;
 
   try {
-    sessionStorage.setItem(APP_ROUTE_STORAGE_KEY, pathname);
+    sessionStorage.setItem(APP_ROUTE_STORAGE_KEY, route);
   } catch {
     /* quota / private mode */
   }
@@ -100,11 +118,12 @@ export function clearStoredRoute(): void {
   }
 }
 
-export function maskBrowserUrl(pathname: string, mode: "replace" | "push"): void {
+export function maskBrowserUrl(route: string, mode: "replace" | "push"): void {
   if (typeof window === "undefined") return;
-  if (!isMaskablePath(pathname)) return;
+  if (!isMaskablePath(stripSearchAndHash(route))) return;
+  if (!isValidInternalPath(route)) return;
 
-  const state = { internalPath: pathname };
+  const state = { internalPath: route };
 
   try {
     if (mode === "push") {
@@ -116,4 +135,12 @@ export function maskBrowserUrl(pathname: string, mode: "replace" | "push"): void
   } catch {
     /* WebViews (WhatsApp/Instagram) podem bloquear History API */
   }
+}
+
+/**
+ * Com query ativa, mascarar para `/` faz o Next App Router navegar para
+ * `/?filtros` e perder a rota real. Só mascara quando não há search.
+ */
+export function shouldMaskBrowserUrl(search: string): boolean {
+  return !search.trim();
 }

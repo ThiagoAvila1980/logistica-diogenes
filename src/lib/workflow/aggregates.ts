@@ -86,6 +86,9 @@ export function aggregateCuttingStepsFromItems(
 /**
  * Progresso de transporte a partir dos itens (vãos).
  *
+ * Considera apenas vãos do plano de corte (mesma regra de `selectCuttingLineItems`),
+ * para que vãos só medidos não impeçam o transporte de ser concluído.
+ *
  * - levarPerfilEstrutural → ALGUM vão entregou o perfil estrutural
  * - levarPerfilTotal      → TODOS os vãos entregaram os perfis (embalagem)
  * - levarAcessorios       → TODOS os vãos entregaram acessórios
@@ -95,7 +98,8 @@ export function aggregateCuttingStepsFromItems(
 export function aggregateTransportStepsFromItems(
   items: MeasurementLineItem[],
 ): TransportSteps {
-  if (!items.length) {
+  const scoped = selectCuttingLineItems(items);
+  if (!scoped.length) {
     return {
       levarPerfilEstrutural: false,
       levarPerfilTotal: false,
@@ -105,16 +109,16 @@ export function aggregateTransportStepsFromItems(
     };
   }
 
-  const levarPerfilEstrutural = items.some(
+  const levarPerfilEstrutural = scoped.some(
     (i) => i.transportProgress?.perfilEstrutural === true,
   );
-  const levarPerfilTotal = items.every(
+  const levarPerfilTotal = scoped.every(
     (i) => i.transportProgress?.perfilTotal === true,
   );
-  const levarAcessorios = items.every(
+  const levarAcessorios = scoped.every(
     (i) => i.transportProgress?.acessorios === true,
   );
-  const levarVidros = items.every((i) => i.transportProgress?.vidros === true);
+  const levarVidros = scoped.every((i) => i.transportProgress?.vidros === true);
   const transporteConcluido =
     levarPerfilEstrutural && levarPerfilTotal && levarAcessorios && levarVidros;
 
@@ -142,6 +146,8 @@ export function selectInstallationLineItems(
 /**
  * Progresso de instalação a partir dos itens (vãos).
  *
+ * Considera apenas vãos enviados à instalação (`selectInstallationLineItems`).
+ *
  * - instalacaoEstruturalFeita → TODOS os vãos têm estrutural concluído
  * - instalacaoVidrosFeita    → TODOS os vãos têm vidros concluídos
  */
@@ -163,28 +169,30 @@ export function isVaoInstallationConcluded(item: MeasurementLineItem): boolean {
 export function aggregateInstallationStepsFromItems(
   items: MeasurementLineItem[],
 ): InstallationSteps {
-  if (!items.length) {
+  const scoped = selectInstallationLineItems(items);
+  if (!scoped.length) {
     return { instalacaoEstruturalFeita: false, instalacaoVidrosFeita: false, instalacaoAcabamentoFeito: false };
   }
   return {
-    instalacaoEstruturalFeita: items.every(
+    instalacaoEstruturalFeita: scoped.every(
       (i) => i.installationProgress?.estrutural === true,
     ),
-    instalacaoVidrosFeita: items.every(
+    instalacaoVidrosFeita: scoped.every(
       (i) => i.installationProgress?.vidros === true,
     ),
-    instalacaoAcabamentoFeito: items.every(
+    instalacaoAcabamentoFeito: scoped.every(
       (i) => i.installationProgress?.acabamento === true,
     ),
   };
 }
 
-/** Todos os vãos foram confirmados como concluídos na instalação */
+/** Todos os vãos enviados à instalação foram confirmados como concluídos */
 export function aggregateAllVaosInstallationConcluded(
   items: MeasurementLineItem[],
 ): boolean {
-  if (!items.length) return false;
-  return items.every(isVaoInstallationConcluded);
+  const scoped = selectInstallationLineItems(items);
+  if (!scoped.length) return false;
+  return scoped.every(isVaoInstallationConcluded);
 }
 
 /**

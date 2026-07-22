@@ -276,4 +276,116 @@ describe("installerIdsFromMeasurementItems", () => {
 
     expect(installerIdsFromMeasurementItems(items)).toEqual(["inst-a", "inst-c"]);
   });
+
+  it("não atribui OS de outro instalador só porque assignedUserId existe na OS", () => {
+    // installerId null = sem designação por vão (não pode herdar assignedUserId no filtro)
+    const result = filterConcludedOrdersForInstaller(
+      [
+        makeOrder({
+          assignedUserId: "inst-1",
+          vaos: [
+            {
+              id: "v1",
+              index: 0,
+              label: "Vão 1",
+              installerId: null,
+              installerName: null,
+              estrutural: true,
+              vidros: true,
+              acabamento: true,
+              concluido: true,
+            },
+          ],
+          totalVaos: 1,
+          estruturalCount: 1,
+          vidrosCount: 1,
+          acabamentoCount: 1,
+        }),
+      ],
+      "inst-2",
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
+  it("com designação por vão, ignora assignedUserId legado de outro responsável", () => {
+    const result = filterConcludedOrdersForInstaller(
+      [
+        makeOrder({
+          assignedUserId: "inst-legado",
+          vaos: [
+            {
+              id: "v1",
+              index: 0,
+              label: "Vão 1",
+              installerId: "inst-2",
+              installerName: "Instalador 2",
+              estrutural: true,
+              vidros: true,
+              acabamento: true,
+              concluido: true,
+            },
+            {
+              id: "v2",
+              index: 1,
+              label: "Vão 2",
+              installerId: "inst-legado",
+              installerName: "Legado",
+              estrutural: true,
+              vidros: false,
+              acabamento: false,
+              concluido: true,
+            },
+          ],
+        }),
+      ],
+      "inst-2",
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.vaos.map((v) => v.id)).toEqual(["v1"]);
+  });
+
+  it("no legado, devolve só os vãos concluídos (não a OS inteira)", () => {
+    const result = filterConcludedOrdersForInstaller(
+      [
+        makeOrder({
+          assignedUserId: "inst-legacy",
+          vaos: [
+            {
+              id: "v1",
+              index: 0,
+              label: "Vão 1",
+              installerId: null,
+              installerName: null,
+              estrutural: true,
+              vidros: true,
+              acabamento: true,
+              concluido: true,
+            },
+            {
+              id: "v2",
+              index: 1,
+              label: "Vão 2",
+              installerId: null,
+              installerName: null,
+              estrutural: false,
+              vidros: false,
+              acabamento: false,
+              concluido: false,
+            },
+          ],
+          totalVaos: 2,
+          estruturalCount: 1,
+          vidrosCount: 1,
+          acabamentoCount: 1,
+        }),
+      ],
+      "inst-legacy",
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.vaos.map((v) => v.id)).toEqual(["v1"]);
+    expect(result[0]?.totalVaos).toBe(1);
+  });
 });
