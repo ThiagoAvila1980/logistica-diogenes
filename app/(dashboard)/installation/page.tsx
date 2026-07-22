@@ -29,6 +29,8 @@ export default async function InstallationIndexPage() {
   const installationOrders = candidates.filter((order) => {
     const entry = listingByOs[order.id];
     if (!entry) {
+      // Sem medição/items: gestor segue regra padrão; instalador não vê.
+      if (!viewAll) return false;
       return isActiveInstallationListing(order, null);
     }
     const { items, ...progress } = entry;

@@ -21,11 +21,8 @@ function formatAssigneeNames(
 
 function resolveInstallerIds(
   items: MeasurementLineItem[] | null | undefined,
-  assignedUserId: string | null,
 ): string[] {
-  const fromItems = collectInstallerIdsFromMeasurementItems(items);
-  if (fromItems.length > 0) return fromItems;
-  return assignedUserId ? [assignedUserId] : [];
+  return collectInstallerIdsFromMeasurementItems(items);
 }
 
 function resolveScheduledDate(
@@ -53,7 +50,6 @@ export async function getInstallationSummariesDb(
   const measurementRows = await db
     .select({
       id: measurements.id,
-      assignedUserId: measurements.assignedUserId,
       items: measurements.items,
     })
     .from(measurements)
@@ -64,7 +60,6 @@ export async function getInstallationSummariesDb(
       const measurement = measurementRows.find((row) => row.id === osId);
       const resolved = resolveInstallerIds(
         measurement?.items as MeasurementLineItem[] | null | undefined,
-        measurement?.assignedUserId ?? null,
       );
       const filtered = installerIdFilter
         ? resolved.filter((id) => id === installerIdFilter)
