@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { applyDriverToAllVaoSteps } from "./apply-driver-to-all-vaos";
+import {
+  applyDriverToAllVaoSteps,
+  applyScheduledDateToAllVaoSteps,
+  applyVehicleToAllVaoSteps,
+} from "./apply-driver-to-all-vaos";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 
 function makeItem(
@@ -112,6 +116,145 @@ describe("applyDriverToAllVaoSteps", () => {
       driverId: null,
       scheduledDate: "2026-02-01",
       vehicleId: "v1",
+    });
+  });
+});
+
+describe("applyScheduledDateToAllVaoSteps", () => {
+  it("aplica a data a todas as etapas, preservando motorista e veículo", () => {
+    const items = [
+      makeItem("a", {
+        perfilEstrutural: false,
+        perfilTotal: false,
+        acessorios: false,
+        vidros: false,
+        stepAssignments: {
+          perfilEstrutural: {
+            driverId: "m1",
+            scheduledDate: "2026-01-01",
+            vehicleId: "v1",
+          },
+          vidros: {
+            driverId: "m2",
+            scheduledDate: "2026-01-02",
+            vehicleId: "v2",
+          },
+        },
+      }),
+    ];
+
+    const next = applyScheduledDateToAllVaoSteps(items, "2026-07-22");
+
+    expect(next[0].transportProgress?.stepAssignments).toEqual({
+      perfilEstrutural: {
+        driverId: "m1",
+        scheduledDate: "2026-07-22",
+        vehicleId: "v1",
+      },
+      perfilTotal: {
+        driverId: null,
+        scheduledDate: "2026-07-22",
+        vehicleId: null,
+      },
+      acessorios: {
+        driverId: null,
+        scheduledDate: "2026-07-22",
+        vehicleId: null,
+      },
+      vidros: {
+        driverId: "m2",
+        scheduledDate: "2026-07-22",
+        vehicleId: "v2",
+      },
+    });
+  });
+
+  it("permite limpar a data em lote (null)", () => {
+    const items = [
+      makeItem("a", {
+        perfilEstrutural: false,
+        perfilTotal: false,
+        acessorios: false,
+        vidros: false,
+        stepAssignments: {
+          perfilEstrutural: {
+            driverId: "m1",
+            scheduledDate: "2026-02-01",
+            vehicleId: "v1",
+          },
+        },
+      }),
+    ];
+
+    const next = applyScheduledDateToAllVaoSteps(items, null);
+    expect(next[0].transportProgress?.stepAssignments?.perfilEstrutural).toEqual({
+      driverId: "m1",
+      scheduledDate: null,
+      vehicleId: "v1",
+    });
+  });
+});
+
+describe("applyVehicleToAllVaoSteps", () => {
+  it("aplica o veículo a todas as etapas, preservando motorista e data", () => {
+    const items = [
+      makeItem("a", {
+        perfilEstrutural: false,
+        perfilTotal: false,
+        acessorios: false,
+        vidros: false,
+        stepAssignments: {
+          perfilEstrutural: {
+            driverId: "m1",
+            scheduledDate: "2026-01-01",
+            vehicleId: "v-old",
+          },
+        },
+      }),
+      makeItem("b", {
+        perfilEstrutural: false,
+        perfilTotal: false,
+        acessorios: false,
+        vidros: false,
+      }),
+    ];
+
+    const next = applyVehicleToAllVaoSteps(items, "v-bulk");
+
+    expect(next[0].transportProgress?.stepAssignments?.perfilEstrutural).toEqual({
+      driverId: "m1",
+      scheduledDate: "2026-01-01",
+      vehicleId: "v-bulk",
+    });
+    expect(next[1].transportProgress?.stepAssignments?.vidros).toEqual({
+      driverId: null,
+      scheduledDate: null,
+      vehicleId: "v-bulk",
+    });
+  });
+
+  it("permite limpar o veículo em lote (null)", () => {
+    const items = [
+      makeItem("a", {
+        perfilEstrutural: false,
+        perfilTotal: false,
+        acessorios: false,
+        vidros: false,
+        stepAssignments: {
+          perfilEstrutural: {
+            driverId: "m1",
+            scheduledDate: "2026-02-01",
+            vehicleId: "v1",
+          },
+        },
+      }),
+    ];
+
+    const next = applyVehicleToAllVaoSteps(items, null);
+    expect(next[0].transportProgress?.stepAssignments?.perfilEstrutural).toEqual({
+      driverId: "m1",
+      scheduledDate: "2026-02-01",
+      vehicleId: null,
     });
   });
 });

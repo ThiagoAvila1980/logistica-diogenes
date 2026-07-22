@@ -31,6 +31,8 @@ import {
 } from "@/lib/measurement/vao-item-subtitle";
 import { VaoStepDriverSelect } from "@/components/logistics/vao-step-driver-select";
 import { TransportBulkDriverSelect } from "@/components/logistics/transport-bulk-driver-select";
+import { TransportBulkDateSelect } from "@/components/logistics/transport-bulk-date-select";
+import { TransportBulkVehicleSelect } from "@/components/logistics/transport-bulk-vehicle-select";
 import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
 import {
@@ -181,6 +183,10 @@ export function TransportChecklist({
         </CardTitle>
         {canAssignDriver && (
           <TransportBulkDriverSelect osId={osId} drivers={drivers} />
+        )}
+        {canAssignDriver && <TransportBulkDateSelect osId={osId} />}
+        {canAssignVehicle && (
+          <TransportBulkVehicleSelect osId={osId} vehicles={vehicles} />
         )}
       </CardHeader>
 

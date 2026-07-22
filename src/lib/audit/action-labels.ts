@@ -14,6 +14,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   [AUDIT_ACTIONS.TRANSPORT_DRIVER_UNASSIGNED]: "Motorista removido",
   [AUDIT_ACTIONS.TRANSPORT_VEHICLE_ASSIGNED]: "Veículo atribuído",
   [AUDIT_ACTIONS.TRANSPORT_VEHICLE_UNASSIGNED]: "Veículo removido",
+  [AUDIT_ACTIONS.TRANSPORT_SCHEDULE_ASSIGNED]: "Data de transporte atribuída",
+  [AUDIT_ACTIONS.TRANSPORT_SCHEDULE_UNASSIGNED]: "Data de transporte removida",
   [AUDIT_ACTIONS.TRANSPORT_NOTES_UPDATED]: "Observações de transporte atualizadas",
 
   [AUDIT_ACTIONS.INSTALLATION_STEP_CHECKED]: "Instalação marcada",

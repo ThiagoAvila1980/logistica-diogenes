@@ -11,6 +11,8 @@ export const AUDIT_ACTIONS = {
   TRANSPORT_DRIVER_UNASSIGNED: "transport.driver_unassigned",
   TRANSPORT_VEHICLE_ASSIGNED: "transport.vehicle_assigned",
   TRANSPORT_VEHICLE_UNASSIGNED: "transport.vehicle_unassigned",
+  TRANSPORT_SCHEDULE_ASSIGNED: "transport.schedule_assigned",
+  TRANSPORT_SCHEDULE_UNASSIGNED: "transport.schedule_unassigned",
   TRANSPORT_NOTES_UPDATED: "transport.notes_updated",
 
   INSTALLATION_STEP_CHECKED: "installation.step_checked",

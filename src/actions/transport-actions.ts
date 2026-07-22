@@ -798,3 +798,216 @@ export async function assignDriverToAllVaosAction(
     return { success: false, message: "Erro ao atribuir motorista a todos os vãos" };
   }
 }
+
+const assignScheduledDateToAllVaosSchema = z.object({
+  osId: z.string().uuid(),
+  scheduledTransportDate: z.string().nullable(),
+});
+
+export async function assignScheduledDateToAllVaosAction(
+  raw: z.infer<typeof assignScheduledDateToAllVaosSchema>,
+): Promise<AssignDriverToVaoResult> {
+  const parsed = assignScheduledDateToAllVaosSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Requisição inválida. Recarregue a página e tente novamente.",
+    };
+  }
+
+  let session: SessionUser;
+  try {
+    session = await requireRole(["admin"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const { osId, scheduledTransportDate } = parsed.data;
+
+  if (scheduledTransportDate) {
+    const d = new Date(scheduledTransportDate);
+    if (isNaN(d.getTime())) return { success: false, message: "Data inválida" };
+  }
+
+  try {
+    const db = getDb();
+    const [orderRow] = await db
+      .select({ etapa: measurements.etapa })
+      .from(measurements)
+      .where(eq(measurements.id, osId))
+      .limit(1);
+    if (!orderRow) return { success: false, message: "OS não encontrada" };
+
+    const isLatePhase = isTransportOrLater(orderRow.etapa);
+
+    const { applyScheduledDateToAllVaoSteps } = await import(
+      "@/lib/logistics/apply-driver-to-all-vaos"
+    );
+
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
+
+      if (!meas) throw new WorkflowActionError("OS não encontrada");
+
+      const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const cuttingSteps = effectiveCuttingSteps(
+        aggregateCuttingStepsFromItems(items),
+        isLatePhase,
+      );
+
+      if (!canOperateTransportModule(orderRow.etapa, cuttingSteps)) {
+        throw new WorkflowActionError(
+          "Aguardando conclusão do corte para liberar transporte",
+        );
+      }
+
+      const updatedItems = applyScheduledDateToAllVaoSteps(
+        items,
+        scheduledTransportDate ?? null,
+      );
+
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
+
+      for (const item of updatedItems) {
+        await recordAuditEvent(tx, {
+          actorId: session.userId,
+          action: scheduledTransportDate
+            ? AUDIT_ACTIONS.TRANSPORT_SCHEDULE_ASSIGNED
+            : AUDIT_ACTIONS.TRANSPORT_SCHEDULE_UNASSIGNED,
+          measurementId: osId,
+          itemId: item.id,
+          payload: { scheduledDate: scheduledTransportDate, scope: "all_vaos" },
+        });
+      }
+    });
+
+    revalidateOSRoutes(osId);
+    return { success: true };
+  } catch (err) {
+    if (err instanceof WorkflowActionError) {
+      return { success: false, message: err.message };
+    }
+    logger.error("assignScheduledDateToAllVaosAction failed", { osId, err });
+    return {
+      success: false,
+      message: "Erro ao atribuir data a todos os vãos",
+    };
+  }
+}
+
+const assignVehicleToAllVaosSchema = z.object({
+  osId: z.string().uuid(),
+  vehicleId: z.string().uuid().nullable(),
+});
+
+export async function assignVehicleToAllVaosAction(
+  raw: z.infer<typeof assignVehicleToAllVaosSchema>,
+): Promise<AssignDriverToVaoResult> {
+  const parsed = assignVehicleToAllVaosSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Requisição inválida. Recarregue a página e tente novamente.",
+    };
+  }
+
+  let session: SessionUser;
+  try {
+    session = await requireRole(["admin"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const { osId, vehicleId } = parsed.data;
+
+  if (vehicleId) {
+    const db = getDb();
+    const [vehicle] = await db
+      .select({ id: vehicles.id, active: vehicles.active })
+      .from(vehicles)
+      .where(and(eq(vehicles.id, vehicleId), eq(vehicles.active, true)))
+      .limit(1);
+
+    if (!vehicle) {
+      return { success: false, message: "Veículo não encontrado ou inativo" };
+    }
+  }
+
+  try {
+    const db = getDb();
+    const [orderRow] = await db
+      .select({ etapa: measurements.etapa })
+      .from(measurements)
+      .where(eq(measurements.id, osId))
+      .limit(1);
+    if (!orderRow) return { success: false, message: "OS não encontrada" };
+
+    const isLatePhase = isTransportOrLater(orderRow.etapa);
+
+    const { applyVehicleToAllVaoSteps } = await import(
+      "@/lib/logistics/apply-driver-to-all-vaos"
+    );
+
+    await db.transaction(async (tx) => {
+      const [meas] = await tx
+        .select({ items: measurements.items })
+        .from(measurements)
+        .where(eq(measurements.id, osId))
+        .for("update")
+        .limit(1);
+
+      if (!meas) throw new WorkflowActionError("OS não encontrada");
+
+      const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const cuttingSteps = effectiveCuttingSteps(
+        aggregateCuttingStepsFromItems(items),
+        isLatePhase,
+      );
+
+      if (!canOperateTransportModule(orderRow.etapa, cuttingSteps)) {
+        throw new WorkflowActionError(
+          "Aguardando conclusão do corte para liberar transporte",
+        );
+      }
+
+      const updatedItems = applyVehicleToAllVaoSteps(items, vehicleId ?? null);
+
+      await tx
+        .update(measurements)
+        .set({ items: updatedItems, updatedAt: new Date() })
+        .where(eq(measurements.id, osId));
+
+      for (const item of updatedItems) {
+        await recordAuditEvent(tx, {
+          actorId: session.userId,
+          action: vehicleId
+            ? AUDIT_ACTIONS.TRANSPORT_VEHICLE_ASSIGNED
+            : AUDIT_ACTIONS.TRANSPORT_VEHICLE_UNASSIGNED,
+          measurementId: osId,
+          itemId: item.id,
+          payload: { vehicleId, scope: "all_vaos" },
+        });
+      }
+    });
+
+    revalidateOSRoutes(osId);
+    return { success: true };
+  } catch (err) {
+    if (err instanceof WorkflowActionError) {
+      return { success: false, message: err.message };
+    }
+    logger.error("assignVehicleToAllVaosAction failed", { osId, err });
+    return {
+      success: false,
+      message: "Erro ao atribuir veículo a todos os vãos",
+    };
+  }
+}
