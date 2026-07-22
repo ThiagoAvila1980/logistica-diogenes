@@ -72,27 +72,17 @@ function summarizeVaos(vaos: VaoInstallationProgress[]) {
   };
 }
 
-/** Instalador vê apenas OS/vãos em que registrou progresso de instalação. */
+/** Instalador vê apenas OS/vãos com installerId dele e conclusão registrada. */
 export function filterConcludedOrdersForInstaller(
   orders: ConcludedOrderItem[],
   userId: string,
 ): ConcludedOrderItem[] {
   return orders
     .map((order) => {
-      const hasPerVaoAssignment = order.vaos.some((vao) => vao.installerId);
-
-      if (!hasPerVaoAssignment) {
-        if (order.assignedUserId !== userId) return null;
-        const workedVaos = order.vaos.filter(hasVaoInstallationWork);
-        if (workedVaos.length === 0) return null;
-        return order;
-      }
-
       const workedVaos = order.vaos.filter(
         (vao) => vao.installerId === userId && hasVaoInstallationWork(vao),
       );
       if (workedVaos.length === 0) return null;
-
       return {
         ...order,
         ...summarizeVaos(workedVaos),
