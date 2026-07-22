@@ -323,19 +323,13 @@ export function KanbanCard({
                   />
                 </>
               ) : isConcludedColumn ? (
-                <>
-                  <span
-                    className="inline-flex items-center text-success"
-                    title="Concluído"
-                    aria-label="Concluído"
-                  >
-                    <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
-                  </span>
-                  <KanbanProfessionalNames
-                    names={os.professionalNames}
-                    className={text.badge}
-                  />
-                </>
+                <span
+                  className="inline-flex items-center text-success"
+                  title="Concluído"
+                  aria-label="Concluído"
+                >
+                  <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+                </span>
               ) : null}
             </div>
           </div>
