@@ -83,7 +83,6 @@ export function canAccessOrder(
       isInstallerResponsibleForOrder(
         session.userId,
         order.installerIds,
-        order.assignedUserId,
       );
 
     if (hasAnyRole(session.roles, ["motorista", "instalador"])) {
@@ -98,7 +97,6 @@ export function canAccessOrder(
     return isInstallerResponsibleForOrder(
       session.userId,
       order.installerIds,
-      order.assignedUserId,
     );
   }
 

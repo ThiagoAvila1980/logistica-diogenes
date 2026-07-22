@@ -2,6 +2,10 @@ import { inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { measurements } from "@/db/schema";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import {
+  isVaoInstallationConcluded,
+  selectInstallationLineItems,
+} from "@/lib/workflow/aggregates";
 
 export function collectInstallerIdsFromMeasurementItems(
   items: MeasurementLineItem[] | null | undefined,
@@ -47,13 +51,26 @@ export function isAssignedInstaller(
   return !!installerIds?.includes(userId);
 }
 
-/** Designação por vão ou responsável geral legado (sem vãos designados). */
+/** Designação por vão apenas — sem fallback de responsável geral da OS. */
 export function isInstallerResponsibleForOrder(
   userId: string,
   installerIds: readonly string[] | undefined,
-  assignedUserId: string | null,
 ): boolean {
-  if (isAssignedInstaller(userId, installerIds)) return true;
-  const hasPerVaoAssignment = (installerIds?.length ?? 0) > 0;
-  return !hasPerVaoAssignment && assignedUserId === userId;
+  return isAssignedInstaller(userId, installerIds);
+}
+
+/**
+ * Há vão de instalação incompleto designado a este instalador?
+ * Sem vão no nome dele → false (OS some da listagem).
+ */
+export function hasPendingInstallationWorkForInstaller(
+  items: MeasurementLineItem[],
+  installerId: string,
+): boolean {
+  const scoped = selectInstallationLineItems(items);
+  const relevant = scoped.filter(
+    (i) => i.installationProgress?.installerId === installerId,
+  );
+  if (relevant.length === 0) return false;
+  return relevant.some((i) => !isVaoInstallationConcluded(i));
 }

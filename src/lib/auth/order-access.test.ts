@@ -138,14 +138,14 @@ describe("canAccessOrder — instalador", () => {
     ).toBe(false);
   });
 
-  it("permite responsável geral legado sem designação por vão", () => {
+  it("bloqueia instalação só com assignedUserId (sem vão designado)", () => {
     expect(
       canAccessOrder(pedro, {
         assignedUserId: "instalador-pedro",
         status: "instalacao_estrutural",
         installerIds: [],
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("permite instalação designada ao instalador logado", () => {

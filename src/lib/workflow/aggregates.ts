@@ -128,6 +128,18 @@ export function aggregateTransportStepsFromItems(
 }
 
 /**
+ * Vãos que entraram na instalação (retrocompat: todos se nenhum tiver progresso).
+ */
+export function selectInstallationLineItems(
+  items: MeasurementLineItem[],
+): MeasurementLineItem[] {
+  const hasSent = items.some((i) => i.installationProgress !== undefined);
+  return hasSent
+    ? items.filter((i) => i.installationProgress !== undefined)
+    : items;
+}
+
+/**
  * Progresso de instalação a partir dos itens (vãos).
  *
  * - instalacaoEstruturalFeita → TODOS os vãos têm estrutural concluído
