@@ -63,13 +63,13 @@ describe("isInstallationIndexCandidate", () => {
     ).toBe(false);
   });
 
-  it("inclui transporte em paralelo para instalador", () => {
+  it("exclui transporte da listagem do instalador", () => {
     expect(
       isInstallationIndexCandidate(
         makeOrder({ status: "transporte_levar_vidro" }),
         ["instalador"],
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("inclui transporte em paralelo apenas para admin/gerente", () => {
