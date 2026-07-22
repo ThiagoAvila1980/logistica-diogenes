@@ -12,9 +12,25 @@ export type InstallationOrderProgress = InstallationSteps & {
   todosVaosConcluidos: boolean;
 };
 
+export type InstallationListingProgress = InstallationOrderProgress & {
+  items: MeasurementLineItem[];
+};
+
 export async function getInstallationStepsForOrders(
   osIds: string[],
 ): Promise<Record<string, InstallationOrderProgress>> {
+  const data = await getInstallationListingProgressForOrders(osIds);
+  return Object.fromEntries(
+    Object.entries(data).map(([id, { items: _items, ...progress }]) => [
+      id,
+      progress,
+    ]),
+  );
+}
+
+export async function getInstallationListingProgressForOrders(
+  osIds: string[],
+): Promise<Record<string, InstallationListingProgress>> {
   if (osIds.length === 0) return {};
 
   const db = getDb();
@@ -32,6 +48,7 @@ export async function getInstallationStepsForOrders(
       return [
         row.id,
         {
+          items,
           ...aggregateInstallationStepsFromItems(items),
           todosVaosConcluidos: aggregateAllVaosInstallationConcluded(items),
         },

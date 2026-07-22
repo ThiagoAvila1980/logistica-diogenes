@@ -6,6 +6,7 @@ import {
   aggregateAllVaosInstallationConcluded,
   isVaoInstallationStepsComplete,
   isVaoInstallationConcluded,
+  selectInstallationLineItems,
   canOperateCuttingForItems,
   effectiveCuttingSteps,
   hasPendingCuttingWorkOnItems,
@@ -158,6 +159,25 @@ describe("aggregateTransportStepsFromItems", () => {
     const full = { perfilEstrutural: true, perfilTotal: true, acessorios: true, vidros: true };
     const items = [item("a", { transportProgress: full }), item("b", { transportProgress: full })];
     expect(aggregateTransportStepsFromItems(items).transporteConcluido).toBe(true);
+  });
+});
+
+describe("selectInstallationLineItems", () => {
+  it("retrocompat: sem progresso de instalação em nenhum vão, retorna todos", () => {
+    const items = [
+      item("a"),
+      item("b", { cuttingProgress: { corte: true, embalagem: false, acessorios: false, vidros: false } }),
+    ];
+    expect(selectInstallationLineItems(items)).toEqual(items);
+  });
+
+  it("filtra só vãos com installationProgress quando algum vão já entrou na instalação", () => {
+    const withProgress = item("a", {
+      installationProgress: { estrutural: false, vidros: false, acabamento: false },
+    });
+    const without = item("b");
+    const items = [withProgress, without];
+    expect(selectInstallationLineItems(items)).toEqual([withProgress]);
   });
 });
 

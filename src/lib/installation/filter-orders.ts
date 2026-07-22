@@ -19,12 +19,21 @@ export function isInstallationIndexCandidate(
   return false;
 }
 
+type OperatorListingOptions = {
+  /** Quando definido (ex.: instalador), manda na decisão em vez do agregado global. */
+  hasOperatorPendingWork?: boolean;
+};
+
 /** OS some de /installation quando todos os vãos foram confirmados como concluídos. */
 export function isActiveInstallationListing(
   order: OrderListItem,
   progress: InstallationOrderProgress | null,
+  options?: OperatorListingOptions,
 ): boolean {
   if (order.status === "concluido") return false;
+  if (options?.hasOperatorPendingWork !== undefined) {
+    return options.hasOperatorPendingWork;
+  }
   if (!progress) return true;
   return !progress.todosVaosConcluidos;
 }

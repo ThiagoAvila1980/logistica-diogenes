@@ -111,6 +111,22 @@ describe("isActiveInstallationListing", () => {
     ).toBe(false);
   });
 
+  it("para instalador, remove OS quando não há trabalho pendente dele", () => {
+    expect(
+      isActiveInstallationListing(makeOrder(), stepsDoneButNotConfirmed, {
+        hasOperatorPendingWork: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("para instalador, mantém OS quando ainda há trabalho pendente dele", () => {
+    expect(
+      isActiveInstallationListing(makeOrder(), completedInstallation, {
+        hasOperatorPendingWork: true,
+      }),
+    ).toBe(true);
+  });
+
   it("remove OS com status concluído", () => {
     expect(
       isActiveInstallationListing(
