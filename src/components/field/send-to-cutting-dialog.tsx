@@ -148,8 +148,8 @@ export function SendToCuttingDialog({
       </Button>
 
       <Dialog open={open} onOpenChange={(v) => { if (!isPending) setOpen(v); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(90dvh,720px)] flex-col overflow-hidden sm:max-w-md">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Scissors className="h-4 w-4" />
               Enviar para o plano de corte
@@ -160,60 +160,58 @@ export function SendToCuttingDialog({
           </DialogHeader>
 
           {/* Resumo da OS */}
-          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+          <div className="shrink-0 rounded-md border bg-muted/40 px-3 py-2 text-sm">
             <p className="font-mono font-medium">{osNumber}</p>
             <p className="text-muted-foreground">{clientName}</p>
           </div>
 
-          {/* Lista de vãos com checkboxes */}
-          <div className="space-y-2">
-            {/* Selecionar todos */}
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/40">
-              <Checkbox
-                checked={allSelected}
-                onCheckedChange={(v) => {
-                  if (v) setSelectedIds(new Set(items.map((i) => i.id)));
-                  else setSelectedIds(new Set());
-                }}
-              />
-              Todos os vãos
-            </label>
+          {/* Selecionar todos — fixo acima da lista rolável */}
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/40">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={(v) => {
+                if (v) setSelectedIds(new Set(items.map((i) => i.id)));
+                else setSelectedIds(new Set());
+              }}
+            />
+            Todos os vãos
+          </label>
 
-            <div className="space-y-1.5 rounded-md border bg-muted/10 p-2">
-              {items.map((item, index) => {
-                const label = buildItemLabel(item, index, lookups);
-                const checked = selectedIds.has(item.id);
-                return (
-                  <Label
-                    key={item.id}
-                    className="flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted/40"
-                  >
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={() => toggleItem(item.id)}
-                      className="mt-px"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-xs font-semibold">
-                        Vão {getVaoNumber(item, index)}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {label}
-                      </span>
+          {/* Lista de vãos com rolagem própria */}
+          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto rounded-md border bg-muted/10 p-2">
+            {items.map((item, index) => {
+              const label = buildItemLabel(item, index, lookups);
+              const checked = selectedIds.has(item.id);
+              return (
+                <Label
+                  key={item.id}
+                  className="flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-2 text-sm transition-colors hover:bg-muted/40"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggleItem(item.id)}
+                    className="mt-px"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold">
+                      Vão {getVaoNumber(item, index)}
                     </span>
-                  </Label>
-                );
-              })}
-            </div>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {label}
+                    </span>
+                  </span>
+                </Label>
+              );
+            })}
           </div>
 
           {noneSelected && (
-            <p className="text-center text-xs text-destructive">
+            <p className="shrink-0 text-center text-xs text-destructive">
               Selecione ao menos um vão.
             </p>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button
               type="button"
               variant="outline"
