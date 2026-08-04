@@ -778,56 +778,54 @@ export function FieldMeasurementForm({
           if (!open && !isPending) setConfirmOpen(false);
         }}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(90dvh,720px)] flex-col overflow-hidden sm:max-w-md">
+          <DialogHeader className="shrink-0">
             <DialogTitle>{confirmCopy.title}</DialogTitle>
             <DialogDescription>{confirmCopy.description}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 text-sm">
-            <div className="rounded-md border bg-muted/40 p-3">
-              <p className="font-mono font-medium">{displayNumeroOrcamento}</p>
-              <p className="text-muted-foreground">{displayCliente}</p>
-              {displayTelefone && (
-                <p className="text-muted-foreground">{displayTelefone}</p>
-              )}
-              {displayEndereco && (
-                <p className="text-muted-foreground">{displayEndereco}</p>
-              )}
-              <p className="mt-1 text-xs text-muted-foreground">
-                {getMeasurementBadgeLabel(measurementType)}
-              </p>
-            </div>
-
-            <div className="rounded-md border p-3">
-              <p className="font-medium">Itens de medição</p>
-              <ul className="mt-2 space-y-2">
-                {validItems.map((item, index) => (
-                  <li
-                    key={item.id}
-                    className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 border-b border-dashed pb-2 last:border-0 last:pb-0"
-                  >
-                    <span className="text-muted-foreground">
-                      {resolveLookupLabel(lookups.ambientes, item.idAmbiente ?? null) ||
-                        `Medição ${getVaoNumber(item, index)}`}
-                    </span>
-                    <span className="font-mono tabular-nums">
-                      {formatDimensionsSummary(item)}
-                    </span>
-                    <span className="w-full text-xs text-muted-foreground">
-                      {item.drawingUrl ? "Com desenho" : "Sem desenho"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <p className="text-muted-foreground">
-              {totalPhotoCount} foto(s) anexada(s)
+          <div className="shrink-0 rounded-md border bg-muted/40 p-3 text-sm">
+            <p className="font-mono font-medium">{displayNumeroOrcamento}</p>
+            <p className="text-muted-foreground">{displayCliente}</p>
+            {displayTelefone && (
+              <p className="text-muted-foreground">{displayTelefone}</p>
+            )}
+            {displayEndereco && (
+              <p className="text-muted-foreground">{displayEndereco}</p>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {getMeasurementBadgeLabel(measurementType)}
             </p>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border text-sm">
+            <p className="shrink-0 px-3 pt-3 font-medium">Itens de medição</p>
+            <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-2">
+              {validItems.map((item, index) => (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 border-b border-dashed pb-2 last:border-0 last:pb-0"
+                >
+                  <span className="text-muted-foreground">
+                    {resolveLookupLabel(lookups.ambientes, item.idAmbiente ?? null) ||
+                      `Medição ${getVaoNumber(item, index)}`}
+                  </span>
+                  <span className="font-mono tabular-nums">
+                    {formatDimensionsSummary(item)}
+                  </span>
+                  <span className="w-full text-xs text-muted-foreground">
+                    {item.drawingUrl ? "Com desenho" : "Sem desenho"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="shrink-0 text-sm text-muted-foreground">
+            {totalPhotoCount} foto(s) anexada(s)
+          </p>
+
+          <DialogFooter className="shrink-0 gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
