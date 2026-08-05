@@ -13,7 +13,6 @@ import type { KanbanPlacedOrder } from "@/lib/kanban/phase-placement";
 type KanbanPhaseColumnProps = {
   phase: KanbanPhase;
   items: KanbanPlacedOrder[];
-  isDropDisabled?: boolean;
   onKeyboardAdvance?: (osId: string) => void;
   canRevertStage?: boolean;
   onRequestRevert?: (osId: string) => void;
@@ -24,7 +23,6 @@ type KanbanPhaseColumnProps = {
 export function KanbanPhaseColumn({
   phase,
   items,
-  isDropDisabled,
   onKeyboardAdvance,
   canRevertStage,
   onRequestRevert,
@@ -70,8 +68,8 @@ export function KanbanPhaseColumn({
         </div>
       </div>
 
-      <Droppable droppableId={phase.id} isDropDisabled={isDropDisabled || !!phase.readOnly}>
-        {(provided, snapshot) => (
+      <Droppable droppableId={phase.id} isDropDisabled>
+        {(provided) => (
           <ScrollArea
             className={cn(
               isCarousel
@@ -82,12 +80,7 @@ export function KanbanPhaseColumn({
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={cn(
-                "min-h-[120px] rounded-md px-0.5 pb-1 transition-colors",
-                snapshot.isDraggingOver
-                  ? "bg-primary/10 ring-1 ring-inset ring-primary/40"
-                  : "bg-transparent",
-              )}
+              className="min-h-[120px] rounded-md bg-transparent px-0.5 pb-1"
             >
               {items.map((item, idx) => {
                 const canAdvance =
@@ -100,7 +93,6 @@ export function KanbanPhaseColumn({
                     os={item.os}
                     phaseId={item.phaseId}
                     placementKey={item.placementKey}
-                    isParallelPlacement={item.isParallelPlacement}
                     index={idx}
                     canAdvance={canAdvance}
                     onKeyboardAdvance={onKeyboardAdvance}

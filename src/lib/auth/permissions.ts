@@ -142,6 +142,11 @@ export function canDeleteMeasurement(roles: readonly UserRole[]): boolean {
   return hasRole(roles, "admin");
 }
 
+/** Arquivar medição — somente admin (mesmo critério da exclusão). */
+export function canArchiveMeasurement(roles: readonly UserRole[]): boolean {
+  return canDeleteMeasurement(roles);
+}
+
 export function canEditMeasurementHeader(roles: readonly UserRole[]): boolean {
   return canViewAllOrders(roles);
 }

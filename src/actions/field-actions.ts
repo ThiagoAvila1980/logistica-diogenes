@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { z } from "zod";
@@ -52,6 +52,10 @@ export type CreateMeasurementResult =
   | { success: false; message: string };
 
 export type DeleteMeasurementResult =
+  | { success: true }
+  | { success: false; message: string };
+
+export type ArchiveMeasurementResult =
   | { success: true }
   | { success: false; message: string };
 
@@ -361,6 +365,70 @@ export async function updateMeasurementHeader(
       success: false,
       message:
         error instanceof Error ? error.message : "Erro ao salvar dados da medição",
+    };
+  }
+}
+
+/**
+ * Arquiva medição (soft delete): mantém registro e arquivos; oculta das listas ativas.
+ * Apenas admin; idempotente se já arquivada.
+ */
+export async function archiveMeasurement(
+  osId: string,
+): Promise<ArchiveMeasurementResult> {
+  let session;
+  try {
+    session = await requireRole(["admin"]);
+  } catch (err) {
+    return {
+      success: false,
+      message: authErrorMessage(err) ?? "Sem permissão para arquivar medição.",
+    };
+  }
+
+  if (!osId || !z.string().uuid().safeParse(osId).success) {
+    return { success: false, message: "ID inválido." };
+  }
+
+  const { getServiceOrderById } = await import("@/lib/data/orders");
+  const order = await getServiceOrderById(osId);
+  if (!order) {
+    return { success: false, message: "Medição não encontrada." };
+  }
+
+  if (order.archivedAt) {
+    return { success: true };
+  }
+
+  try {
+    const db = getDb();
+    const now = new Date();
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(measurements)
+        .set({ archivedAt: now, updatedAt: now })
+        .where(and(eq(measurements.id, osId), isNull(measurements.archivedAt)));
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.FIELD_MEASUREMENT_ARCHIVED,
+        measurementId: osId,
+        payload: {
+          osNumber: order.number,
+        },
+      });
+    });
+
+    revalidateOSRoutes(osId);
+
+    return { success: true };
+  } catch (error) {
+    console.error("[archiveMeasurement]", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Erro ao arquivar medição",
     };
   }
 }

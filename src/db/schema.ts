@@ -160,6 +160,7 @@ export const measurements = pgTable(
     clientUpdatedAt: timestamp("client_updated_at", { withTimezone: true }),
     /** Identificador do dispositivo de origem do sync offline */
     deviceId: varchar("device_id", { length: 128 }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -176,6 +177,7 @@ export const measurements = pgTable(
     index("idx_meas_updated_at").on(t.updatedAt),
     index("idx_meas_etapa_updated").on(t.etapa, t.updatedAt),
     index("idx_meas_etapa_assigned_updated").on(t.etapa, t.assignedUserId, t.updatedAt),
+    index("idx_meas_archived_at").on(t.archivedAt),
   ],
 );
 

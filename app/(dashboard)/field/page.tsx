@@ -7,29 +7,45 @@ import { SyncStatusBar } from "@/components/offline/sync-status-bar";
 import { FieldCacheHydrator } from "@/components/offline/field-cache-hydrator";
 import { Ruler } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
-import { canDeleteMeasurement, hasAnyRole } from "@/lib/auth/permissions";
+import {
+  canArchiveMeasurement,
+  canDeleteMeasurement,
+  hasAnyRole,
+} from "@/lib/auth/permissions";
 
 export default async function FieldIndexPage() {
   const session = await getSession();
   const roles = session?.roles ?? [];
   const canCreate = hasAnyRole(roles, ["admin", "gerente"]);
   const canDelete = canDeleteMeasurement(roles);
+  const canArchive = canArchiveMeasurement(roles);
 
-  const [allOrders, lookups] = await Promise.all([
-    listServiceOrders(),
+  const [activeOrders, archivedOrders, lookups] = await Promise.all([
+    listServiceOrders({ archiveFilter: "active" }),
+    listServiceOrders({ archiveFilter: "archived" }),
     listMeasurementLookups(),
   ]);
-  const fieldOrders = allOrders.filter((o) => o.status.startsWith("medicao"));
+  const fieldActive = activeOrders.filter((o) =>
+    o.status.startsWith("medicao"),
+  );
+  const fieldArchived = archivedOrders.filter((o) =>
+    o.status.startsWith("medicao"),
+  );
 
   return (
     <div className="space-y-4">
-      <PageHeading title="Medições" count={fieldOrders.length} icon={Ruler}>
+      <PageHeading title="Medições" icon={Ruler}>
         {canCreate && <CreateMeasurementDialog />}
       </PageHeading>
 
       <SyncStatusBar />
-      <FieldOrderIndex orders={fieldOrders} canDelete={canDelete} />
-      <FieldCacheHydrator orders={fieldOrders} lookups={lookups} />
+      <FieldOrderIndex
+        activeOrders={fieldActive}
+        archivedOrders={fieldArchived}
+        canDelete={canDelete}
+        canArchive={canArchive}
+      />
+      <FieldCacheHydrator orders={fieldActive} lookups={lookups} />
     </div>
   );
 }

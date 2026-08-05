@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { canDeleteMeasurement } from "./permissions";
+import { canArchiveMeasurement, canDeleteMeasurement } from "./permissions";
+
+describe("canArchiveMeasurement", () => {
+  it("permite somente admin", () => {
+    expect(canArchiveMeasurement(["admin"])).toBe(true);
+    expect(canArchiveMeasurement(["admin", "gerente"])).toBe(true);
+  });
+
+  it("nega gerente e demais papéis", () => {
+    expect(canArchiveMeasurement(["gerente"])).toBe(false);
+    expect(canArchiveMeasurement(["medidor"])).toBe(false);
+    expect(canArchiveMeasurement(["cortador", "motorista", "instalador"])).toBe(
+      false,
+    );
+    expect(canArchiveMeasurement([])).toBe(false);
+  });
+});
 
 describe("canDeleteMeasurement", () => {
   it("permite somente admin", () => {

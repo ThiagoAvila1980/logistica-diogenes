@@ -1,6 +1,7 @@
 "use client";
 
 import { FieldOrderCard } from "@/components/field/field-order-card";
+import { ArchiveMeasurementDialog } from "@/components/field/archive-measurement-dialog";
 import { DeleteMeasurementDialog } from "@/components/field/delete-measurement-dialog";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import type { OrderListItem } from "@/lib/data/types";
@@ -8,32 +9,40 @@ import type { OrderListItem } from "@/lib/data/types";
 type FieldOrderCardWithDeleteProps = {
   order: OrderListItem;
   canDelete: boolean;
+  canArchive?: boolean;
+  showArchive?: boolean;
 };
 
 export function FieldOrderCardWithDelete({
   order,
   canDelete,
+  canArchive = canDelete,
+  showArchive = true,
 }: FieldOrderCardWithDeleteProps) {
   const displayNumber = getOrderDisplayNumber(order);
-
-  return (
-    <div className="flex min-w-0 items-stretch gap-1">
-      <div className="min-w-0 flex-1">
-        <FieldOrderCard order={order} />
-      </div>
-      {canDelete && (
-        <div
-          className="flex shrink-0 items-center pr-1"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
+  const actions =
+    canDelete || (canArchive && showArchive) ? (
+      <div
+        className="flex shrink-0 items-center gap-0.5"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        {canArchive && showArchive && (
+          <ArchiveMeasurementDialog
+            osId={order.id}
+            displayNumber={displayNumber}
+            clientName={order.clientName}
+          />
+        )}
+        {canDelete && (
           <DeleteMeasurementDialog
             osId={order.id}
             displayNumber={displayNumber}
             clientName={order.clientName}
           />
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    ) : null;
+
+  return <FieldOrderCard order={order} actions={actions} />;
 }

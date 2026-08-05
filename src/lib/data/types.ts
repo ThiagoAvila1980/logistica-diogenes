@@ -21,6 +21,7 @@ export type OrderListItem = {
   budgetReference: string | null;
   hasMeasurement: boolean;
   pedidoStatus: PedidoStatus;
+  archivedAt: Date | null;
 };
 
 export type OrderDetail = OrderListItem & {

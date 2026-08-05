@@ -28,6 +28,7 @@ export const AUDIT_ACTIONS = {
   FIELD_MEASUREMENT_SAVED: "field.measurement_saved",
   FIELD_HEADER_UPDATED: "field.header_updated",
   FIELD_MEASUREMENT_DELETED: "field.measurement_deleted",
+  FIELD_MEASUREMENT_ARCHIVED: "field.measurement_archived",
 
   OS_STAGE_CHANGED: "os.stage_changed",
   OS_STAGE_REVERTED: "os.stage_reverted",

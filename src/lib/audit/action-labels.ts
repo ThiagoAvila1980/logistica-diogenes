@@ -31,6 +31,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   [AUDIT_ACTIONS.FIELD_MEASUREMENT_SAVED]: "Medição salva",
   [AUDIT_ACTIONS.FIELD_HEADER_UPDATED]: "Cabeçalho atualizado",
   [AUDIT_ACTIONS.FIELD_MEASUREMENT_DELETED]: "Medição excluída",
+  [AUDIT_ACTIONS.FIELD_MEASUREMENT_ARCHIVED]: "Medição arquivada",
 
   [AUDIT_ACTIONS.OS_STAGE_CHANGED]: "Etapa alterada",
   [AUDIT_ACTIONS.OS_STAGE_REVERTED]: "Etapa revertida",

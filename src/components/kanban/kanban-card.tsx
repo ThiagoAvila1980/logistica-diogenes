@@ -3,7 +3,7 @@
 import type React from "react";
 import Link from "next/link";
 import { Draggable } from "@hello-pangea/dnd";
-import { GripVertical, BadgeCheck, Undo2 } from "lucide-react";
+import { BadgeCheck, Undo2 } from "lucide-react";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { formatBrDate } from "@/lib/date-format";
 import { getOsModuleHrefForKanbanPhase } from "@/lib/os-module-href";
@@ -31,7 +31,6 @@ type KanbanCardProps = {
   os: KanbanOrderItem;
   phaseId: string;
   placementKey: string;
-  isParallelPlacement?: boolean;
   index: number;
   canAdvance?: boolean;
   onKeyboardAdvance?: (osId: string) => void;
@@ -78,7 +77,6 @@ export function KanbanCard({
   os,
   phaseId,
   placementKey,
-  isParallelPlacement = false,
   index,
   canAdvance,
   onKeyboardAdvance,
@@ -118,43 +116,23 @@ export function KanbanCard({
     <Draggable
       draggableId={placementKey}
       index={index}
-      isDragDisabled={isParallelPlacement}
+      isDragDisabled
     >
-      {(provided, snapshot) => (
+      {(provided) => (
         <article
           ref={provided.innerRef}
           {...provided.draggableProps}
           style={provided.draggableProps.style as React.CSSProperties}
           onKeyDown={handleKeyDown}
           className={cn(
-            "mb-1.5 last:mb-0 min-w-0 max-w-full overflow-hidden rounded-md border border-l-[3px] bg-card transition-shadow sm:mb-2",
+            "mb-1.5 last:mb-0 min-w-0 max-w-full overflow-hidden rounded-md border border-l-[3px] bg-card shadow-sm transition-shadow hover:shadow-md sm:mb-2",
             text.card,
             priorityClass,
-            snapshot.isDragging
-              ? "z-10 scale-[1.02] shadow-lg ring-1 ring-primary/40"
-              : "shadow-sm hover:shadow-md",
           )}
           data-testid={`kanban-card-${os.id}-${phaseId}`}
           title={`${displayNumber} · ${os.clientName}${os.scheduledDate ? ` · ${formatBrDate(os.scheduledDate)}` : ""}`}
         >
-          <div className="flex min-w-0 items-start gap-1 p-1.5 sm:gap-1.5 sm:p-2">
-            <button
-              type="button"
-              className={cn(
-                "mt-0.5 hidden shrink-0 rounded p-0.5 text-muted-foreground sm:inline-flex",
-                isParallelPlacement
-                  ? "cursor-default opacity-40"
-                  : "cursor-grab hover:bg-muted active:cursor-grabbing",
-              )}
-              {...(isParallelPlacement ? {} : provided.dragHandleProps)}
-              tabIndex={0}
-              aria-label={`Arrastar orçamento ${displayNumber}`}
-              onClick={(e) => e.preventDefault()}
-              disabled={isParallelPlacement}
-            >
-              <GripVertical className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
-            </button>
-            <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
+          <div className="min-w-0 space-y-0.5 p-1.5 sm:space-y-1 sm:p-2">
               <div className="flex items-start justify-between gap-1">
                 <Link
                   href={detailHref}
@@ -162,7 +140,6 @@ export function KanbanCard({
                     "block min-w-0 flex-1 truncate font-mono font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring",
                     text.orderNumber,
                   )}
-                  tabIndex={snapshot.isDragging ? -1 : 0}
                 >
                   {displayNumber}
                 </Link>
@@ -175,7 +152,6 @@ export function KanbanCard({
                         text.badge,
                         PEDIDO_STATUS_STYLE[os.pedidoStatus],
                       )}
-                      tabIndex={snapshot.isDragging ? -1 : 0}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {PEDIDO_STATUS_LABEL[os.pedidoStatus]}
@@ -191,7 +167,6 @@ export function KanbanCard({
                         e.stopPropagation();
                         onRequestRevert(os.id);
                       }}
-                      tabIndex={snapshot.isDragging ? -1 : 0}
                     >
                       <Undo2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
                     </button>
@@ -204,7 +179,6 @@ export function KanbanCard({
                   "block min-w-0 truncate text-muted-foreground outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring",
                   text.clientName,
                 )}
-                tabIndex={snapshot.isDragging ? -1 : 0}
               >
                 {os.clientName}
               </Link>
@@ -331,7 +305,6 @@ export function KanbanCard({
                   <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
                 </span>
               ) : null}
-            </div>
           </div>
         </article>
       )}

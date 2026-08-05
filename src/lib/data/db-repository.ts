@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, or, isNull, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, or, isNull, isNotNull, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
 import { measurements, pedidos } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session-types";
@@ -13,7 +13,12 @@ import {
   resolvedBudgetReference,
 } from "@/lib/data/order-measurement-join";
 import { derivePedidoStatus } from "@/lib/pedido/pedido-status";
+import type { ArchiveFilter } from "./archive-filter";
 import type { OrderDetail, OrderListItem } from "./types";
+
+export type ListOrdersOptions = {
+  archiveFilter?: ArchiveFilter;
+};
 
 function buildOrderAccessWhere(session: SessionUser | null): SQL | undefined {
   if (!session || canViewAllOrders(session.roles)) return undefined;
@@ -70,6 +75,7 @@ function mapMeasurementRow(r: {
   hasMeasurement: boolean;
   pedidoFeito: boolean | null;
   pedidoRecebido: boolean | null;
+  archivedAt: Date | null;
 }): OrderListItem {
   return {
     id: r.id,
@@ -89,14 +95,29 @@ function mapMeasurementRow(r: {
         ? null
         : { pedidoFeito: r.pedidoFeito, pedidoRecebido: r.pedidoRecebido ?? false },
     ),
+    archivedAt: r.archivedAt,
   };
 }
 
 export async function listServiceOrdersDb(
   session?: SessionUser | null,
+  options?: ListOrdersOptions,
 ): Promise<OrderListItem[]> {
   const db = getDb();
+  const archiveFilter = options?.archiveFilter ?? "active";
   const accessWhere = buildOrderAccessWhere(session ?? null);
+
+  const archiveClause =
+    archiveFilter === "all"
+      ? undefined
+      : archiveFilter === "archived"
+        ? isNotNull(measurements.archivedAt)
+        : isNull(measurements.archivedAt);
+
+  const whereClause =
+    accessWhere && archiveClause
+      ? and(accessWhere, archiveClause)
+      : accessWhere ?? archiveClause;
 
   let query = db
     .select({
@@ -114,14 +135,15 @@ export async function listServiceOrdersDb(
       hasMeasurement: hasMeasurementItems,
       pedidoFeito: pedidos.pedidoFeito,
       pedidoRecebido: pedidos.pedidoRecebido,
+      archivedAt: measurements.archivedAt,
     })
     .from(measurements)
     .leftJoin(pedidos, eq(pedidos.idMedicao, measurements.id))
     .orderBy(desc(measurements.updatedAt))
     .$dynamic();
 
-  if (accessWhere) {
-    query = query.where(accessWhere);
+  if (whereClause) {
+    query = query.where(whereClause);
   }
 
   const rows = await query;
@@ -153,6 +175,7 @@ export async function getServiceOrderByIdDb(
       hasMeasurement: hasMeasurementItems,
       pedidoFeito: pedidos.pedidoFeito,
       pedidoRecebido: pedidos.pedidoRecebido,
+      archivedAt: measurements.archivedAt,
     })
     .from(measurements)
     .leftJoin(pedidos, eq(pedidos.idMedicao, measurements.id))

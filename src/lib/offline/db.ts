@@ -62,6 +62,7 @@ export interface CachedMeasurement {
   budgetReference: string | null;
   hasMeasurement: boolean;
   pedidoStatus: PedidoStatus;
+  archivedAt: string | null;
   cachedAt: string;
 }
 
@@ -169,6 +170,7 @@ export function toCachedMeasurement(item: OrderListItem): CachedMeasurement {
     budgetReference: item.budgetReference,
     hasMeasurement: item.hasMeasurement,
     pedidoStatus: item.pedidoStatus,
+    archivedAt: item.archivedAt?.toISOString() ?? null,
     cachedAt: new Date().toISOString(),
   };
 }
@@ -189,5 +191,6 @@ export function fromCachedMeasurement(cached: CachedMeasurement): OrderListItem 
     budgetReference: cached.budgetReference,
     hasMeasurement: cached.hasMeasurement,
     pedidoStatus: cached.pedidoStatus,
+    archivedAt: cached.archivedAt ? new Date(cached.archivedAt) : null,
   };
 }

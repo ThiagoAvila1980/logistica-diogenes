@@ -1,4 +1,7 @@
 import type { OrderDetail, OrderListItem } from "./types";
+import type { ListOrdersOptions } from "./db-repository";
+export type { ListOrdersOptions } from "./db-repository";
+export type { ArchiveFilter } from "./archive-filter";
 import type { OsStatus } from "@/db/schema";
 import { getSession } from "@/lib/auth/session";
 import {
@@ -35,10 +38,12 @@ async function enrichOrdersForAccess<
   }));
 }
 
-export async function listServiceOrders(): Promise<OrderListItem[]> {
+export async function listServiceOrders(
+  options?: ListOrdersOptions,
+): Promise<OrderListItem[]> {
   const session = await getSession();
   const { listServiceOrdersDb } = await import("./db-repository");
-  const orders = await listServiceOrdersDb(session);
+  const orders = await listServiceOrdersDb(session, options);
 
   const ordersForFilter =
     session &&

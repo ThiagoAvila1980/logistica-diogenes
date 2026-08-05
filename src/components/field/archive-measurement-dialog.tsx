@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
-import { deleteMeasurement } from "@/actions/field-actions";
+import { Archive, Loader2 } from "lucide-react";
+import { archiveMeasurement } from "@/actions/field-actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,41 +14,37 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type DeleteMeasurementDialogProps = {
+type ArchiveMeasurementDialogProps = {
   osId: string;
   displayNumber: string;
   clientName: string;
-  /** Rota após exclusão bem-sucedida (padrão: lista de medições). */
-  redirectHref?: string;
 };
 
-export function DeleteMeasurementDialog({
+export function ArchiveMeasurementDialog({
   osId,
   displayNumber,
   clientName,
-  redirectHref = "/field",
-}: DeleteMeasurementDialogProps) {
+}: ArchiveMeasurementDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleDelete() {
+  function handleArchive() {
     setError(null);
     startTransition(async () => {
-      const result = await deleteMeasurement(osId);
+      const result = await archiveMeasurement(osId);
       if (!result.success) {
         setError(result.message);
         return;
       }
       setOpen(false);
-      router.push(redirectHref);
       router.refresh();
     });
   }
 
   const buttonClass =
-    "h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive";
+    "h-9 w-9 shrink-0 text-muted-foreground hover:bg-primary/5 hover:text-primary";
 
   const iconClass = "h-4 w-4";
 
@@ -59,14 +55,14 @@ export function DeleteMeasurementDialog({
         variant="ghost"
         size="icon"
         className={buttonClass}
-        aria-label="Excluir medição"
-        title="Excluir permanentemente"
+        aria-label="Arquivar medição"
+        title="Arquivar para consulta futura"
         onClick={() => {
           setError(null);
           setOpen(true);
         }}
       >
-        <Trash2 className={iconClass} />
+        <Archive className={iconClass} />
       </Button>
 
       <Dialog
@@ -80,11 +76,11 @@ export function DeleteMeasurementDialog({
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Excluir medição?</DialogTitle>
+            <DialogTitle>Arquivar medição?</DialogTitle>
             <DialogDescription>
-              Esta ação é permanente. Serão removidos a OS {displayNumber}, todos
-              os registros no banco e os arquivos (fotos, desenhos e PDF) no
-              storage.
+              A OS {displayNumber} deixará de aparecer na lista ativa e ficará
+              disponível em Arquivadas. Nenhum dado ou arquivo (fotos,
+              desenhos e PDF) é excluído.
             </DialogDescription>
           </DialogHeader>
 
@@ -110,17 +106,16 @@ export function DeleteMeasurementDialog({
             </Button>
             <Button
               type="button"
-              variant="destructive"
-              onClick={handleDelete}
+              onClick={handleArchive}
               disabled={isPending}
             >
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Excluindo...
+                  Arquivando...
                 </>
               ) : (
-                "Excluir permanentemente"
+                "Arquivar"
               )}
             </Button>
           </DialogFooter>
