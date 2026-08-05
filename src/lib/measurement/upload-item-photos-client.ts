@@ -1,7 +1,13 @@
 import { uploadPhotos } from "@/actions/upload-actions";
+import { compressPhotoToJpegFile } from "@/lib/offline/photo-compress";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { filterDisplayableUploadUrls } from "@/lib/upload/displayable-url";
 
+/**
+ * Faz upload das fotos pendentes por vão.
+ * Comprime no cliente e envia UMA foto por request — fotos de celular
+ * somadas facilmente estouram o bodySizeLimit do Server Action e travam a UI.
+ */
 export async function uploadPendingItemPhotos(
   osId: string,
   items: MeasurementLineItem[],
@@ -17,11 +23,12 @@ export async function uploadPendingItemPhotos(
     const pending = pendingByItemId[item.id] ?? [];
     let photos = filterDisplayableUploadUrls(item.photos ?? []);
 
-    if (pending.length > 0) {
+    for (const file of pending) {
+      const compressed = await compressPhotoToJpegFile(file);
       const fd = new FormData();
       fd.set("osId", osId);
       fd.set("scope", "measurements");
-      pending.forEach((file) => fd.append("photos", file));
+      fd.append("photos", compressed);
 
       const res = await uploadPhotos(fd);
       if (!res.success) {

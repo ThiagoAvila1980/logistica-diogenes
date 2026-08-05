@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import {
   UPLOAD_ALLOWED_MIME,
-  UPLOAD_MAX_FILE_BYTES,
   UPLOAD_MAX_FILES,
+  UPLOAD_MAX_RAW_FILE_BYTES,
   type UploadScope,
 } from "./config";
 import {
@@ -18,10 +18,14 @@ import { normalizePersistedUploadUrl } from "./resolve-display-url";
 
 export function validateImageFile(file: File): string | null {
   if (!file.size) return "Arquivo vazio";
-  if (file.size > UPLOAD_MAX_FILE_BYTES) {
-    return `Arquivo muito grande (máx. ${UPLOAD_MAX_FILE_BYTES / 1024 / 1024} MB)`;
+  if (file.size > UPLOAD_MAX_RAW_FILE_BYTES) {
+    return `Arquivo muito grande (máx. ${UPLOAD_MAX_RAW_FILE_BYTES / 1024 / 1024} MB)`;
   }
-  if (!UPLOAD_ALLOWED_MIME.has(file.type)) {
+  if (
+    file.type &&
+    !UPLOAD_ALLOWED_MIME.has(file.type) &&
+    file.type !== "application/octet-stream"
+  ) {
     return `Tipo não permitido: ${file.type || "desconhecido"}`;
   }
   return null;

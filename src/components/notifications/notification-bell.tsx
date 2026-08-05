@@ -24,6 +24,11 @@ import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
 } from "@/actions/notification-actions";
+import {
+  playNotificationChime,
+  shouldPlayNotificationSound,
+  unlockNotificationSound,
+} from "@/lib/notifications/notification-sound";
 import type { AppNotification } from "@/lib/notifications/types";
 import { cn } from "@/lib/utils";
 
@@ -104,6 +109,7 @@ export function NotificationBell({
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const previousUnreadRef = useRef<number | null>(null);
 
   const updatePanelPosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -129,6 +135,18 @@ export function NotificationBell({
       };
       setItems(data.items.map(parseNotification));
       setUnreadCount(data.unreadCount);
+
+      const previousUnread = previousUnreadRef.current;
+      previousUnreadRef.current = data.unreadCount;
+      if (
+        shouldPlayNotificationSound(
+          previousUnread,
+          data.unreadCount,
+          document.visibilityState === "visible",
+        )
+      ) {
+        playNotificationChime();
+      }
     } finally {
       if (!silent) {
         setInitialLoading(false);
@@ -138,6 +156,7 @@ export function NotificationBell({
 
   useEffect(() => {
     setMounted(true);
+    unlockNotificationSound();
   }, []);
 
   useLayoutEffect(() => {
@@ -201,6 +220,8 @@ export function NotificationBell({
   }, [open]);
 
   async function handleOpenToggle() {
+    // Gesto explícito no sino — reforça desbloqueio de áudio no PWA/iOS.
+    unlockNotificationSound();
     const next = !open;
     setOpen(next);
     if (next) await refresh({ silent: true });
@@ -216,7 +237,11 @@ export function NotificationBell({
             : item,
         ),
       );
-      setUnreadCount((count) => Math.max(0, count - 1));
+      setUnreadCount((count) => {
+        const next = Math.max(0, count - 1);
+        previousUnreadRef.current = next;
+        return next;
+      });
     }
     setOpen(false);
     setDetailNotification(notification);
@@ -227,6 +252,7 @@ export function NotificationBell({
     setItems((prev) =>
       prev.map((item) => ({ ...item, readAt: item.readAt ?? new Date() })),
     );
+    previousUnreadRef.current = 0;
     setUnreadCount(0);
   }
 
@@ -240,7 +266,11 @@ export function NotificationBell({
 
     setItems((prev) => prev.filter((item) => item.id !== notification.id));
     if (!notification.readAt) {
-      setUnreadCount((count) => Math.max(0, count - 1));
+      setUnreadCount((count) => {
+        const next = Math.max(0, count - 1);
+        previousUnreadRef.current = next;
+        return next;
+      });
     }
   }
 

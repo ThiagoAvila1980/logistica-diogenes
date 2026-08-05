@@ -219,32 +219,44 @@ async function syncSingleMeasurement(measurement: PendingMeasurement): Promise<v
       }
 
       for (const [itemId, uploads] of Object.entries(byItemId)) {
-        const fd = new FormData();
-        fd.set("osId", measurement.osId);
-        fd.set("scope", "measurements");
+        const urls: string[] = [];
+        const synced: typeof uploads = [];
+        const failed: typeof uploads = [];
 
         for (const u of uploads) {
-          const file = new File([u.blob], `photo-${u.id}.jpg`, {
-            type: u.mimeType,
-          });
-          fd.append("photos", file);
+          const fd = new FormData();
+          fd.set("osId", measurement.osId);
+          fd.set("scope", "measurements");
+          fd.append(
+            "photos",
+            new File([u.blob], `photo-${u.id}.jpg`, { type: u.mimeType }),
+          );
+
+          try {
+            const res = await uploadPhotos(fd);
+            if (!res.success) {
+              throw new Error(res.message);
+            }
+            urls.push(...res.urls);
+            synced.push(u);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : "Erro desconhecido";
+            photoErrors.push(`item ${itemId}: ${msg}`);
+            failed.push(u);
+          }
         }
 
-        try {
-          const res = await uploadPhotos(fd);
-          if (!res.success) {
-            throw new Error(res.message);
-          }
-
-          uploadedUrlsByItemId[itemId] = res.urls;
+        if (urls.length > 0) {
+          uploadedUrlsByItemId[itemId] = urls;
+        }
+        if (synced.length > 0) {
           await db.pendingUploads.bulkPut(
-            uploads.map((u) => ({ ...u, status: "synced" as const })),
+            synced.map((u) => ({ ...u, status: "synced" as const })),
           );
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "Erro desconhecido";
-          photoErrors.push(`item ${itemId}: ${msg}`);
+        }
+        if (failed.length > 0) {
           await db.pendingUploads.bulkPut(
-            uploads.map((u) => ({ ...u, status: "error" as const })),
+            failed.map((u) => ({ ...u, status: "error" as const })),
           );
         }
       }

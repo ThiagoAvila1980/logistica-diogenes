@@ -6,7 +6,6 @@ import { canOperateInstallationModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
 import {
-  canDeleteMeasurement,
   canViewAllOrders,
   canEditMeasurementHeader,
   hasRole,
@@ -32,11 +31,10 @@ export default async function InstallationOsPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const roles = session?.roles ?? [];
-  const isManager = canViewAllOrders(roles);
-  const isAdmin = hasRole(roles, "admin");
-  const canDelete = canDeleteMeasurement(roles);
-  const canEditHeader = canEditMeasurementHeader(roles);
+  const isManager = canViewAllOrders(session?.roles ?? []);
+  const isAdmin = hasRole(session?.roles ?? [], "admin");
+  const canDelete = isManager;
+  const canEditHeader = canEditMeasurementHeader(session?.roles ?? []);
 
   const [detail, lookups, stepAuditMeta] = await Promise.all([
     getInstallationDetailForOs(osId, order.status),
@@ -51,13 +49,15 @@ export default async function InstallationOsPage({ params }: Props) {
 
   const visibleItems = isManager
     ? detail.items
-    : detail.items.filter(
-        (item) => item.installationProgress?.installerId === session?.userId,
-      );
-
-  if (!isManager && visibleItems.length === 0) {
-    notFound();
-  }
+    : detail.items.filter((item) => {
+        const hasPerVaoAssignment = detail.items.some(
+          (i) => i.installationProgress?.installerId,
+        );
+        if (!hasPerVaoAssignment) {
+          return order.assignedUserId === session?.userId;
+        }
+        return item.installationProgress?.installerId === session?.userId;
+      });
 
   const header = (
     <ServiceOrderHeader

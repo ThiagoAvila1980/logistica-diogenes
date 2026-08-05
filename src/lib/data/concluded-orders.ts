@@ -72,46 +72,27 @@ function summarizeVaos(vaos: VaoInstallationProgress[]) {
   };
 }
 
-export type VaoInstallationProgressWithoutNames = Omit<
-  VaoInstallationProgress,
-  "installerName"
->;
-
-/** Mapeia itens da medição para progresso por vão; não usa assignedUserId da OS. */
-export function mapMeasurementItemsToVaoProgress(
-  items: MeasurementLineItem[],
-): VaoInstallationProgressWithoutNames[] {
-  return items.map((item, idx) => ({
-    id: item.id,
-    index: idx,
-    label: `Vão ${getVaoNumber(item, idx)}`,
-    installerId: item.installationProgress?.installerId ?? null,
-    estrutural: item.installationProgress?.estrutural ?? false,
-    vidros: item.installationProgress?.vidros ?? false,
-    acabamento: item.installationProgress?.acabamento ?? false,
-    concluido: item.installationProgress?.concluido ?? false,
-  }));
-}
-
-export function installerIdsFromMeasurementItems(
-  items: MeasurementLineItem[],
-): string[] {
-  return items
-    .map((item) => item.installationProgress?.installerId)
-    .filter((id): id is string => Boolean(id));
-}
-
-/** Instalador vê apenas OS/vãos com installerId dele e conclusão registrada. */
+/** Instalador vê apenas OS/vãos em que registrou progresso de instalação. */
 export function filterConcludedOrdersForInstaller(
   orders: ConcludedOrderItem[],
   userId: string,
 ): ConcludedOrderItem[] {
   return orders
     .map((order) => {
+      const hasPerVaoAssignment = order.vaos.some((vao) => vao.installerId);
+
+      if (!hasPerVaoAssignment) {
+        if (order.assignedUserId !== userId) return null;
+        const workedVaos = order.vaos.filter(hasVaoInstallationWork);
+        if (workedVaos.length === 0) return null;
+        return order;
+      }
+
       const workedVaos = order.vaos.filter(
         (vao) => vao.installerId === userId && hasVaoInstallationWork(vao),
       );
       if (workedVaos.length === 0) return null;
+
       return {
         ...order,
         ...summarizeVaos(workedVaos),
@@ -169,7 +150,11 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
 
   const installerIds = rows.flatMap((r) => {
     const items = (r.items as MeasurementLineItem[] | null) ?? [];
-    return installerIdsFromMeasurementItems(items);
+    const perVaoIds = items
+      .map((item) => item.installationProgress?.installerId)
+      .filter((id): id is string => Boolean(id));
+    if (perVaoIds.length > 0) return perVaoIds;
+    return r.assignedUserId ? [r.assignedUserId] : [];
   });
   const installerNamesById = await resolveUserNamesByIds(installerIds);
 
@@ -177,14 +162,23 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
     .map((r) => {
       const items = (r.items as MeasurementLineItem[] | null) ?? [];
 
-      const vaos: VaoInstallationProgress[] = mapMeasurementItemsToVaoProgress(
-        items,
-      ).map((vao) => ({
-        ...vao,
-        installerName: vao.installerId
-          ? (installerNamesById.get(vao.installerId) ?? null)
-          : null,
-      }));
+      const vaos: VaoInstallationProgress[] = items.map((item, idx) => {
+        const installerId =
+          item.installationProgress?.installerId ?? r.assignedUserId ?? null;
+        return {
+          id: item.id,
+          index: idx,
+          label: `Vão ${getVaoNumber(item, idx)}`,
+          installerId,
+          installerName: installerId
+            ? (installerNamesById.get(installerId) ?? null)
+            : null,
+          estrutural: item.installationProgress?.estrutural ?? false,
+          vidros: item.installationProgress?.vidros ?? false,
+          acabamento: item.installationProgress?.acabamento ?? false,
+          concluido: item.installationProgress?.concluido ?? false,
+        };
+      });
 
       const concludedVaos = vaos.filter((v) => v.concluido);
       const estruturalCount = concludedVaos.filter((v) => v.estrutural).length;

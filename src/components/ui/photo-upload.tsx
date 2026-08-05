@@ -8,6 +8,7 @@ import {
 } from "@/actions/upload-actions";
 import { DrawingEditorModal } from "@/components/field/drawing-editor-modal";
 import { DrawingPreview } from "@/components/production/drawing-preview";
+import { compressPhotosToJpegFiles } from "@/lib/offline/photo-compress";
 import { UPLOAD_MAX_FILES } from "@/lib/upload/config";
 import type { UploadScope } from "@/lib/upload/config";
 import { dataUrlToFile } from "@/lib/upload/data-url-to-file";
@@ -97,6 +98,7 @@ export function PhotoUpload({
     existingUrls.map((url) => ({ id: url, url })),
   );
   const [uploading, setUploading] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [annotatingId, setAnnotatingId] = useState<string | null>(null);
   const [annotateDirty, setAnnotateDirty] = useState(false);
@@ -182,6 +184,8 @@ export function PhotoUpload({
     setItems(next.slice(0, maxFiles));
   }, [maxFiles]);
 
+  const pickerBusy = uploading || processing;
+
   const removeItem = (id: string) => {
     setItems((prev) => {
       const item = prev.find((i) => i.id === id);
@@ -191,7 +195,7 @@ export function PhotoUpload({
   };
 
   async function startAnnotate(item: PhotoUploadItem) {
-    if (disabled || uploading || annotateSaving) return;
+    if (disabled || pickerBusy || annotateSaving) return;
     setError(null);
     setAnnotateDirty(false);
     setAnnotatingId(item.id);
@@ -283,7 +287,7 @@ export function PhotoUpload({
   }
 
   const handleFiles = async (fileList: FileList | null) => {
-    if (!fileList?.length || disabled || uploading) return;
+    if (!fileList?.length || disabled || uploading || processing) return;
     setError(null);
 
     const incoming = Array.from(fileList);
@@ -306,35 +310,59 @@ export function PhotoUpload({
       return;
     }
 
+    // Comprime no aparelho antes de preview/upload — fotos de celular
+    // em resolução nativa travam a UI e estouram o limite do Server Action.
+    setProcessing(true);
+    let prepared: File[];
+    try {
+      prepared = await compressPhotosToJpegFiles(batch);
+    } catch {
+      setError("Não foi possível processar as fotos selecionadas");
+      setProcessing(false);
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      if (filesInputRef.current) filesInputRef.current.value = "";
+      return;
+    }
+
     if (mode === "instant") {
       setUploading(true);
-      const fd = new FormData();
-      fd.set("osId", osId);
-      fd.set("scope", scope);
-      batch.forEach((f) => fd.append("photos", f));
+      const uploaded: PhotoUploadItem[] = [];
+      const uploadWarnings: string[] = [];
 
-      const res = await uploadPhotos(fd);
-      setUploading(false);
+      for (const file of prepared) {
+        const fd = new FormData();
+        fd.set("osId", osId);
+        fd.set("scope", scope);
+        fd.append("photos", file);
 
-      if (!res.success) {
-        setError(res.message);
-        return;
+        const res = await uploadPhotos(fd);
+        if (!res.success) {
+          setError(res.message);
+          break;
+        }
+        for (const url of res.urls) {
+          uploaded.push({ id: newId(), url });
+        }
+        if (res.warnings?.length) {
+          uploadWarnings.push(...res.warnings);
+        }
       }
 
-      const uploaded: PhotoUploadItem[] = res.urls.map((url) => ({
-        id: newId(),
-        url,
-      }));
-      syncItems([...items, ...uploaded]);
-      if (res.warnings?.length) {
-        setError(res.warnings.join("; "));
+      setUploading(false);
+      setProcessing(false);
+
+      if (uploaded.length > 0) {
+        syncItems([...items, ...uploaded]);
+      }
+      if (uploadWarnings.length > 0) {
+        setError(uploadWarnings.join("; "));
       }
       if (cameraInputRef.current) cameraInputRef.current.value = "";
       if (filesInputRef.current) filesInputRef.current.value = "";
       return;
     }
 
-    const pending: PhotoUploadItem[] = batch.map((file) => {
+    const pending: PhotoUploadItem[] = prepared.map((file) => {
       const preview = URL.createObjectURL(file);
       return {
         id: newId(),
@@ -345,11 +373,12 @@ export function PhotoUpload({
     });
 
     syncItems([...items, ...pending]);
+    setProcessing(false);
     if (cameraInputRef.current) cameraInputRef.current.value = "";
     if (filesInputRef.current) filesInputRef.current.value = "";
   };
 
-  const pickerDisabled = disabled || uploading;
+  const pickerDisabled = disabled || pickerBusy;
   const pickerZoneClass = cn(
     "flex min-h-[100px] flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-4 transition-colors",
     pickerDisabled && "pointer-events-none opacity-50",
@@ -395,7 +424,7 @@ export function PhotoUpload({
                     e.stopPropagation();
                     void startAnnotate(item);
                   }}
-                  disabled={disabled || uploading || annotateSaving}
+                  disabled={disabled || pickerBusy || annotateSaving}
                   aria-label={`Editar foto ${index + 1}`}
                   title="Desenhar sobre a foto"
                 >
@@ -406,7 +435,7 @@ export function PhotoUpload({
                 type="button"
                 className="absolute right-1 top-1 z-10 rounded-full bg-overlay/60 p-1 text-primary-foreground hover:bg-overlay/80"
                 onClick={() => removeItem(item.id)}
-                disabled={disabled || uploading || annotateSaving}
+                disabled={disabled || pickerBusy || annotateSaving}
                 aria-label="Remover foto"
               >
                 <X className="h-3.5 w-3.5" />
@@ -443,13 +472,17 @@ export function PhotoUpload({
         >
           {showCamera && (
             <label htmlFor={cameraInputId} className={pickerZoneClass}>
-              {uploading ? (
+              {pickerBusy ? (
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               ) : (
                 <Camera className="h-8 w-8 text-muted-foreground" />
               )}
               <span className="text-center text-sm font-medium">
-                {uploading ? "Enviando..." : "Câmera"}
+                {uploading
+                  ? "Enviando..."
+                  : processing
+                    ? "Otimizando..."
+                    : "Câmera"}
               </span>
               <span className="text-center text-xs text-muted-foreground">
                 Tirar foto agora
@@ -470,13 +503,17 @@ export function PhotoUpload({
 
           {showFiles && (
             <label htmlFor={filesInputId} className={pickerZoneClass}>
-              {uploading ? (
+              {pickerBusy ? (
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               ) : (
                 <ImageIcon className="h-8 w-8 text-muted-foreground" />
               )}
               <span className="text-center text-sm font-medium">
-                {uploading ? "Enviando..." : "Galeria ou arquivos"}
+                {uploading
+                  ? "Enviando..."
+                  : processing
+                    ? "Otimizando..."
+                    : "Galeria ou arquivos"}
               </span>
               <span className="text-center text-xs text-muted-foreground">
                 Escolher imagens já salvas (JPG, PNG ou WebP)
@@ -498,7 +535,8 @@ export function PhotoUpload({
 
       {items.length < maxFiles && showCamera && showFiles && (
         <p className="text-center text-xs text-muted-foreground">
-          As imagens são convertidas para WebP ao salvar a medição.
+          As imagens são otimizadas no aparelho ao selecionar e convertidas
+          para WebP ao salvar.
         </p>
       )}
 
