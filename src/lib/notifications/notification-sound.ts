@@ -15,7 +15,7 @@ let chimeUrl: string | null = null;
 
 function getAudioContextConstructor(): AudioContextConstructor | null {
   if (typeof window === "undefined") return null;
-  const w = window as Window & {
+  const w = window as typeof window & {
     webkitAudioContext?: AudioContextConstructor;
   };
   return w.AudioContext ?? w.webkitAudioContext ?? null;
