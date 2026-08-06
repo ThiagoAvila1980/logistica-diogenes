@@ -392,42 +392,72 @@ export async function sendItemsToCuttingAction(
     if (!meas) return { success: false, message: "OS não encontrada" };
 
     const fromStatus = meas.etapa as OsStatus;
-    const allowed = getAllowedTransitions(fromStatus);
-    if (!allowed.includes("cortes")) {
-      return { success: false, message: `Transição não permitida: ${fromStatus} → cortes` };
+    const currentItems = (meas.items as MeasurementLineItem[]) ?? [];
+    const missing = selectedItemIds.filter(
+      (id) => !currentItems.some((item) => item.id === id),
+    );
+    if (missing.length > 0) {
+      return { success: false, message: "Vão não encontrado" };
     }
 
-    // Marca apenas os vãos selecionados; desmarca os demais (permite reedição futura)
-    const currentItems = (meas.items as MeasurementLineItem[]) ?? [];
+    const alreadyPastMedicao =
+      isCuttingPhaseStatus(fromStatus) ||
+      fromStatus.startsWith("transporte_") ||
+      fromStatus.startsWith("instalacao") ||
+      fromStatus === "concluido";
+
+    if (!alreadyPastMedicao) {
+      const allowed = getAllowedTransitions(fromStatus);
+      if (!allowed.includes("cortes")) {
+        return {
+          success: false,
+          message: `Transição não permitida: ${fromStatus} → cortes`,
+        };
+      }
+    }
+
+    // Marca os vãos selecionados; preserva flag já true em reenvios parciais.
     const updatedItems: MeasurementLineItem[] = currentItems.map((item) => ({
       ...item,
-      sentToCutting: selectedSet.has(item.id) ? true : (item.sentToCutting ?? false),
+      sentToCutting: selectedSet.has(item.id)
+        ? true
+        : (item.sentToCutting ?? false),
     }));
 
     await db.transaction(async (tx) => {
-      await tx
-        .update(measurements)
-        .set({
-          items: updatedItems,
-          etapa: "cortes",
-          updatedAt: sql`NOW()`,
-          ...measurementTypePatchForEtapa("cortes"),
-        })
-        .where(eq(measurements.id, osId));
+      if (alreadyPastMedicao) {
+        await tx
+          .update(measurements)
+          .set({
+            items: updatedItems,
+            updatedAt: sql`NOW()`,
+          })
+          .where(eq(measurements.id, osId));
+      } else {
+        await tx
+          .update(measurements)
+          .set({
+            items: updatedItems,
+            etapa: "cortes",
+            updatedAt: sql`NOW()`,
+            ...measurementTypePatchForEtapa("cortes"),
+          })
+          .where(eq(measurements.id, osId));
 
-      await tx.insert(statusHistory).values({
-        measurementId: osId,
-        fromStatus,
-        toStatus: "cortes",
-        changedById: session.userId,
-        metadata: { source: "send_items_to_cutting", selectedItemIds },
-      });
+        await tx.insert(statusHistory).values({
+          measurementId: osId,
+          fromStatus,
+          toStatus: "cortes",
+          changedById: session.userId,
+          metadata: { source: "send_items_to_cutting", selectedItemIds },
+        });
+      }
 
       await recordAuditEvent(tx, {
         actorId: session.userId,
         action: AUDIT_ACTIONS.CUTTING_ITEMS_SENT,
         measurementId: osId,
-        payload: { selectedItemIds },
+        payload: { selectedItemIds, additive: alreadyPastMedicao },
       });
     });
 

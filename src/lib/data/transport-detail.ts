@@ -9,6 +9,7 @@ import {
   aggregateTransportStepsFromItems,
   effectiveCuttingSteps,
   isTransportOrLater,
+  selectCuttingLineItems,
 } from "@/lib/workflow/aggregates";
 
 /**
@@ -71,7 +72,9 @@ export async function getTransportDetailForOs(
 
   const meas = measRows[0];
   const trans = transport[0];
-  const items = (meas?.items as MeasurementLineItem[]) ?? [];
+  const allItems = (meas?.items as MeasurementLineItem[]) ?? [];
+  // Só vãos enviados ao corte entram no transporte (mesma regra do plano de corte).
+  const items = selectCuttingLineItems(allItems);
 
   // Compute aggregate cutting steps
   const cuttingSteps: CuttingSteps = effectiveCuttingSteps(
@@ -81,7 +84,7 @@ export async function getTransportDetailForOs(
 
   // Compute aggregate transport steps from items (source of truth)
   // Fallback to transport_logs values for data saved before this migration
-  const computedTransport = aggregateTransportStepsFromItems(items);
+  const computedTransport = aggregateTransportStepsFromItems(allItems);
   const hasPerVaoData = items.some((i) => i.transportProgress !== undefined);
 
   const transportSteps: TransportSteps = hasPerVaoData

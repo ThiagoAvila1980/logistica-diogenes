@@ -11,6 +11,8 @@ import {
   aggregateInstallationStepsFromItems,
   effectiveCuttingSteps,
   isInstallationOrLater,
+  selectCuttingLineItems,
+  selectInstallationLineItems,
 } from "@/lib/workflow/aggregates";
 
 /**
@@ -97,18 +99,23 @@ export async function getInstallationDetailForOs(
   const trans = transport[0];
   const inst = installation[0];
   const rawItems = (meas?.items as MeasurementLineItem[]) ?? [];
-  const items = await resolveItemMedia(rawItems);
+  // Instalação só opera sobre vãos do plano de corte; depois filtra os enviados.
+  const cuttingItems = selectCuttingLineItems(rawItems);
+  const scopedItems = selectInstallationLineItems(cuttingItems);
+  const items = await resolveItemMedia(scopedItems);
 
   // Cutting steps from items aggregate
   const cuttingSteps: CuttingSteps = effectiveCuttingSteps(
-    aggregateCuttingStepsFromItems(items),
+    aggregateCuttingStepsFromItems(cuttingItems),
     isLatePhase,
   );
 
   // Transport steps from items aggregate (with fallback to transport_logs)
-  const hasTransportPerVaoData = items.some((i) => i.transportProgress !== undefined);
+  const hasTransportPerVaoData = cuttingItems.some(
+    (i) => i.transportProgress !== undefined,
+  );
   const transportSteps: TransportSteps = hasTransportPerVaoData
-    ? aggregateTransportStepsFromItems(items)
+    ? aggregateTransportStepsFromItems(rawItems)
     : {
         levarPerfilEstrutural: trans?.levarPerfilEstrutural ?? false,
         levarPerfilTotal: trans?.levarPerfilTotal ?? false,
@@ -118,9 +125,11 @@ export async function getInstallationDetailForOs(
       };
 
   // Installation steps from items aggregate (with fallback to installation_logs)
-  const hasInstPerVaoData = items.some((i) => i.installationProgress !== undefined);
+  const hasInstPerVaoData = cuttingItems.some(
+    (i) => i.installationProgress !== undefined,
+  );
   const installationSteps: InstallationSteps = hasInstPerVaoData
-    ? aggregateInstallationStepsFromItems(items)
+    ? aggregateInstallationStepsFromItems(rawItems)
     : {
         instalacaoEstruturalFeita: inst?.instalacaoEstruturalFeita ?? false,
         instalacaoVidrosFeita: inst?.instalacaoVidrosFeita ?? false,

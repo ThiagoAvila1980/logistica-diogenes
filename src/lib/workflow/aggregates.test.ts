@@ -6,7 +6,10 @@ import {
   aggregateAllVaosInstallationConcluded,
   isVaoInstallationStepsComplete,
   isVaoInstallationConcluded,
+  selectCuttingLineItems,
   selectInstallationLineItems,
+  selectUnsentMeasurementLineItems,
+  hasRemainingUnsentMeasurementItems,
   canOperateCuttingForItems,
   effectiveCuttingSteps,
   hasPendingCuttingWorkOnItems,
@@ -175,6 +178,52 @@ describe("aggregateTransportStepsFromItems", () => {
       item("c", { sentToCutting: false }),
     ];
     expect(aggregateTransportStepsFromItems(items).transporteConcluido).toBe(true);
+  });
+});
+
+describe("selectCuttingLineItems", () => {
+  it("retrocompat: sem flag sentToCutting, retorna todos", () => {
+    const items = [item("a"), item("b")];
+    expect(selectCuttingLineItems(items)).toEqual(items);
+  });
+
+  it("filtra só vãos com sentToCutting=true quando algum foi enviado", () => {
+    const items = [
+      item("a", { sentToCutting: true }),
+      item("b", { sentToCutting: false }),
+      item("c", { sentToCutting: true }),
+    ];
+    expect(selectCuttingLineItems(items).map((i) => i.id)).toEqual(["a", "c"]);
+  });
+});
+
+describe("selectUnsentMeasurementLineItems / hasRemainingUnsentMeasurementItems", () => {
+  it("sem envio parcial, todos os vãos ainda estão na medição", () => {
+    const items = [item("a"), item("b")];
+    expect(selectUnsentMeasurementLineItems(items)).toEqual(items);
+    expect(hasRemainingUnsentMeasurementItems(items)).toBe(false);
+  });
+
+  it("após envio parcial, retorna só os vãos que ficaram na medição", () => {
+    const items = [
+      item("a", { sentToCutting: true }),
+      item("b", { sentToCutting: false }),
+      item("c"),
+    ];
+    expect(selectUnsentMeasurementLineItems(items).map((i) => i.id)).toEqual([
+      "b",
+      "c",
+    ]);
+    expect(hasRemainingUnsentMeasurementItems(items)).toBe(true);
+  });
+
+  it("quando todos foram enviados, não há remanescentes na medição", () => {
+    const items = [
+      item("a", { sentToCutting: true }),
+      item("b", { sentToCutting: true }),
+    ];
+    expect(selectUnsentMeasurementLineItems(items)).toEqual([]);
+    expect(hasRemainingUnsentMeasurementItems(items)).toBe(false);
   });
 });
 

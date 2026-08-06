@@ -75,6 +75,7 @@ import {
 } from "@/lib/measurement/dimensions";
 import { sortMeasurementItemsOldestFirst } from "@/lib/measurement/item-order";
 import { getVaoNumber } from "@/lib/measurement/vao-item-subtitle";
+import { hasRemainingUnsentMeasurementItems } from "@/lib/workflow/aggregates";
 
 type FieldMeasurementFormProps = {
   order: OrderDetail;
@@ -86,6 +87,8 @@ type FieldMeasurementFormProps = {
   canEditHeader?: boolean;
   canDelete?: boolean;
   canSendToCutting?: boolean;
+  /** Todos os itens da OS (inclui já enviados ao corte) — libera edição remanescente. */
+  allMeasurementItems?: MeasurementLineItem[];
 };
 
 /** Preenche vaoNumber para itens antigos (rascunhos locais salvos antes desta migração). */
@@ -153,6 +156,7 @@ export function FieldMeasurementForm({
   canEditHeader = false,
   canDelete = false,
   canSendToCutting = false,
+  allMeasurementItems,
 }: FieldMeasurementFormProps) {
   const router = useRouter();
   const initialType =
@@ -260,10 +264,18 @@ export function FieldMeasurementForm({
     relockPage();
   }
 
-  const orderContext = { etapa: order.status };
+  const orderContext = {
+    etapa: order.status,
+    items: allMeasurementItems,
+  };
   const allowedActions = getAllowedMeasurementActions(orderContext);
   const confirmCopy = getMeasurementConfirmCopy(measurementType);
   const wizardStatus = osStatusFromMeasurementType(measurementType);
+  const canSendRemaining =
+    canSendToCutting &&
+    (order.status === "medicao_final" ||
+      (allMeasurementItems != null &&
+        hasRemainingUnsentMeasurementItems(allMeasurementItems)));
 
   const activeHeaderDraft =
     draftsByType.orcamento ?? draftsByType.final ?? undefined;
@@ -717,11 +729,12 @@ export function FieldMeasurementForm({
           </div>
         </div>
 
-        {canSendToCutting && order.status === "medicao_final" ? (
+        {canSendRemaining ? (
           <section className="rounded-xl border bg-card p-4 shadow-sm">
             <p className="mb-3 text-sm text-muted-foreground">
-              Medição final registrada. Escolha quais vãos enviar para o plano
-              de corte.
+              {order.status === "medicao_final"
+                ? "Medição final registrada. Escolha quais vãos enviar para o plano de corte."
+                : "Ainda há vãos nesta medição. Escolha quais enviar para o plano de corte."}
             </p>
             <SendToCuttingDialog
               osId={order.id}

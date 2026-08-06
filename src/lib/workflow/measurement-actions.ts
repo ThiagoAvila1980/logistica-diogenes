@@ -1,4 +1,6 @@
 import type { OsStatus } from "@/db/schema";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { hasRemainingUnsentMeasurementItems } from "@/lib/workflow/aggregates";
 
 /** Tipo persistido em `measurements.type`. */
 export type MeasurementDbType = "orcamento" | "final";
@@ -8,6 +10,8 @@ export const FINAL_MEASUREMENT_TYPE: MeasurementDbType = "final";
 
 export type MeasurementOrderContext = {
   etapa: OsStatus;
+  /** Itens da medição — usados para liberar edição de vãos remanescentes. */
+  items?: MeasurementLineItem[];
 };
 
 export function osStatusFromMeasurementType(
@@ -41,6 +45,13 @@ export function getAllowedMeasurementActions(
 ): MeasurementDbType[] {
   if (isMedicaoPhaseStatus(order.etapa)) {
     return [ORCAMENTO_MEASUREMENT_TYPE, FINAL_MEASUREMENT_TYPE];
+  }
+  // OS já avançou, mas ainda há vãos não enviados ao corte.
+  if (
+    order.items &&
+    hasRemainingUnsentMeasurementItems(order.items) 
+  ) {
+    return [FINAL_MEASUREMENT_TYPE];
   }
   return [];
 }

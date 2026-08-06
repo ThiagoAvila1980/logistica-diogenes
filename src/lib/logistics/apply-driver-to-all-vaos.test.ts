@@ -19,6 +19,32 @@ function makeItem(
 }
 
 describe("applyDriverToAllVaoSteps", () => {
+  it("não materializa transporte em vãos fora do plano de corte", () => {
+    const items = [
+      {
+        ...makeItem("a", {
+          perfilEstrutural: false,
+          perfilTotal: false,
+          acessorios: false,
+          vidros: false,
+        }),
+        sentToCutting: true,
+      },
+      {
+        ...makeItem("b", undefined),
+        sentToCutting: false,
+      },
+    ] as MeasurementLineItem[];
+
+    const next = applyDriverToAllVaoSteps(items, "m-bulk");
+
+    expect(next[0].transportProgress?.stepAssignments?.perfilEstrutural?.driverId).toBe(
+      "m-bulk",
+    );
+    expect(next[1].transportProgress).toBeUndefined();
+    expect(next[1].sentToCutting).toBe(false);
+  });
+
   it("aplica o motorista a todas as etapas de todos os vãos, preservando data e veículo", () => {
     const items = [
       makeItem("a", {

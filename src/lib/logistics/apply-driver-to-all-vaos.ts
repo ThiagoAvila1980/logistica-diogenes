@@ -3,16 +3,26 @@ import {
   TRANSPORT_STEPS,
   getVaoStepAssignment,
 } from "@/lib/logistics/transport-step-assignment";
+import { selectCuttingLineItems } from "@/lib/workflow/aggregates";
+
+function applyToCuttingItems(
+  items: MeasurementLineItem[],
+  mutate: (item: MeasurementLineItem) => MeasurementLineItem,
+): MeasurementLineItem[] {
+  const cuttingIds = new Set(selectCuttingLineItems(items).map((i) => i.id));
+  return items.map((item) => (cuttingIds.has(item.id) ? mutate(item) : item));
+}
 
 /**
- * Aplica o mesmo motorista a todas as etapas de todos os vãos,
+ * Aplica o mesmo motorista a todas as etapas dos vãos do plano de corte,
  * preservando data e veículo já resolvidos em cada etapa.
+ * Vãos ainda na medição (sem `sentToCutting`) não são tocados.
  */
 export function applyDriverToAllVaoSteps(
   items: MeasurementLineItem[],
   driverId: string | null,
 ): MeasurementLineItem[] {
-  return items.map((item) => {
+  return applyToCuttingItems(items, (item) => {
     const prev = item.transportProgress ?? {
       perfilEstrutural: false,
       perfilTotal: false,
@@ -41,14 +51,14 @@ export function applyDriverToAllVaoSteps(
 }
 
 /**
- * Aplica a mesma data a todas as etapas de todos os vãos,
+ * Aplica a mesma data a todas as etapas dos vãos do plano de corte,
  * preservando motorista e veículo já resolvidos em cada etapa.
  */
 export function applyScheduledDateToAllVaoSteps(
   items: MeasurementLineItem[],
   scheduledDate: string | null,
 ): MeasurementLineItem[] {
-  return items.map((item) => {
+  return applyToCuttingItems(items, (item) => {
     const prev = item.transportProgress ?? {
       perfilEstrutural: false,
       perfilTotal: false,
@@ -77,14 +87,14 @@ export function applyScheduledDateToAllVaoSteps(
 }
 
 /**
- * Aplica o mesmo veículo a todas as etapas de todos os vãos,
+ * Aplica o mesmo veículo a todas as etapas dos vãos do plano de corte,
  * preservando motorista e data já resolvidos em cada etapa.
  */
 export function applyVehicleToAllVaoSteps(
   items: MeasurementLineItem[],
   vehicleId: string | null,
 ): MeasurementLineItem[] {
-  return items.map((item) => {
+  return applyToCuttingItems(items, (item) => {
     const prev = item.transportProgress ?? {
       perfilEstrutural: false,
       perfilTotal: false,

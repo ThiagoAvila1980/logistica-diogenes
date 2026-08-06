@@ -15,6 +15,7 @@ import { persistMeasurementDrawings } from "@/lib/upload/save-base64-image";
 import { parsePdfFileField } from "@/lib/upload/pdf-file-field";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { mergeMeasurementItemsOnConflict } from "@/lib/measurement/merge-on-conflict";
+import { mergePreservingSentToCutting } from "@/lib/measurement/merge-preserving-sent-to-cutting";
 import {
   collectMeasurementFileUrls,
   purgeAllOsFiles,
@@ -31,8 +32,11 @@ import {
   getMeasurementActionErrorMessage,
   getMeasurementActionLabel,
   isMeasurementActionAllowed,
+  isMedicaoPhaseStatus,
   osStatusFromMeasurementType,
 } from "@/lib/workflow/measurement-actions";
+import { hasRemainingUnsentMeasurementItems } from "@/lib/workflow/aggregates";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 
 const saveMeasurementSchema = z.object({
   osId: z.string().uuid(),
@@ -560,14 +564,29 @@ export async function saveFieldMeasurement(
     return { success: false, message: "OS não encontrada." };
   }
 
-  if (!order.status.startsWith("medicao")) {
+  const dbForGate = getDb();
+  const [measForGate] = await dbForGate
+    .select({ items: measurements.items })
+    .from(measurements)
+    .where(eq(measurements.id, osId))
+    .limit(1);
+  const serverItemsForGate =
+    (measForGate?.items as MeasurementLineItem[] | null) ?? [];
+  const allowRemainingEdit =
+    !order.status.startsWith("medicao") &&
+    hasRemainingUnsentMeasurementItems(serverItemsForGate);
+
+  if (!order.status.startsWith("medicao") && !allowRemainingEdit) {
     return {
       success: false,
       message: "Esta OS não está em etapa de medição.",
     };
   }
 
-  const orderContext = { etapa: order.status };
+  const orderContext = {
+    etapa: order.status,
+    items: serverItemsForGate,
+  };
 
   if (!isMeasurementActionAllowed(orderContext, measurementType)) {
     return {
@@ -619,7 +638,18 @@ export async function saveFieldMeasurement(
       }
     }
 
+    // Com vãos já no corte, o formulário só envia remanescentes — mescla.
+    const [currentForMerge] = await db
+      .select({ items: measurements.items })
+      .from(measurements)
+      .where(eq(measurements.id, osId))
+      .limit(1);
+    const serverItems =
+      (currentForMerge?.items as MeasurementLineItem[] | null) ?? [];
+    itemsToSave = mergePreservingSentToCutting(itemsToSave, serverItems);
+
     const photos = aggregateMeasurementPhotos(itemsToSave);
+    const preserveEtapa = !isMedicaoPhaseStatus(order.status);
 
     await db.transaction(async (tx) => {
       await tx
@@ -630,7 +660,9 @@ export async function saveFieldMeasurement(
           notes: notes ?? null,
           photos,
           status: "medida",
-          etapa: osStatusFromMeasurementType(measurementType),
+          ...(preserveEtapa
+            ? {}
+            : { etapa: osStatusFromMeasurementType(measurementType) }),
           priority: priorityField.priority,
           clientUpdatedAt: clientUpdatedAt ? new Date(clientUpdatedAt) : null,
           deviceId: deviceId ?? null,
@@ -646,6 +678,7 @@ export async function saveFieldMeasurement(
           type: measurementType,
           itemsCount: itemsToSave.length,
           photosCount: photos.length,
+          preservedEtapa: preserveEtapa,
         },
       });
 

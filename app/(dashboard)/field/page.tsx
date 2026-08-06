@@ -1,5 +1,6 @@
 import { listServiceOrders } from "@/lib/data/orders";
 import { listMeasurementLookups } from "@/lib/data/lookups";
+import { listOrderIdsWithRemainingUnsentVaos } from "@/lib/data/field-remaining-vaos";
 import { FieldOrderIndex } from "@/components/field/field-order-index";
 import { CreateMeasurementDialog } from "@/components/field/create-measurement-dialog";
 import { PageHeading } from "@/components/dashboard/page-heading";
@@ -25,11 +26,26 @@ export default async function FieldIndexPage() {
     listServiceOrders({ archiveFilter: "archived" }),
     listMeasurementLookups(),
   ]);
-  const fieldActive = activeOrders.filter((o) =>
-    o.status.startsWith("medicao"),
+
+  const advancedActiveIds = activeOrders
+    .filter((o) => !o.status.startsWith("medicao"))
+    .map((o) => o.id);
+  const advancedArchivedIds = archivedOrders
+    .filter((o) => !o.status.startsWith("medicao"))
+    .map((o) => o.id);
+
+  const [remainingActive, remainingArchived] = await Promise.all([
+    listOrderIdsWithRemainingUnsentVaos(advancedActiveIds),
+    listOrderIdsWithRemainingUnsentVaos(advancedArchivedIds),
+  ]);
+
+  const fieldActive = activeOrders.filter(
+    (o) =>
+      o.status.startsWith("medicao") || remainingActive.has(o.id),
   );
-  const fieldArchived = archivedOrders.filter((o) =>
-    o.status.startsWith("medicao"),
+  const fieldArchived = archivedOrders.filter(
+    (o) =>
+      o.status.startsWith("medicao") || remainingArchived.has(o.id),
   );
 
   return (

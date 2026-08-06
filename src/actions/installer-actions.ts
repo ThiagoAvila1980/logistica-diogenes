@@ -10,6 +10,7 @@ import { getServiceOrderById } from "@/lib/data/orders";
 import { getDb } from "@/lib/db";
 import { measurements } from "@/db/schema";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { selectCuttingLineItems } from "@/lib/workflow/aggregates";
 import { logger } from "@/lib/logger";
 
 export type AssignInstallerResult =
@@ -153,6 +154,13 @@ export async function sendVaosToInstallationAction(
       if (!meas) throw new Error("OS não encontrada");
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
+      const cuttingIds = new Set(
+        selectCuttingLineItems(items).map((item) => item.id),
+      );
+      const notInCutting = selectedItemIds.filter((id) => !cuttingIds.has(id));
+      if (notInCutting.length > 0) {
+        throw new Error("Vão fora do plano de corte");
+      }
       const missing = selectedItemIds.filter(
         (id) => !items.some((item) => item.id === id),
       );

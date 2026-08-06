@@ -38,6 +38,29 @@ export function selectCuttingLineItems(
   return hasSentFlag ? items.filter((i) => i.sentToCutting === true) : items;
 }
 
+/**
+ * Vãos que ainda não foram enviados ao corte (permanecem editáveis na medição).
+ * Retrocompat: se nenhum tiver `sentToCutting`, todos ainda estão na medição.
+ */
+export function selectUnsentMeasurementLineItems(
+  items: MeasurementLineItem[],
+): MeasurementLineItem[] {
+  const hasSentFlag = items.some((i) => i.sentToCutting === true);
+  if (!hasSentFlag) return items;
+  return items.filter((i) => i.sentToCutting !== true);
+}
+
+/**
+ * Há envio parcial: pelo menos um vão no corte e pelo menos um ainda na medição.
+ */
+export function hasRemainingUnsentMeasurementItems(
+  items: MeasurementLineItem[],
+): boolean {
+  const hasSent = items.some((i) => i.sentToCutting === true);
+  if (!hasSent) return false;
+  return items.some((i) => i.sentToCutting !== true);
+}
+
 /** Há algum vão com etapa de corte incompleta (checagem por vão, não por agregado). */
 export function hasPendingCuttingWorkOnItems(
   items: MeasurementLineItem[],

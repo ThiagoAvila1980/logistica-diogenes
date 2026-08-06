@@ -7,6 +7,14 @@ import { FieldMeasurementPastStage } from "@/components/field/field-measurement-
 import { FieldDetailCacheHydrator } from "@/components/offline/field-detail-cache-hydrator";
 import { getSession } from "@/lib/auth/session";
 import { canDeleteMeasurement, hasAnyRole } from "@/lib/auth/permissions";
+import {
+  hasRemainingUnsentMeasurementItems,
+  selectUnsentMeasurementLineItems,
+} from "@/lib/workflow/aggregates";
+import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { getDb } from "@/lib/db";
+import { measurements } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 type Props = { params: Promise<{ osId: string }> };
 
@@ -20,7 +28,17 @@ export default async function FieldOsPage({ params }: Props) {
   const canManage = hasAnyRole(roles, ["admin", "gerente"]);
   const canDelete = canDeleteMeasurement(roles);
 
-  if (!order.status.startsWith("medicao")) {
+  const db = getDb();
+  const [measRow] = await db
+    .select({ items: measurements.items })
+    .from(measurements)
+    .where(eq(measurements.id, osId))
+    .limit(1);
+  const allItems = (measRow?.items as MeasurementLineItem[] | null) ?? [];
+  const hasRemaining = hasRemainingUnsentMeasurementItems(allItems);
+  const inMedicao = order.status.startsWith("medicao");
+
+  if (!inMedicao && !hasRemaining) {
     if (canManage) {
       return <FieldMeasurementPastStage order={order} canDelete={canDelete} />;
     }
@@ -40,9 +58,18 @@ export default async function FieldOsPage({ params }: Props) {
     listMeasurementLookups(),
   ]);
 
+  // Com envio parcial, o formulário edita só os vãos que ficaram na medição.
+  const finalForForm =
+    hasRemaining && draftFinal?.items
+      ? {
+          ...draftFinal,
+          items: selectUnsentMeasurementLineItems(draftFinal.items),
+        }
+      : draftFinal;
+
   const draftsByType = {
     orcamento: draftOrcamento,
-    final: draftFinal,
+    final: finalForForm,
   };
 
   return (
@@ -54,6 +81,7 @@ export default async function FieldOsPage({ params }: Props) {
         canEditHeader={canManage}
         canDelete={canDelete}
         canSendToCutting={canManage}
+        allMeasurementItems={allItems}
       />
       <FieldDetailCacheHydrator
         order={order}
@@ -63,4 +91,3 @@ export default async function FieldOsPage({ params }: Props) {
     </>
   );
 }
-

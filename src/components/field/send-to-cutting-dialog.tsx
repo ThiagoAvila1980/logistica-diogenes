@@ -23,9 +23,29 @@ import type { MeasurementLookups } from "@/lib/data/lookup-types";
 import { resolveLookupLabel } from "@/lib/data/lookup-types";
 import { formatDimensionsSummary } from "@/lib/measurement/dimensions";
 import { getVaoNumber } from "@/lib/measurement/vao-item-subtitle";
+import {
+  isCuttingPhaseStatus,
+  isInstallationPhaseStatus,
+  isTransportPhaseStatus,
+} from "@/lib/transport-gates";
 
 const SOURCE_STATUS: OsStatus = "medicao_final";
 const DEST_STATUS: OsStatus = "cortes";
+
+function canSendItemsToCutting(orderStatus: OsStatus): boolean {
+  if (
+    orderStatus === SOURCE_STATUS &&
+    getAllowedTransitions(orderStatus).includes(DEST_STATUS)
+  ) {
+    return true;
+  }
+  // Reenvio de vãos remanescentes após a OS já ter avançado.
+  return (
+    isCuttingPhaseStatus(orderStatus) ||
+    isTransportPhaseStatus(orderStatus) ||
+    isInstallationPhaseStatus(orderStatus)
+  );
+}
 
 function buildItemLabel(
   item: MeasurementLineItem,
@@ -71,9 +91,7 @@ export function SendToCuttingDialog({
     () => new Set(items.map((i) => i.id)),
   );
 
-  const canSend =
-    orderStatus === SOURCE_STATUS &&
-    getAllowedTransitions(orderStatus).includes(DEST_STATUS);
+  const canSend = canSendItemsToCutting(orderStatus);
 
   function toggleItem(id: string) {
     setSelectedIds((prev) => {
