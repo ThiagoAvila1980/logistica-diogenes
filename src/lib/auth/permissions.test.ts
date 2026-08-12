@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canArchiveMeasurement, canDeleteMeasurement } from "./permissions";
+import {
+  canArchiveMeasurement,
+  canDeleteMeasurement,
+  canAddVaosAfterCutting,
+} from "./permissions";
 
 describe("canArchiveMeasurement", () => {
   it("permite somente admin", () => {
@@ -30,5 +34,21 @@ describe("canDeleteMeasurement", () => {
       false,
     );
     expect(canDeleteMeasurement([])).toBe(false);
+  });
+});
+
+describe("canAddVaosAfterCutting", () => {
+  it("permite somente admin", () => {
+    expect(canAddVaosAfterCutting(["admin"])).toBe(true);
+    expect(canAddVaosAfterCutting(["admin", "gerente"])).toBe(true);
+  });
+
+  it("nega gerente e demais papéis", () => {
+    expect(canAddVaosAfterCutting(["gerente"])).toBe(false);
+    expect(canAddVaosAfterCutting(["medidor"])).toBe(false);
+    expect(canAddVaosAfterCutting(["cortador", "motorista", "instalador"])).toBe(
+      false,
+    );
+    expect(canAddVaosAfterCutting([])).toBe(false);
   });
 });

@@ -20,6 +20,7 @@ import {
   collectMeasurementFileUrls,
   purgeAllOsFiles,
 } from "@/lib/upload/purge-os-files";
+import { hasRole } from "@/lib/auth/permissions";
 import { requireRole } from "@/lib/auth/require-role";
 import { authErrorMessage } from "@/lib/auth/auth-error";
 import { recordWorkEvent } from "@/lib/performance/scoring";
@@ -575,8 +576,16 @@ export async function saveFieldMeasurement(
   const allowRemainingEdit =
     !order.status.startsWith("medicao") &&
     hasRemainingUnsentMeasurementItems(serverItemsForGate);
+  const allowAdminAddVaos =
+    !order.status.startsWith("medicao") &&
+    hasRole(session.roles, "admin") &&
+    measurementType === FINAL_MEASUREMENT_TYPE;
 
-  if (!order.status.startsWith("medicao") && !allowRemainingEdit) {
+  if (
+    !order.status.startsWith("medicao") &&
+    !allowRemainingEdit &&
+    !allowAdminAddVaos
+  ) {
     return {
       success: false,
       message: "Esta OS não está em etapa de medição.",
@@ -588,7 +597,11 @@ export async function saveFieldMeasurement(
     items: serverItemsForGate,
   };
 
-  if (!isMeasurementActionAllowed(orderContext, measurementType)) {
+  if (
+    !isMeasurementActionAllowed(orderContext, measurementType, {
+      addVaosAfterCutting: allowAdminAddVaos && !allowRemainingEdit,
+    })
+  ) {
     return {
       success: false,
       message: getMeasurementActionErrorMessage(measurementType),

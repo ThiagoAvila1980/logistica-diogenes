@@ -46,4 +46,25 @@ describe("getAllowedMeasurementActions", () => {
       ),
     ).toBe(true);
   });
+
+  it("com addVaosAfterCutting libera só final mesmo sem remanescentes", () => {
+    expect(
+      getAllowedMeasurementActions(
+        {
+          etapa: "cortes",
+          items: [item("a", { sentToCutting: true })],
+        },
+        { addVaosAfterCutting: true },
+      ),
+    ).toEqual(["final"]);
+  });
+
+  it("sem flag e sem remanescentes continua vazio fora da medição", () => {
+    expect(
+      getAllowedMeasurementActions({
+        etapa: "cortes",
+        items: [item("a", { sentToCutting: true })],
+      }),
+    ).toEqual([]);
+  });
 });

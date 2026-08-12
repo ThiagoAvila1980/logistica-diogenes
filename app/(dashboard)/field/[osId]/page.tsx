@@ -6,7 +6,11 @@ import { FieldMeasurementForm } from "@/components/field/field-measurement-form"
 import { FieldMeasurementPastStage } from "@/components/field/field-measurement-past-stage";
 import { FieldDetailCacheHydrator } from "@/components/offline/field-detail-cache-hydrator";
 import { getSession } from "@/lib/auth/session";
-import { canDeleteMeasurement, hasAnyRole } from "@/lib/auth/permissions";
+import {
+  canAddVaosAfterCutting,
+  canDeleteMeasurement,
+  hasAnyRole,
+} from "@/lib/auth/permissions";
 import {
   hasRemainingUnsentMeasurementItems,
   selectUnsentMeasurementLineItems,
@@ -16,10 +20,14 @@ import { getDb } from "@/lib/db";
 import { measurements } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-type Props = { params: Promise<{ osId: string }> };
+type Props = {
+  params: Promise<{ osId: string }>;
+  searchParams: Promise<{ addVaos?: string }>;
+};
 
-export default async function FieldOsPage({ params }: Props) {
+export default async function FieldOsPage({ params, searchParams }: Props) {
   const { osId } = await params;
+  const { addVaos } = await searchParams;
   const order = await getServiceOrderById(osId);
   if (!order) notFound();
 
@@ -27,6 +35,7 @@ export default async function FieldOsPage({ params }: Props) {
   const roles = session?.roles ?? [];
   const canManage = hasAnyRole(roles, ["admin", "gerente"]);
   const canDelete = canDeleteMeasurement(roles);
+  const canAddVaos = canAddVaosAfterCutting(roles);
 
   const db = getDb();
   const [measRow] = await db
@@ -37,8 +46,10 @@ export default async function FieldOsPage({ params }: Props) {
   const allItems = (measRow?.items as MeasurementLineItem[] | null) ?? [];
   const hasRemaining = hasRemainingUnsentMeasurementItems(allItems);
   const inMedicao = order.status.startsWith("medicao");
+  const addVaosMode =
+    canAddVaos && addVaos === "1" && !inMedicao && !hasRemaining;
 
-  if (!inMedicao && !hasRemaining) {
+  if (!inMedicao && !hasRemaining && !addVaosMode) {
     if (canManage) {
       return <FieldMeasurementPastStage order={order} canDelete={canDelete} />;
     }
@@ -58,18 +69,21 @@ export default async function FieldOsPage({ params }: Props) {
     listMeasurementLookups(),
   ]);
 
-  // Com envio parcial, o formulário edita só os vãos que ficaram na medição.
-  const finalForForm =
-    hasRemaining && draftFinal?.items
-      ? {
-          ...draftFinal,
-          items: selectUnsentMeasurementLineItems(draftFinal.items),
-        }
-      : draftFinal;
+  // Com envio parcial ou inclusão posterior, o formulário edita só os vãos não enviados.
+  const finalForFormResolved = (() => {
+    if (!draftFinal) return draftFinal;
+    if (hasRemaining || addVaosMode) {
+      return {
+        ...draftFinal,
+        items: selectUnsentMeasurementLineItems(draftFinal.items ?? []),
+      };
+    }
+    return draftFinal;
+  })();
 
   const draftsByType = {
     orcamento: draftOrcamento,
-    final: finalForForm,
+    final: finalForFormResolved,
   };
 
   return (
@@ -82,6 +96,7 @@ export default async function FieldOsPage({ params }: Props) {
         canDelete={canDelete}
         canSendToCutting={canManage}
         allMeasurementItems={allItems}
+        addVaosMode={addVaosMode}
       />
       <FieldDetailCacheHydrator
         order={order}

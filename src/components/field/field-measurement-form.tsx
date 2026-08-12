@@ -89,6 +89,7 @@ type FieldMeasurementFormProps = {
   canSendToCutting?: boolean;
   /** Todos os itens da OS (inclui já enviados ao corte) — libera edição remanescente. */
   allMeasurementItems?: MeasurementLineItem[];
+  addVaosMode?: boolean;
 };
 
 /** Preenche vaoNumber para itens antigos (rascunhos locais salvos antes desta migração). */
@@ -157,6 +158,7 @@ export function FieldMeasurementForm({
   canDelete = false,
   canSendToCutting = false,
   allMeasurementItems,
+  addVaosMode = false,
 }: FieldMeasurementFormProps) {
   const router = useRouter();
   const initialType =
@@ -165,8 +167,14 @@ export function FieldMeasurementForm({
     draftsByType[initialType] ??
     draftsByType.orcamento ??
     draftsByType.final;
-  const initialItems = resolveInitialItems(order.id, initialDraft);
-  const initialViewMode = hasSavedMeasurementForView(initialDraft);
+  const initialItems = addVaosMode
+    ? backfillVaoNumbers(
+        sortMeasurementItemsOldestFirst(initialDraft?.items ?? []),
+      )
+    : resolveInitialItems(order.id, initialDraft);
+  const initialViewMode = addVaosMode
+    ? false
+    : hasSavedMeasurementForView(initialDraft);
 
   const [measurementType, setMeasurementType] =
     useState<MeasurementDbType>(initialType);
@@ -268,7 +276,9 @@ export function FieldMeasurementForm({
     etapa: order.status,
     items: allMeasurementItems,
   };
-  const allowedActions = getAllowedMeasurementActions(orderContext);
+  const allowedActions = getAllowedMeasurementActions(orderContext, {
+    addVaosAfterCutting: addVaosMode,
+  });
   const confirmCopy = getMeasurementConfirmCopy(measurementType);
   const wizardStatus = osStatusFromMeasurementType(measurementType);
   const canSendRemaining =
@@ -430,11 +440,16 @@ export function FieldMeasurementForm({
 
   function addItem() {
     setItems((prev) => {
-      const nextVaoNumber =
-        Math.max(0, ...prev.map((item) => item.vaoNumber ?? 0)) + 1;
+      const maxExisting = Math.max(
+        0,
+        ...prev.map((item, index) => getVaoNumber(item, index)),
+        ...(allMeasurementItems ?? []).map((item, index) =>
+          getVaoNumber(item, index),
+        ),
+      );
       const newItem: MeasurementLineItem = {
         ...createEmptyMeasurementItem(`${order.id}-item-${Date.now()}`),
-        vaoNumber: nextVaoNumber,
+        vaoNumber: maxExisting + 1,
       };
       setExpandedItemId(newItem.id);
       return [...prev, newItem];
@@ -593,6 +608,15 @@ export function FieldMeasurementForm({
           <StageProblemReport osId={order.id} stage="measurement" />
         </div>
       </ServiceOrderHeader>
+
+      {addVaosMode && (
+        <Alert>
+          <AlertDescription>
+            Adicionando vãos a uma OS já em plano de corte. Os vãos já enviados
+            permanecem protegidos.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {hasLocalPending && (
         <Alert>

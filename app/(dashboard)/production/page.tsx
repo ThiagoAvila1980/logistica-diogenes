@@ -5,13 +5,17 @@ import { listServiceOrders } from "@/lib/data/orders";
 import { getCuttingDetailForOs } from "@/lib/data/cutting-detail";
 import { hasPendingCuttingWorkOnItems } from "@/lib/workflow/aggregates";
 import { getSession } from "@/lib/auth/session";
-import { canDeleteMeasurement } from "@/lib/auth/permissions";
+import {
+  canAddVaosAfterCutting,
+  canDeleteMeasurement,
+} from "@/lib/auth/permissions";
 
 const CUTTING_STATUSES = new Set(["cortes", "embalagem", "acessorios_plano"]);
 
 export default async function ProductionIndexPage() {
   const session = await getSession();
   const canDelete = canDeleteMeasurement(session?.roles ?? []);
+  const canAddVaos = canAddVaosAfterCutting(session?.roles ?? []);
   const allOrders = await listServiceOrders();
   const candidateOrders = allOrders.filter(
     (o) =>
@@ -55,7 +59,12 @@ export default async function ProductionIndexPage() {
         icon={Scissors}
       />
 
-      <ProductionOrderIndex orders={orders} stepsByOs={stepsByOs} canDelete={canDelete} />
+      <ProductionOrderIndex
+        orders={orders}
+        stepsByOs={stepsByOs}
+        canDelete={canDelete}
+        canAddVaos={canAddVaos}
+      />
     </div>
   );
 }

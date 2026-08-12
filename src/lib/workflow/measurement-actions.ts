@@ -14,6 +14,11 @@ export type MeasurementOrderContext = {
   items?: MeasurementLineItem[];
 };
 
+export type MeasurementActionOptions = {
+  /** Admin abrindo medição para incluir vãos após envio total ao corte. */
+  addVaosAfterCutting?: boolean;
+};
+
 export function osStatusFromMeasurementType(
   type: MeasurementDbType,
 ): OsStatus {
@@ -42,6 +47,7 @@ export function isMedicaoPhaseStatus(status: OsStatus): boolean {
 
 export function getAllowedMeasurementActions(
   order: MeasurementOrderContext,
+  options?: MeasurementActionOptions,
 ): MeasurementDbType[] {
   if (isMedicaoPhaseStatus(order.etapa)) {
     return [ORCAMENTO_MEASUREMENT_TYPE, FINAL_MEASUREMENT_TYPE];
@@ -49,8 +55,11 @@ export function getAllowedMeasurementActions(
   // OS já avançou, mas ainda há vãos não enviados ao corte.
   if (
     order.items &&
-    hasRemainingUnsentMeasurementItems(order.items) 
+    hasRemainingUnsentMeasurementItems(order.items)
   ) {
+    return [FINAL_MEASUREMENT_TYPE];
+  }
+  if (options?.addVaosAfterCutting) {
     return [FINAL_MEASUREMENT_TYPE];
   }
   return [];
@@ -59,8 +68,9 @@ export function getAllowedMeasurementActions(
 export function isMeasurementActionAllowed(
   order: MeasurementOrderContext,
   type: MeasurementDbType,
+  options?: MeasurementActionOptions,
 ): boolean {
-  return getAllowedMeasurementActions(order).includes(type);
+  return getAllowedMeasurementActions(order, options).includes(type);
 }
 
 export function getDraftMeasurementType(

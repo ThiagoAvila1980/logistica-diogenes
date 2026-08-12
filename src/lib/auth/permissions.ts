@@ -147,6 +147,11 @@ export function canArchiveMeasurement(roles: readonly UserRole[]): boolean {
   return canDeleteMeasurement(roles);
 }
 
+/** Adicionar vãos após plano de corte — somente admin. */
+export function canAddVaosAfterCutting(roles: readonly UserRole[]): boolean {
+  return canDeleteMeasurement(roles);
+}
+
 export function canEditMeasurementHeader(roles: readonly UserRole[]): boolean {
   return canViewAllOrders(roles);
 }
