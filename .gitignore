@@ -16,6 +16,8 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+# repo usa package-lock.json (npm); evita ruido de pnpm local
+pnpm-lock.yaml
 
 # next.js
 /.next/
