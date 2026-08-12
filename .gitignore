@@ -4,6 +4,9 @@
 # git worktrees locais
 .worktrees/
 
+# brainstorm visual companion (local)
+.superpowers/
+
 # dependencies
 /node_modules
 /.pnp
