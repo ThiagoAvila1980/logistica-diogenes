@@ -28,6 +28,8 @@ import {
 import { saveBase64Drawing } from "@/lib/upload/save-base64-image";
 import { isDrawingDataUrl } from "@/lib/upload/canvas-export";
 import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
+import { parsePhotoFiles, saveUploadedFiles } from "@/lib/upload/save-files";
+import { applyCuttingStepPhoto } from "@/lib/production/apply-cutting-step-photo";
 import type { DrawingItem } from "@/lib/workflow/schemas";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -38,11 +40,14 @@ export type UpdateCuttingStepResult =
 
 // ─── Action: atualizar etapa de corte por vão ────────────────────────────────
 
+const cuttingStepEnum = z.enum(["corte", "embalagem", "acessorios", "vidros"]);
+
 const updateItemStepSchema = z.object({
   osId: z.string().uuid(),
   itemId: z.string().min(1),
-  step: z.enum(["corte", "embalagem", "acessorios", "vidros"]),
+  step: cuttingStepEnum,
   done: z.boolean(),
+  photoUrl: z.string().min(1).optional(),
 });
 
 export async function updateItemCuttingStepAction(
@@ -61,7 +66,7 @@ export async function updateItemCuttingStepAction(
     return { success: false, message: "Sem permissão para esta ação" };
   }
 
-  const { osId, itemId, step, done } = parsed.data;
+  const { osId, itemId, step, done, photoUrl } = parsed.data;
 
   try {
     const order = await getServiceOrderById(osId);
@@ -91,6 +96,9 @@ export async function updateItemCuttingStepAction(
       // Atualiza o item específico no array JSONB (preserva todos os items)
       const updatedItems = allItems.map((item) => {
         if (item.id !== itemId) return item;
+        if (done && photoUrl) {
+          return applyCuttingStepPhoto(item, step, photoUrl);
+        }
         const prev = item.cuttingProgress ?? {
           corte: false, embalagem: false, acessorios: false, vidros: false,
         };
@@ -107,7 +115,7 @@ export async function updateItemCuttingStepAction(
         action: stepCheckAction("cutting", done),
         measurementId: osId,
         itemId,
-        payload: { step, done },
+        payload: { step, done, photoUrl: photoUrl ?? null },
       });
 
       const updatedCuttingItems = selectCuttingLineItems(updatedItems);
@@ -172,6 +180,64 @@ export async function updateItemCuttingStepAction(
     logger.error("updateItemCuttingStep failed", { osId, itemId, step, err });
     return { success: false, message: "Erro ao atualizar etapa" };
   }
+}
+
+const completeStepPhotoFieldsSchema = z.object({
+  osId: z.string().uuid(),
+  itemId: z.string().min(1),
+  step: cuttingStepEnum,
+});
+
+export type CompleteCuttingStepWithPhotoResult =
+  | { success: true; photoUrl: string }
+  | { success: false; message: string };
+
+export async function completeCuttingStepWithPhotoAction(
+  formData: FormData,
+): Promise<CompleteCuttingStepWithPhotoResult> {
+  try {
+    await requireRole(["admin", "gerente", "cortador"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const parsed = completeStepPhotoFieldsSchema.safeParse({
+    osId: formData.get("osId"),
+    itemId: formData.get("itemId"),
+    step: formData.get("step"),
+  });
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Requisição inválida. Recarregue a página e tente novamente.",
+    };
+  }
+
+  const files = parsePhotoFiles(formData);
+  if (files.length === 0) {
+    return { success: false, message: "Envie uma foto para concluir a etapa." };
+  }
+
+  const { osId, itemId, step } = parsed.data;
+  const { urls, errors } = await saveUploadedFiles(files, "measurements", osId);
+  if (!urls[0]) {
+    return {
+      success: false,
+      message: errors.join("; ") || "Falha ao salvar a foto",
+    };
+  }
+
+  const photoUrl = urls[0];
+  const result = await updateItemCuttingStepAction({
+    osId,
+    itemId,
+    step,
+    done: true,
+    photoUrl,
+  });
+
+  if (!result.success) return result;
+  return { success: true, photoUrl };
 }
 
 const advanceToTransportSchema = z.object({

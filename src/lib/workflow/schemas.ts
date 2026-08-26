@@ -42,6 +42,17 @@ export const itemCuttingProgressSchema = z.object({
 
 export type ItemCuttingProgress = z.infer<typeof itemCuttingProgressSchema>;
 
+/** Foto de evidência por etapa de corte (uma URL por passo). */
+export const itemCuttingStepPhotosSchema = z.object({
+  corte: z.string().min(1).optional(),
+  embalagem: z.string().min(1).optional(),
+  acessorios: z.string().min(1).optional(),
+  vidros: z.string().min(1).optional(),
+});
+
+export type ItemCuttingStepPhotos = z.infer<typeof itemCuttingStepPhotosSchema>;
+export type CuttingChecklistStep = keyof ItemCuttingProgress;
+
 /** Progresso de instalação por vão (item de medição) */
 export const itemInstallationProgressSchema = z.object({
   estrutural: z.boolean().default(false),
@@ -134,6 +145,8 @@ export const measurementLineItemSchema = z.object({
   sentToCutting: z.boolean().optional(),
   /** Progresso de corte por vão — preenchido na tela de produção */
   cuttingProgress: itemCuttingProgressSchema.optional(),
+  /** Foto de evidência por etapa de corte */
+  cuttingStepPhotos: itemCuttingStepPhotosSchema.optional(),
   /** Progresso de transporte por vão — preenchido na tela de logística */
   transportProgress: itemTransportProgressSchema.optional(),
   /** Progresso de instalação por vão — preenchido na tela de instalação */

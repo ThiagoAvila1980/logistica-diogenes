@@ -57,7 +57,11 @@ export function vaoHasProgressForPhase(
 ): boolean {
   if (phase === "instalacao") return Boolean(item.installationProgress);
   if (phase === "transporte") return Boolean(item.transportProgress);
-  return Boolean(item.cuttingProgress) || item.sentToCutting === true;
+  return (
+    Boolean(item.cuttingProgress) ||
+    Boolean(item.cuttingStepPhotos) ||
+    item.sentToCutting === true
+  );
 }
 
 /** Remove por completo o progresso da fase abandonada de um vão (como se nunca tivesse ocorrido). */
@@ -75,7 +79,8 @@ export function clearVaoProgressForPhase(
     void transportProgress;
     return rest;
   }
-  const { cuttingProgress, ...rest } = item;
+  const { cuttingProgress, cuttingStepPhotos, ...rest } = item;
   void cuttingProgress;
+  void cuttingStepPhotos;
   return { ...rest, sentToCutting: false };
 }

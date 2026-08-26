@@ -81,6 +81,22 @@ describe("vaoHasProgressForPhase / clearVaoProgressForPhase", () => {
     expect(cleared.sentToCutting).toBe(false);
   });
 
+  it("limpa as fotos das etapas de corte ao reverter o plano de corte", () => {
+    const item = makeItem({
+      sentToCutting: true,
+      cuttingProgress: {
+        corte: true,
+        embalagem: false,
+        acessorios: false,
+        vidros: false,
+      },
+      cuttingStepPhotos: { corte: "/uploads/measurements/os-1/corte.webp" },
+    });
+
+    const cleared = clearVaoProgressForPhase(item, "plano_corte");
+    expect(cleared.cuttingStepPhotos).toBeUndefined();
+  });
+
   it("não altera outros campos do vão", () => {
     const item = makeItem({
       idAmbiente: "11111111-1111-1111-1111-111111111111",

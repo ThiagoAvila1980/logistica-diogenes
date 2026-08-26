@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { CheckCircle2, Loader2, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,10 +13,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-  updateItemCuttingStepAction,
-  advanceCuttingToTransportAction,
-} from "@/actions/cutting-actions";
+import { advanceCuttingToTransportAction } from "@/actions/cutting-actions";
+import { CuttingStepPhotoButton } from "@/components/production/cutting-step-photo-button";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { PrintVaoLabelButton } from "@/components/production/print-vao-label-button";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
@@ -27,10 +24,7 @@ import {
   formatVaoItemFullLabel,
   getVaoNumber,
 } from "@/lib/measurement/vao-item-subtitle";
-import {
-  getStepAuditMeta,
-  StepAuditTooltip,
-} from "@/components/audit/step-audit-hint";
+import { getStepAuditMeta } from "@/components/audit/step-audit-hint";
 import type { StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
 
 type Step = "corte" | "embalagem" | "acessorios" | "vidros";
@@ -43,6 +37,7 @@ const STEPS: { key: Step; label: string; shortLabel: string }[] = [
 ];
 
 type ItemProgress = Record<Step, boolean>;
+type ItemPhotos = Partial<Record<Step, string>>;
 
 function getItemProgress(item: MeasurementLineItem): ItemProgress {
   return {
@@ -79,7 +74,11 @@ export function CuttingChecklist({
     () =>
       Object.fromEntries(items.map((item) => [item.id, getItemProgress(item)])),
   );
-  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Record<string, ItemPhotos>>(() =>
+    Object.fromEntries(
+      items.map((item) => [item.id, item.cuttingStepPhotos ?? {}]),
+    ),
+  );
   const [stepError, setStepError] = useState<string | null>(null);
   const [isAdvancing, startAdvancing] = useTransition();
 
@@ -114,35 +113,15 @@ export function CuttingChecklist({
     });
   }
 
-  async function handleToggle(itemId: string, step: Step, done: boolean) {
-    const key = `${itemId}-${step}`;
-    setLoadingKey(key);
-    setStepError(null);
-
-    let result: Awaited<ReturnType<typeof updateItemCuttingStepAction>> | null =
-      null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        result = await updateItemCuttingStepAction({ osId, itemId, step, done });
-        break;
-      } catch {
-        if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
-      }
-    }
-
-    if (!result) {
-      setStepError(
-        "Falha de conexão. Verifique sua internet e tente novamente.",
-      );
-    } else if (result.success) {
-      setProgress((prev) => ({
-        ...prev,
-        [itemId]: { ...prev[itemId], [step]: done },
-      }));
-    } else {
-      setStepError(result.message);
-    }
-    setLoadingKey(null);
+  function handleStepCompleted(itemId: string, step: Step, photoUrl: string) {
+    setProgress((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId]!, [step]: true },
+    }));
+    setPhotos((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], [step]: photoUrl },
+    }));
   }
 
   if (items.length === 0) {
@@ -281,36 +260,28 @@ export function CuttingChecklist({
                     ) : null}
                   </div>
 
-                  {STEPS.map(({ key }) => {
+                  {STEPS.map(({ key, label: stepLabel }) => {
                     const done = itemProgress[key];
-                    const lKey = `${item.id}-${key}`;
-                    const isLoading = loadingKey === lKey;
                     return (
                       <div key={key} className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        ) : (
-                          <StepAuditTooltip
-                            meta={
-                              done
-                                ? getStepAuditMeta(stepAuditMeta, item.id, key)
-                                : undefined
-                            }
-                          >
-                            <Checkbox
-                              checked={done}
-                              disabled={isLoading}
-                              onCheckedChange={(v) =>
-                                handleToggle(item.id, key, v === true)
-                              }
-                              className={cn(
-                                "shrink-0",
-                                done && "border-success bg-success",
-                              )}
-                              aria-label={`${key} — Vão ${vaoNumber}`}
-                            />
-                          </StepAuditTooltip>
-                        )}
+                        <CuttingStepPhotoButton
+                          osId={osId}
+                          itemId={item.id}
+                          step={key}
+                          stepLabel={stepLabel}
+                          vaoNumber={vaoNumber}
+                          done={done}
+                          photoUrl={photos[item.id]?.[key]}
+                          auditMeta={
+                            done
+                              ? getStepAuditMeta(stepAuditMeta, item.id, key)
+                              : undefined
+                          }
+                          onCompleted={(url) =>
+                            handleStepCompleted(item.id, key, url)
+                          }
+                          onError={setStepError}
+                        />
                       </div>
                     );
                   })}
@@ -369,43 +340,34 @@ export function CuttingChecklist({
                   <div className="grid grid-cols-4 gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {STEPS.map(({ key, label: stepLabel }) => {
                       const done = itemProgress[key];
-                      const lKey = `${item.id}-${key}`;
-                      const isLoading = loadingKey === lKey;
                       return (
-                        <label
+                        <div
                           key={key}
                           className={cn(
-                            "flex cursor-pointer flex-col items-center gap-1 rounded-md border px-1 py-2 text-center transition-colors",
+                            "flex flex-col items-center gap-1 rounded-md border px-1 py-2 text-center transition-colors",
                             done
                               ? "border-success-border bg-success-muted"
-                              : "border-border bg-background hover:bg-muted/50",
-                            isLoading && "opacity-60",
+                              : "border-border bg-background",
                           )}
                         >
-                          {isLoading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                          ) : (
-                            <StepAuditTooltip
-                              meta={
-                                done
-                                  ? getStepAuditMeta(stepAuditMeta, item.id, key)
-                                  : undefined
-                              }
-                            >
-                              <Checkbox
-                                checked={done}
-                                disabled={isLoading}
-                                onCheckedChange={(v) =>
-                                  handleToggle(item.id, key, v === true)
-                                }
-                                className={cn(
-                                  "shrink-0",
-                                  done && "border-success bg-success",
-                                )}
-                                aria-label={`${stepLabel} — Vão ${vaoNumber}`}
-                              />
-                            </StepAuditTooltip>
-                          )}
+                          <CuttingStepPhotoButton
+                            osId={osId}
+                            itemId={item.id}
+                            step={key}
+                            stepLabel={stepLabel}
+                            vaoNumber={vaoNumber}
+                            done={done}
+                            photoUrl={photos[item.id]?.[key]}
+                            auditMeta={
+                              done
+                                ? getStepAuditMeta(stepAuditMeta, item.id, key)
+                                : undefined
+                            }
+                            onCompleted={(url) =>
+                              handleStepCompleted(item.id, key, url)
+                            }
+                            onError={setStepError}
+                          />
                           <span
                             className={cn(
                               "text-[11px] font-medium leading-tight",
@@ -416,7 +378,7 @@ export function CuttingChecklist({
                           >
                             {stepLabel}
                           </span>
-                        </label>
+                        </div>
                       );
                     })}
                   </div>

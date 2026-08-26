@@ -34,6 +34,22 @@ async function resolveMeasurementItems(
             item.photos.map((url) => resolveUploadDisplayUrl(url)),
           )
         : item.photos,
+      cuttingStepPhotos: item.cuttingStepPhotos
+        ? {
+            corte: item.cuttingStepPhotos.corte
+              ? await resolveUploadDisplayUrl(item.cuttingStepPhotos.corte)
+              : item.cuttingStepPhotos.corte,
+            embalagem: item.cuttingStepPhotos.embalagem
+              ? await resolveUploadDisplayUrl(item.cuttingStepPhotos.embalagem)
+              : item.cuttingStepPhotos.embalagem,
+            acessorios: item.cuttingStepPhotos.acessorios
+              ? await resolveUploadDisplayUrl(item.cuttingStepPhotos.acessorios)
+              : item.cuttingStepPhotos.acessorios,
+            vidros: item.cuttingStepPhotos.vidros
+              ? await resolveUploadDisplayUrl(item.cuttingStepPhotos.vidros)
+              : item.cuttingStepPhotos.vidros,
+          }
+        : item.cuttingStepPhotos,
     })),
   );
 }
