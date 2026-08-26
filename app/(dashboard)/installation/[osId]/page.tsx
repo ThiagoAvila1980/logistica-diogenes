@@ -13,7 +13,8 @@ import {
 import { listActiveInstallers } from "@/lib/data/installers";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
-import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
+import { UpstreamObservationsCard } from "@/components/workflow/upstream-observations";
+import { collectOsUpstreamObservations } from "@/lib/workflow/upstream-observations";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { ServiceOrderManageActions } from "@/components/order/service-order-manage-actions";
 import { InstallationChecklist } from "@/components/installation/installation-checklist";
@@ -58,6 +59,11 @@ export default async function InstallationOsPage({ params }: Props) {
         }
         return item.installationProgress?.installerId === session?.userId;
       });
+  const upstreamObservations = collectOsUpstreamObservations({
+    stage: "installation",
+    measurementNotes: order.notes,
+    cutterNotes: detail.cutterNotes,
+  });
 
   const header = (
     <ServiceOrderHeader
@@ -87,7 +93,7 @@ export default async function InstallationOsPage({ params }: Props) {
           readOnly
         />
       </div>
-      <MeasurementNotesCard notes={order.notes} className="mt-4" />
+      <UpstreamObservationsCard observations={upstreamObservations} className="mt-4" />
     </ServiceOrderHeader>
   );
 

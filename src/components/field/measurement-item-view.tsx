@@ -183,15 +183,18 @@ export function MeasurementDimensionsSummary({
   item,
   lookups,
   variant = "stacked",
+  showObservacao = true,
 }: {
   item: MeasurementLineItem;
   lookups?: MeasurementLookups;
   variant?: "stacked" | "inline";
+  showObservacao?: boolean;
 }) {
   const ambienteLabel = resolveLookupLabel(
     lookups?.ambientes ?? [],
     item.idAmbiente ?? null,
   );
+  const observacao = showObservacao ? item.observacao?.trim() : "";
 
   if (variant === "inline") {
     return (
@@ -206,11 +209,11 @@ export function MeasurementDimensionsSummary({
           <MeasurementDimensionsDisplay item={item} />
         </dl>
       <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
-      {item.observacao?.trim() ? (
+      {observacao ? (
         <div className="mt-4 min-w-0">
-          <dt className="text-xs text-muted-foreground">Observação</dt>
+          <dt className="text-xs text-muted-foreground">Observação do Medidor</dt>
           <dd className="mt-0.5 whitespace-pre-wrap text-sm">
-            {item.observacao.trim()}
+            {observacao}
           </dd>
         </div>
       ) : null}
@@ -231,11 +234,11 @@ export function MeasurementDimensionsSummary({
         <MeasurementDimensionsDisplay item={item} />
       </dl>
       <MeasurementItemSpecSummary item={item} lookups={lookups} variant="dl" />
-      {item.observacao?.trim() ? (
+      {observacao ? (
         <div className="mt-4">
-          <dt className="text-xs text-muted-foreground">Observação</dt>
+          <dt className="text-xs text-muted-foreground">Observação do Medidor</dt>
           <dd className="mt-0.5 whitespace-pre-wrap text-sm">
-            {item.observacao.trim()}
+            {observacao}
           </dd>
         </div>
       ) : null}

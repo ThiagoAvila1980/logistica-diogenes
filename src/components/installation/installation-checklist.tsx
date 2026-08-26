@@ -39,6 +39,8 @@ import {
 } from "@/lib/measurement/vao-item-subtitle";
 import { InstallationDailyNotes } from "@/components/installation/installation-daily-notes";
 import { VaoInstallerSelect } from "@/components/installation/vao-installer-select";
+import { VaoUpstreamObservations } from "@/components/workflow/upstream-observations";
+import { collectVaoUpstreamObservations } from "@/lib/workflow/upstream-observations";
 import type { InstallerOption } from "@/lib/data/installers-db";
 import { CompleteInstallationVaoDialog } from "@/components/installation/complete-installation-vao-dialog";
 import { Button } from "@/components/ui/button";
@@ -131,6 +133,7 @@ function VaoMediaPanel({
         item={item}
         lookups={lookups}
         variant="inline"
+        showObservacao={false}
       />
 
       {/* Desenhos */}
@@ -179,13 +182,6 @@ function VaoMediaPanel({
           <ImageOff className="h-3.5 w-3.5 shrink-0" />
           Nenhum desenho ou foto registrado neste vão.
         </div>
-      )}
-
-      {/* Observação */}
-      {item.observacao && (
-        <p className="text-xs italic text-muted-foreground">
-          <span className="not-italic font-medium">Obs:</span> {item.observacao}
-        </p>
       )}
     </div>
   );
@@ -320,6 +316,11 @@ export function InstallationChecklist({
     const fullLabel = formatVaoItemFullLabel(subtitle);
     const vaoNumber = getVaoNumber(item, index);
     const isExpanded = expandedId === item.id;
+    const upstreamVaoNotes = collectVaoUpstreamObservations({
+      stage: "installation",
+      itemObservacao: item.observacao,
+      driverObservacoes: item.transportProgress?.observacoes,
+    });
 
     return (
       <div
@@ -432,6 +433,12 @@ export function InstallationChecklist({
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         </div>
+
+        <VaoUpstreamObservations
+          observations={upstreamVaoNotes}
+          compact={!isExpanded}
+          className="mx-3 mb-2"
+        />
 
         {(canAssignInstaller || item.installationProgress?.installerId) && (
           <div className="border-t px-3 py-2">

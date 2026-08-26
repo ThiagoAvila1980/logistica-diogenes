@@ -7,7 +7,8 @@ import { getSession } from "@/lib/auth/session";
 import { canDeleteMeasurement, canEditMeasurementHeader, hasRole } from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
-import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
+import { UpstreamObservationsCard } from "@/components/workflow/upstream-observations";
+import { collectOsUpstreamObservations } from "@/lib/workflow/upstream-observations";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { ServiceOrderManageActions } from "@/components/order/service-order-manage-actions";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +37,11 @@ export default async function ProductionOsPage({ params }: Props) {
     : undefined;
 
   const { measurement, cutterNotes } = detail;
+  const upstreamObservations = collectOsUpstreamObservations({
+    stage: "cutting",
+    measurementNotes: order.notes,
+    cutterNotes,
+  });
 
   return (
     <>
@@ -72,7 +78,7 @@ export default async function ProductionOsPage({ params }: Props) {
             readOnly
           />
         </div>
-        <MeasurementNotesCard notes={order.notes} className="mt-4" />
+        <UpstreamObservationsCard observations={upstreamObservations} className="mt-4" />
       </ServiceOrderHeader>
 
       <div className="space-y-6">

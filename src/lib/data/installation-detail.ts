@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { installationLogs, transportLogs, measurements } from "@/db/schema";
+import { cuttingPlans, installationLogs, transportLogs, measurements } from "@/db/schema";
 import type { OsStatus } from "@/db/schema";
 import type { TransportSteps, InstallationSteps, CuttingSteps } from "@/lib/transport-gates";
 import type { MeasurementLineItem, InstallationDailyNote } from "@/lib/workflow/schemas";
@@ -52,6 +52,7 @@ export type InstallationDetail = {
   transportSteps: TransportSteps;
   installationSteps: InstallationSteps;
   notes: string | null;
+  cutterNotes: string | null;
   servicePhotos: string[];
   dailyNotes: InstallationDailyNote[];
 };
@@ -64,7 +65,7 @@ export async function getInstallationDetailForOs(
 
   const isLatePhase = isInstallationOrLater(osStatus);
 
-  const [measRows, transport, installation] = await Promise.all([
+  const [measRows, transport, installation, cutting] = await Promise.all([
     db
       .select({ cliente: measurements.cliente, items: measurements.items })
       .from(measurements)
@@ -93,11 +94,17 @@ export async function getInstallationDetailForOs(
       .from(installationLogs)
       .where(eq(installationLogs.idMedicao, osId))
       .limit(1),
+    db
+      .select({ cutterNotes: cuttingPlans.cutterNotes })
+      .from(cuttingPlans)
+      .where(eq(cuttingPlans.idMedicao, osId))
+      .limit(1),
   ]);
 
   const meas = measRows[0];
   const trans = transport[0];
   const inst = installation[0];
+  const cut = cutting[0];
   const rawItems = (meas?.items as MeasurementLineItem[]) ?? [];
   // Instalação só opera sobre vãos do plano de corte; depois filtra os enviados.
   const cuttingItems = selectCuttingLineItems(rawItems);
@@ -145,6 +152,7 @@ export async function getInstallationDetailForOs(
     transportSteps,
     installationSteps,
     notes: inst?.notes ?? null,
+    cutterNotes: cut?.cutterNotes ?? null,
     servicePhotos: inst?.photos?.service ?? [],
     dailyNotes: inst?.dailyNotes ?? [],
   };

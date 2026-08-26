@@ -16,7 +16,8 @@ import {
 } from "@/lib/auth/permissions";
 import { PageHeading } from "@/components/dashboard/page-heading";
 import { MeasurementSpecFields } from "@/components/field/measurement-spec-fields";
-import { MeasurementNotesCard } from "@/components/measurement/measurement-notes-card";
+import { UpstreamObservationsCard } from "@/components/workflow/upstream-observations";
+import { collectOsUpstreamObservations } from "@/lib/workflow/upstream-observations";
 import { ServiceOrderHeader } from "@/components/order/service-order-header";
 import { ServiceOrderManageActions } from "@/components/order/service-order-manage-actions";
 import { TransportChecklist } from "@/components/logistics/transport-checklist";
@@ -54,6 +55,11 @@ export default async function LogisticsOsPage({ params }: Props) {
     allDrivers,
   );
   const visibleItems = filterVaoItemsForSession(detail.items, session);
+  const upstreamObservations = collectOsUpstreamObservations({
+    stage: "transport",
+    measurementNotes: order.notes,
+    cutterNotes: detail.cutterNotes,
+  });
 
   const header = (
     <ServiceOrderHeader
@@ -96,7 +102,7 @@ export default async function LogisticsOsPage({ params }: Props) {
           backAriaLabel="Voltar ao transporte"
         />
         {header}
-        <MeasurementNotesCard notes={order.notes} collapsible />
+        <UpstreamObservationsCard observations={upstreamObservations} className="mb-4" />
         <div className="rounded-xl border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">
             Aguardando conclusão do corte para liberar o transporte desta OS.
@@ -116,7 +122,7 @@ export default async function LogisticsOsPage({ params }: Props) {
       />
       {header}
 
-      <MeasurementNotesCard notes={order.notes} collapsible />
+      <UpstreamObservationsCard observations={upstreamObservations} className="mb-4" />
 
       <TransportChecklist
         osId={osId}

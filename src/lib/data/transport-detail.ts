@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { transportLogs, vehicles, measurements } from "@/db/schema";
+import { cuttingPlans, transportLogs, vehicles, measurements } from "@/db/schema";
 import type { OsStatus } from "@/db/schema";
 import type { TransportSteps, CuttingSteps } from "@/lib/transport-gates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
@@ -29,6 +29,7 @@ export type TransportDetail = {
   vehiclePlate: string | null;
   vehicleDescription: string | null;
   routeNotes: string | null;
+  cutterNotes: string | null;
 };
 
 export type VehicleOption = {
@@ -45,7 +46,7 @@ export async function getTransportDetailForOs(
 
   const isLatePhase = isTransportOrLater(osStatus);
 
-  const [measRows, transport] = await Promise.all([
+  const [measRows, transport, cutting] = await Promise.all([
     db
       .select({ cliente: measurements.cliente, items: measurements.items })
       .from(measurements)
@@ -68,10 +69,16 @@ export async function getTransportDetailForOs(
       .leftJoin(vehicles, eq(transportLogs.vehicleId, vehicles.id))
       .where(eq(transportLogs.idMedicao, osId))
       .limit(1),
+    db
+      .select({ cutterNotes: cuttingPlans.cutterNotes })
+      .from(cuttingPlans)
+      .where(eq(cuttingPlans.idMedicao, osId))
+      .limit(1),
   ]);
 
   const meas = measRows[0];
   const trans = transport[0];
+  const cut = cutting[0];
   const allItems = (meas?.items as MeasurementLineItem[]) ?? [];
   // Só vãos enviados ao corte entram no transporte (mesma regra do plano de corte).
   const items = selectCuttingLineItems(allItems);
@@ -110,6 +117,7 @@ export async function getTransportDetailForOs(
       ? (trans?.vehicleDescription ?? null)
       : null,
     routeNotes: trans?.routeNotes ?? null,
+    cutterNotes: cut?.cutterNotes ?? null,
   };
 }
 

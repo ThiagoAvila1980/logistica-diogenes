@@ -34,6 +34,8 @@ import { TransportBulkDriverSelect } from "@/components/logistics/transport-bulk
 import { TransportBulkDateSelect } from "@/components/logistics/transport-bulk-date-select";
 import { TransportBulkVehicleSelect } from "@/components/logistics/transport-bulk-vehicle-select";
 import { TransportVaoNotesField } from "@/components/logistics/transport-vao-notes";
+import { VaoUpstreamObservations } from "@/components/workflow/upstream-observations";
+import { collectVaoUpstreamObservations } from "@/lib/workflow/upstream-observations";
 import type { VehicleOptionForSelection } from "@/lib/data/vehicles-db";
 import {
   getItemTransportGates,
@@ -214,6 +216,11 @@ export function TransportChecklist({
             const vaoNumber = getVaoNumber(item, index);
 
             const isExpanded = expandedId === item.id;
+            const upstreamVaoNotes = collectVaoUpstreamObservations({
+              stage: "transport",
+              itemObservacao: item.observacao,
+              driverObservacoes: item.transportProgress?.observacoes,
+            });
 
             return (
               <div
@@ -282,6 +289,12 @@ export function TransportChecklist({
                     )}
                   </button>
                 </div>
+
+                <VaoUpstreamObservations
+                  observations={upstreamVaoNotes}
+                  compact={!isExpanded}
+                  className="mx-3 mb-2"
+                />
 
                 {/* Conteúdo expansível */}
                 {isExpanded && (
