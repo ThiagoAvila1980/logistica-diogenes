@@ -2,6 +2,7 @@ import { rm } from "fs/promises";
 import path from "path";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { collectCuttingStepPhotoUrls } from "@/lib/production/apply-cutting-step-photo";
+import { collectInstallationStepPhotoUrls } from "@/lib/installation/apply-installation-step-photos";
 import { deleteObject, isPersistedUploadUrl } from "./storage";
 import { purgeCloudStoragePrefixes } from "./storage/purge-prefix";
 
@@ -36,6 +37,9 @@ export function collectMeasurementFileUrls(input: {
       if (isPersistedUploadUrl(photo)) urls.add(photo);
     }
     for (const photo of collectCuttingStepPhotoUrls(item)) {
+      if (isPersistedUploadUrl(photo)) urls.add(photo);
+    }
+    for (const photo of collectInstallationStepPhotoUrls(item)) {
       if (isPersistedUploadUrl(photo)) urls.add(photo);
     }
   }

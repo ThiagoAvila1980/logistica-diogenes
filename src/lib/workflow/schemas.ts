@@ -65,6 +65,18 @@ export const itemInstallationProgressSchema = z.object({
 });
 
 export type ItemInstallationProgress = z.infer<typeof itemInstallationProgressSchema>;
+export type InstallationChecklistStep = "estrutural" | "vidros" | "acabamento";
+
+/** Fotos de evidência por etapa de instalação (uma ou mais URLs por passo). */
+export const itemInstallationStepPhotosSchema = z.object({
+  estrutural: z.array(z.string().min(1)).min(1).optional(),
+  vidros: z.array(z.string().min(1)).min(1).optional(),
+  acabamento: z.array(z.string().min(1)).min(1).optional(),
+});
+
+export type ItemInstallationStepPhotos = z.infer<
+  typeof itemInstallationStepPhotosSchema
+>;
 
 /** Motorista, data e veículo designados para um item de ticagem específico do vão */
 export const transportStepAssignmentSchema = z.object({
@@ -151,6 +163,8 @@ export const measurementLineItemSchema = z.object({
   transportProgress: itemTransportProgressSchema.optional(),
   /** Progresso de instalação por vão — preenchido na tela de instalação */
   installationProgress: itemInstallationProgressSchema.optional(),
+  /** Fotos de evidência por etapa de instalação */
+  installationStepPhotos: itemInstallationStepPhotosSchema.optional(),
 });
 
 export const measurementItemsSchema = z

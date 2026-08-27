@@ -39,6 +39,31 @@ async function resolveItemMedia(items: MeasurementLineItem[]): Promise<Measureme
       photos: item.photos?.length
         ? await Promise.all(item.photos.map((url) => resolveUploadDisplayUrl(url)))
         : item.photos,
+      installationStepPhotos: item.installationStepPhotos
+        ? {
+            estrutural: item.installationStepPhotos.estrutural?.length
+              ? await Promise.all(
+                  item.installationStepPhotos.estrutural.map((url) =>
+                    resolveUploadDisplayUrl(url),
+                  ),
+                )
+              : item.installationStepPhotos.estrutural,
+            vidros: item.installationStepPhotos.vidros?.length
+              ? await Promise.all(
+                  item.installationStepPhotos.vidros.map((url) =>
+                    resolveUploadDisplayUrl(url),
+                  ),
+                )
+              : item.installationStepPhotos.vidros,
+            acabamento: item.installationStepPhotos.acabamento?.length
+              ? await Promise.all(
+                  item.installationStepPhotos.acabamento.map((url) =>
+                    resolveUploadDisplayUrl(url),
+                  ),
+                )
+              : item.installationStepPhotos.acabamento,
+          }
+        : item.installationStepPhotos,
     })),
   );
 }

@@ -55,7 +55,7 @@ export function vaoHasProgressForPhase(
   item: MeasurementLineItem,
   phase: RevertablePhase,
 ): boolean {
-  if (phase === "instalacao") return Boolean(item.installationProgress);
+  if (phase === "instalacao") return Boolean(item.installationProgress) || Boolean(item.installationStepPhotos);
   if (phase === "transporte") return Boolean(item.transportProgress);
   return (
     Boolean(item.cuttingProgress) ||
@@ -70,8 +70,9 @@ export function clearVaoProgressForPhase(
   phase: RevertablePhase,
 ): MeasurementLineItem {
   if (phase === "instalacao") {
-    const { installationProgress, ...rest } = item;
+    const { installationProgress, installationStepPhotos, ...rest } = item;
     void installationProgress;
+    void installationStepPhotos;
     return rest;
   }
   if (phase === "transporte") {

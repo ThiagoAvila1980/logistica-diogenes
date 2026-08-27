@@ -21,6 +21,8 @@ import { WorkflowActionError } from "@/lib/workflow/errors";
 import { logger } from "@/lib/logger";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { recordVaoStepCompletion } from "@/lib/performance/scoring";
+import { parsePhotoFiles, saveUploadedFiles } from "@/lib/upload/save-files";
+import { applyInstallationStepPhotos } from "@/lib/installation/apply-installation-step-photos";
 
 export type UpdateInstallationStepResult =
   | { success: true }
@@ -32,11 +34,14 @@ export type CompleteInstallationVaoResult =
 
 // ─── Action: atualizar etapa de instalação por vão ───────────────────────────
 
+const installationStepEnum = z.enum(["estrutural", "vidros", "acabamento"]);
+
 const updateItemInstallationStepSchema = z.object({
   osId: z.string().uuid(),
   itemId: z.string().min(1),
-  step: z.enum(["estrutural", "vidros", "acabamento"]),
+  step: installationStepEnum,
   done: z.boolean(),
+  photoUrls: z.array(z.string().min(1)).min(1).optional(),
 });
 
 export async function updateItemInstallationStepAction(
@@ -55,7 +60,7 @@ export async function updateItemInstallationStepAction(
     return { success: false, message: "Sem permissão para esta ação" };
   }
 
-  const { osId, itemId, step, done } = parsed.data;
+  const { osId, itemId, step, done, photoUrls } = parsed.data;
 
   try {
     const order = await getServiceOrderById(osId);
@@ -134,6 +139,9 @@ export async function updateItemInstallationStepAction(
         if (i.id !== itemId) return i;
         const prev = i.installationProgress ?? { estrutural: false, vidros: false, acabamento: false };
         wasConcluded = prev.concluido === true;
+        if (done && photoUrls?.length) {
+          return applyInstallationStepPhotos(i, step, photoUrls);
+        }
         const next = { ...prev, [step]: done };
         if (!done) {
           next.concluido = false;
@@ -185,7 +193,7 @@ export async function updateItemInstallationStepAction(
         action: stepCheckAction("installation", done),
         measurementId: osId,
         itemId,
-        payload: { step, done },
+        payload: { step, done, photoUrls: photoUrls ?? null },
       });
     });
 
@@ -202,6 +210,63 @@ export async function updateItemInstallationStepAction(
     logger.error("updateItemInstallationStep failed", { osId, itemId, step, err });
     return { success: false, message: "Erro ao atualizar etapa de instalação" };
   }
+}
+
+const completeStepPhotoFieldsSchema = z.object({
+  osId: z.string().uuid(),
+  itemId: z.string().min(1),
+  step: installationStepEnum,
+});
+
+export type CompleteInstallationStepWithPhotosResult =
+  | { success: true; photoUrls: string[] }
+  | { success: false; message: string; reason?: "gate_locked" };
+
+export async function completeInstallationStepWithPhotosAction(
+  formData: FormData,
+): Promise<CompleteInstallationStepWithPhotosResult> {
+  try {
+    await requireRole(["admin", "gerente", "instalador"]);
+  } catch {
+    return { success: false, message: "Sem permissão para esta ação" };
+  }
+
+  const parsed = completeStepPhotoFieldsSchema.safeParse({
+    osId: formData.get("osId"),
+    itemId: formData.get("itemId"),
+    step: formData.get("step"),
+  });
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Requisição inválida. Recarregue a página e tente novamente.",
+    };
+  }
+
+  const files = parsePhotoFiles(formData);
+  if (files.length === 0) {
+    return { success: false, message: "Envie ao menos uma foto para concluir a etapa." };
+  }
+
+  const { osId, itemId, step } = parsed.data;
+  const { urls, errors } = await saveUploadedFiles(files, "installation", osId);
+  if (urls.length === 0) {
+    return {
+      success: false,
+      message: errors.join("; ") || "Falha ao salvar as fotos",
+    };
+  }
+
+  const result = await updateItemInstallationStepAction({
+    osId,
+    itemId,
+    step,
+    done: true,
+    photoUrls: urls,
+  });
+
+  if (!result.success) return result;
+  return { success: true, photoUrls: urls };
 }
 
 // ─── Action: confirmar conclusão de vão na instalação ────────────────────────

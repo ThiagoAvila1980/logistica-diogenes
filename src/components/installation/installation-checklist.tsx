@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Loader2,
   Lock,
   Hammer,
   GlassWater,
@@ -13,7 +12,6 @@ import {
   BadgeCheck,
   ImageOff,
 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -23,10 +21,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-  completeInstallationVaoAction,
-  updateItemInstallationStepAction,
-} from "@/actions/installation-step-actions";
+import { completeInstallationVaoAction } from "@/actions/installation-step-actions";
+import { InstallationStepPhotoButton } from "@/components/installation/installation-step-photo-button";
 import { StageProblemReport } from "@/components/workflow/stage-problem-report";
 import { DrawingPreview } from "@/components/production/drawing-preview";
 import { MeasurementDimensionsSummary } from "@/components/field/measurement-item-view";
@@ -47,7 +43,6 @@ import { Button } from "@/components/ui/button";
 import {
   getStepAuditMeta,
   StepAuditLine,
-  StepAuditTooltip,
 } from "@/components/audit/step-audit-hint";
 import type { StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
 
@@ -65,6 +60,7 @@ const INST_STEPS: {
 ];
 
 type ItemInstProgress = Record<InstStep, boolean>;
+type ItemInstPhotos = Partial<Record<InstStep, string[]>>;
 
 function getItemInstProgress(item: MeasurementLineItem): ItemInstProgress {
   return {
@@ -216,11 +212,15 @@ export function InstallationChecklist({
     () =>
       Object.fromEntries(items.map((item) => [item.id, getItemInstProgress(item)])),
   );
+  const [photos, setPhotos] = useState<Record<string, ItemInstPhotos>>(() =>
+    Object.fromEntries(
+      items.map((item) => [item.id, item.installationStepPhotos ?? {}]),
+    ),
+  );
   const [concludedIds, setConcludedIds] = useState<Set<string>>(
     () => new Set(items.filter(isItemConcluded).map((item) => item.id)),
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
   const [pendingComplete, setPendingComplete] = useState<{
     itemId: string;
@@ -242,39 +242,15 @@ export function InstallationChecklist({
     setExpandedId((prev) => (prev === itemId ? null : itemId));
   }
 
-  async function handleToggle(itemId: string, step: InstStep, done: boolean) {
-    const key = `${itemId}-${step}`;
-    setLoadingKey(key);
-    setStepError(null);
-
-    let result: Awaited<ReturnType<typeof updateItemInstallationStepAction>> | null = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        result = await updateItemInstallationStepAction({ osId, itemId, step, done });
-        break;
-      } catch {
-        if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
-      }
-    }
-
-    if (!result) {
-      setStepError("Falha de conexão. Verifique sua internet e tente novamente.");
-    } else if (result.success) {
-      setProgress((prev) => ({
-        ...prev,
-        [itemId]: { ...prev[itemId], [step]: done },
-      }));
-      if (!done) {
-        setConcludedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(itemId);
-          return next;
-        });
-      }
-    } else {
-      setStepError(result.message);
-    }
-    setLoadingKey(null);
+  function handleStepCompleted(itemId: string, step: InstStep, photoUrls: string[]) {
+    setProgress((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId]!, [step]: true },
+    }));
+    setPhotos((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], [step]: photoUrls },
+    }));
   }
 
   async function handleConfirmComplete() {
@@ -367,44 +343,41 @@ export function InstallationChecklist({
           </button>
 
           <div className="hidden items-center gap-3 sm:flex">
-            {INST_STEPS.map(({ key, shortLabel }) => {
+            {INST_STEPS.map(({ key, label: stepLabel, shortLabel }) => {
               const done = itemProgress[key];
               const gate = gates[key];
-              const lKey = `${item.id}-${key}`;
-              const isLoading = loadingKey === lKey;
               const isLocked = !readOnly && !gate.unlocked && !done;
 
               return (
                 <div key={key} className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground">{shortLabel}</span>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  ) : readOnly || isLocked ? (
+                  {isLocked || (readOnly && !done) ? (
                     <span title={isLocked ? (gate.reason ?? undefined) : undefined}>
                       {isLocked ? (
                         <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                      ) : done ? (
-                        <CheckCircle2 className="h-4 w-4 text-success" />
                       ) : (
                         <Lock className="h-3.5 w-3.5 text-muted-foreground/30" />
                       )}
                     </span>
                   ) : (
-                    <StepAuditTooltip
-                      meta={
+                    <InstallationStepPhotoButton
+                      osId={osId}
+                      itemId={item.id}
+                      step={key}
+                      stepLabel={stepLabel}
+                      vaoNumber={vaoNumber}
+                      done={done}
+                      photoUrls={photos[item.id]?.[key]}
+                      auditMeta={
                         done
                           ? getStepAuditMeta(stepAuditMeta, item.id, key)
                           : undefined
                       }
-                    >
-                      <Checkbox
-                        checked={done}
-                        disabled={isLoading}
-                        onCheckedChange={(v) => handleToggle(item.id, key, v === true)}
-                        className={cn("shrink-0", done && "border-success bg-success")}
-                        aria-label={`${key} — Vão ${vaoNumber}`}
-                      />
-                    </StepAuditTooltip>
+                      onCompleted={(urls) =>
+                        handleStepCompleted(item.id, key, urls)
+                      }
+                      onError={setStepError}
+                    />
                   )}
                 </div>
               );
@@ -466,26 +439,21 @@ export function InstallationChecklist({
             {INST_STEPS.map(({ key, label: stepLabel, icon: Icon }) => {
               const done = itemProgress[key];
               const gate = gates[key];
-              const lKey = `${item.id}-${key}`;
-              const isLoading = loadingKey === lKey;
               const isLocked = !gate.unlocked && !done;
 
               return (
-                <label
+                <div
                   key={key}
                   className={cn(
-                    "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 transition-colors",
+                    "flex items-center gap-2 rounded-md border px-3 py-2.5 transition-colors",
                     done
                       ? "border-success-border bg-success-muted"
                       : isLocked
-                        ? "cursor-not-allowed border-border bg-muted/30 opacity-60"
-                        : "border-border bg-background hover:bg-muted/50",
-                    isLoading && "opacity-60",
+                        ? "border-border bg-muted/30 opacity-60"
+                        : "border-border bg-background",
                   )}
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  ) : isLocked ? (
+                  {isLocked ? (
                     <Lock className="h-4 w-4 text-muted-foreground/50" />
                   ) : done ? (
                     <CheckCircle2 className="h-4 w-4 text-success" />
@@ -517,16 +485,27 @@ export function InstallationChecklist({
                       />
                     )}
                   </div>
-                  {!isLocked && !isLoading && (
-                    <Checkbox
-                      checked={done}
-                      disabled={isLoading}
-                      onCheckedChange={(v) => handleToggle(item.id, key, v === true)}
-                      className={cn("ml-auto shrink-0", done && "border-success bg-success")}
-                      aria-label={`${stepLabel} — Vão ${vaoNumber}`}
+                  {!isLocked && (
+                    <InstallationStepPhotoButton
+                      osId={osId}
+                      itemId={item.id}
+                      step={key}
+                      stepLabel={stepLabel}
+                      vaoNumber={vaoNumber}
+                      done={done}
+                      photoUrls={photos[item.id]?.[key]}
+                      auditMeta={
+                        done
+                          ? getStepAuditMeta(stepAuditMeta, item.id, key)
+                          : undefined
+                      }
+                      onCompleted={(urls) =>
+                        handleStepCompleted(item.id, key, urls)
+                      }
+                      onError={setStepError}
                     />
                   )}
-                </label>
+                </div>
               );
             })}
           </div>

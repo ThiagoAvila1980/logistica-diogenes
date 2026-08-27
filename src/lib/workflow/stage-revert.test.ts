@@ -59,6 +59,22 @@ describe("vaoHasProgressForPhase / clearVaoProgressForPhase", () => {
     expect(vaoHasProgressForPhase(cleared, "instalacao")).toBe(false);
   });
 
+  it("limpa as fotos das etapas de instalação ao reverter a instalação", () => {
+    const item = makeItem({
+      installationProgress: {
+        estrutural: true,
+        vidros: false,
+        acabamento: false,
+      },
+      installationStepPhotos: {
+        estrutural: ["/uploads/installation/os-1/est.webp"],
+      },
+    });
+
+    const cleared = clearVaoProgressForPhase(item, "instalacao");
+    expect(cleared.installationStepPhotos).toBeUndefined();
+  });
+
   it("detecta e limpa progresso de transporte", () => {
     const item = makeItem({
       transportProgress: { perfilEstrutural: true, perfilTotal: false, acessorios: false, vidros: false },

@@ -24,4 +24,30 @@ describe("collectMeasurementFileUrls", () => {
       ]),
     );
   });
+
+  it("inclui fotos das etapas de instalação do vão", () => {
+    const item: MeasurementLineItem = {
+      id: "vao-1",
+      qty: 1,
+      largura: 1000,
+      altura: 2100,
+      installationStepPhotos: {
+        estrutural: ["/uploads/installation/os-1/a.webp"],
+        vidros: [
+          "/uploads/installation/os-1/b.webp",
+          "/uploads/installation/os-1/c.webp",
+        ],
+      },
+    };
+
+    const urls = collectMeasurementFileUrls({ items: [item] });
+
+    expect(urls).toEqual(
+      expect.arrayContaining([
+        "/uploads/installation/os-1/a.webp",
+        "/uploads/installation/os-1/b.webp",
+        "/uploads/installation/os-1/c.webp",
+      ]),
+    );
+  });
 });
