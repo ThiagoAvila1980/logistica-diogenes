@@ -6,6 +6,7 @@ import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getDb } from "@/lib/db";
 import { transportLogs, vehicles, measurements, users } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
+import { TRANSPORT_ASSIGN_ROLES } from "@/lib/auth/permissions";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { canOperateTransportModule } from "@/lib/transport-gates";
 import {
@@ -91,9 +92,9 @@ export async function assignVehicleToVaoAction(
 
   let session: SessionUser;
   try {
-    // Atribuir veículo ao vão é decisão de gestão — somente admin
-    // (alinhado ao `canAssignVehicle={isAdmin}` da UI de transporte).
-    session = await requireRole(["admin"]);
+    // Atribuir veículo ao vão é decisão de gestão — admin e gerente
+    // (alinhado ao `canAssignTransport` da UI de transporte).
+    session = await requireRole(TRANSPORT_ASSIGN_ROLES);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -554,10 +555,9 @@ export async function assignDriverToVaoAction(
 
   let session: SessionUser;
   try {
-    // Atribuir motorista a um item do vão é decisão de gestão — somente admin
-    // (alinhado ao `canAssignDriver={isAdmin}` da UI; drivers só são
-    // listados para admin).
-    session = await requireRole(["admin"]);
+    // Atribuir motorista/data a um item do vão é decisão de gestão —
+    // admin e gerente (alinhado ao `canAssignTransport` da UI).
+    session = await requireRole(TRANSPORT_ASSIGN_ROLES);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -711,7 +711,7 @@ export async function assignDriverToAllVaosAction(
 
   let session: SessionUser;
   try {
-    session = await requireRole(["admin"]);
+    session = await requireRole(TRANSPORT_ASSIGN_ROLES);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -817,7 +817,7 @@ export async function assignScheduledDateToAllVaosAction(
 
   let session: SessionUser;
   try {
-    session = await requireRole(["admin"]);
+    session = await requireRole(TRANSPORT_ASSIGN_ROLES);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }
@@ -921,7 +921,7 @@ export async function assignVehicleToAllVaosAction(
 
   let session: SessionUser;
   try {
-    session = await requireRole(["admin"]);
+    session = await requireRole(TRANSPORT_ASSIGN_ROLES);
   } catch {
     return { success: false, message: "Sem permissão para esta ação" };
   }

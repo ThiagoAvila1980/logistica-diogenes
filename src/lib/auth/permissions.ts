@@ -137,6 +137,16 @@ export function canViewAllOrders(roles: readonly UserRole[]): boolean {
   return hasAnyRole(roles, ["admin", "gerente"]);
 }
 
+/** Atribuir motorista, data e veículo no transporte — admin e gerente. */
+export const TRANSPORT_ASSIGN_ROLES: readonly UserRole[] = [
+  "admin",
+  "gerente",
+] as const;
+
+export function canAssignTransport(roles: readonly UserRole[]): boolean {
+  return hasAnyRole(roles, TRANSPORT_ASSIGN_ROLES);
+}
+
 /** Exclusão permanente de OS/orçamento — somente admin. */
 export function canDeleteMeasurement(roles: readonly UserRole[]): boolean {
   return hasRole(roles, "admin");

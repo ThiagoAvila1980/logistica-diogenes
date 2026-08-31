@@ -9,6 +9,7 @@ import { canOperateTransportModule } from "@/lib/transport-gates";
 import { getOrderDisplayNumber } from "@/lib/order-display";
 import { getSession } from "@/lib/auth/session";
 import {
+  canAssignTransport,
   canDeleteMeasurement,
   canEditMeasurementHeader,
   canViewAllOrders,
@@ -37,6 +38,7 @@ export default async function LogisticsOsPage({ params }: Props) {
 
   const roles = session?.roles ?? [];
   const isAdmin = hasRole(roles, "admin");
+  const canAssign = canAssignTransport(roles);
   const canDelete = canDeleteMeasurement(roles);
   const canSendToInstallation = canViewAllOrders(roles);
   const canEditHeader = canEditMeasurementHeader(roles);
@@ -131,8 +133,8 @@ export default async function LogisticsOsPage({ params }: Props) {
         vehicles={vehicles}
         lookups={lookups}
         drivers={drivers}
-        canAssignDriver={isAdmin}
-        canAssignVehicle={isAdmin}
+        canAssignDriver={canAssign}
+        canAssignVehicle={canAssign}
         stepAuditMeta={stepAuditMeta}
       />
 

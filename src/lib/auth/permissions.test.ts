@@ -3,6 +3,7 @@ import {
   canArchiveMeasurement,
   canDeleteMeasurement,
   canAddVaosAfterCutting,
+  canAssignTransport,
 } from "./permissions";
 
 describe("canArchiveMeasurement", () => {
@@ -50,5 +51,21 @@ describe("canAddVaosAfterCutting", () => {
       false,
     );
     expect(canAddVaosAfterCutting([])).toBe(false);
+  });
+});
+
+describe("canAssignTransport", () => {
+  it("permite admin e gerente (motorista, data e veículo)", () => {
+    expect(canAssignTransport(["admin"])).toBe(true);
+    expect(canAssignTransport(["gerente"])).toBe(true);
+    expect(canAssignTransport(["admin", "gerente"])).toBe(true);
+  });
+
+  it("nega motorista e demais papéis", () => {
+    expect(canAssignTransport(["motorista"])).toBe(false);
+    expect(canAssignTransport(["medidor"])).toBe(false);
+    expect(canAssignTransport(["cortador"])).toBe(false);
+    expect(canAssignTransport(["instalador"])).toBe(false);
+    expect(canAssignTransport([])).toBe(false);
   });
 });
