@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { z } from "zod";
@@ -61,6 +61,10 @@ export type DeleteMeasurementResult =
   | { success: false; message: string };
 
 export type ArchiveMeasurementResult =
+  | { success: true }
+  | { success: false; message: string };
+
+export type UnarchiveMeasurementResult =
   | { success: true }
   | { success: false; message: string };
 
@@ -434,6 +438,70 @@ export async function archiveMeasurement(
       success: false,
       message:
         error instanceof Error ? error.message : "Erro ao arquivar medição",
+    };
+  }
+}
+
+/**
+ * Desarquiva medição: volta a aparecer nas listas ativas.
+ * Apenas admin; idempotente se já ativa.
+ */
+export async function unarchiveMeasurement(
+  osId: string,
+): Promise<UnarchiveMeasurementResult> {
+  let session;
+  try {
+    session = await requireRole(["admin"]);
+  } catch (err) {
+    return {
+      success: false,
+      message: authErrorMessage(err) ?? "Sem permissão para desarquivar medição.",
+    };
+  }
+
+  if (!osId || !z.string().uuid().safeParse(osId).success) {
+    return { success: false, message: "ID inválido." };
+  }
+
+  const { getServiceOrderById } = await import("@/lib/data/orders");
+  const order = await getServiceOrderById(osId);
+  if (!order) {
+    return { success: false, message: "Medição não encontrada." };
+  }
+
+  if (!order.archivedAt) {
+    return { success: true };
+  }
+
+  try {
+    const db = getDb();
+    const now = new Date();
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(measurements)
+        .set({ archivedAt: null, updatedAt: now })
+        .where(and(eq(measurements.id, osId), isNotNull(measurements.archivedAt)));
+
+      await recordAuditEvent(tx, {
+        actorId: session.userId,
+        action: AUDIT_ACTIONS.FIELD_MEASUREMENT_UNARCHIVED,
+        measurementId: osId,
+        payload: {
+          osNumber: order.number,
+        },
+      });
+    });
+
+    revalidateOSRoutes(osId);
+
+    return { success: true };
+  } catch (error) {
+    console.error("[unarchiveMeasurement]", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Erro ao desarquivar medição",
     };
   }
 }
