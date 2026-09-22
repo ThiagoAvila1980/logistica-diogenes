@@ -1,18 +1,20 @@
 import type {
   InstallationChecklistStep,
+  ItemInstallationProgress,
   MeasurementLineItem,
 } from "@/lib/workflow/schemas";
 
-const EMPTY_PROGRESS = {
+const EMPTY_PROGRESS: ItemInstallationProgress = {
   estrutural: false,
   vidros: false,
   acabamento: false,
-} as const;
+};
 
 export function applyInstallationStepPhotos(
   item: MeasurementLineItem,
   step: InstallationChecklistStep,
   photoUrls: string[],
+  now: Date = new Date(),
 ): MeasurementLineItem {
   const urls = photoUrls.filter((url) => url.trim().length > 0);
   if (urls.length === 0) {
@@ -22,7 +24,12 @@ export function applyInstallationStepPhotos(
   const prev = item.installationProgress ?? EMPTY_PROGRESS;
   return {
     ...item,
-    installationProgress: { ...prev, [step]: true },
+    installationProgress: {
+      ...prev,
+      [step]: true,
+      // Data de finalização do vão: carimba na 1ª fase concluída e nunca muda.
+      completedAt: prev.completedAt ?? now.toISOString(),
+    },
     installationStepPhotos: {
       ...item.installationStepPhotos,
       [step]: urls,

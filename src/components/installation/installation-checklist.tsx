@@ -10,6 +10,7 @@ import {
   GlassWater,
   Sparkles,
   BadgeCheck,
+  CalendarCheck,
   ImageOff,
 } from "lucide-react";
 import {
@@ -37,6 +38,7 @@ import { InstallationDailyNotes } from "@/components/installation/installation-d
 import { VaoInstallerSelect } from "@/components/installation/vao-installer-select";
 import { VaoUpstreamObservations } from "@/components/workflow/upstream-observations";
 import { collectVaoUpstreamObservations } from "@/lib/workflow/upstream-observations";
+import { formatBrDateTime } from "@/lib/date-format";
 import type { InstallerOption } from "@/lib/data/installers-db";
 import { CompleteInstallationVaoDialog } from "@/components/installation/complete-installation-vao-dialog";
 import { Button } from "@/components/ui/button";
@@ -107,10 +109,13 @@ function VaoMediaPanel({
   item,
   vaoNumber,
   lookups,
+  stepPhotos,
 }: {
   item: MeasurementLineItem;
   vaoNumber: number;
   lookups?: MeasurementLookups;
+  /** Fotos de evidência por etapa da instalação (estado ao vivo). */
+  stepPhotos: ItemInstPhotos;
 }) {
   const allDrawings =
     item.drawings && item.drawings.length > 0
@@ -120,7 +125,39 @@ function VaoMediaPanel({
         : [];
 
   const photos = item.photos ?? [];
-  const hasMedia = allDrawings.length > 0 || photos.length > 0;
+
+  const installationPhotoGroups = INST_STEPS.map(({ key, label }) => ({
+    key,
+    label,
+    urls: stepPhotos[key] ?? [],
+  })).filter((group) => group.urls.length > 0);
+  const totalInstallationPhotos = installationPhotoGroups.reduce(
+    (sum, group) => sum + group.urls.length,
+    0,
+  );
+
+  // Carrossel único percorrendo todas as fotos da instalação (todas as etapas).
+  const installationGallery = installationPhotoGroups.flatMap((group) =>
+    group.urls.map((url, idx) => ({
+      src: url,
+      alt: `${group.label} — foto ${idx + 1} — Vão ${vaoNumber}`,
+    })),
+  );
+
+  const drawingGallery = allDrawings.map((d, idx) => ({
+    src: d.url,
+    alt: `Desenho ${idx + 1} — Vão ${vaoNumber}`,
+  }));
+
+  const photoGallery = photos.map((url, idx) => ({
+    src: url,
+    alt: `Foto ${idx + 1} — Vão ${vaoNumber}`,
+  }));
+
+  const hasMedia =
+    allDrawings.length > 0 ||
+    photos.length > 0 ||
+    totalInstallationPhotos > 0;
 
   return (
     <div className="mt-3 space-y-3 border-t pt-3">
@@ -145,6 +182,8 @@ function VaoMediaPanel({
                   src={d.url}
                   alt={`Desenho ${dIdx + 1} — Vão ${vaoNumber}`}
                   variant="thumbnail"
+                  gallery={drawingGallery}
+                  galleryIndex={dIdx}
                 />
               </div>
             ))}
@@ -165,10 +204,49 @@ function VaoMediaPanel({
                   src={url}
                   alt={`Foto ${pIdx + 1} — Vão ${vaoNumber}`}
                   variant="thumbnail"
+                  gallery={photoGallery}
+                  galleryIndex={pIdx}
                 />
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Fotos da instalação (evidência por etapa) */}
+      {installationPhotoGroups.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Fotos da instalação ({totalInstallationPhotos})
+          </p>
+          {installationPhotoGroups.map((group, groupIdx) => {
+            const galleryOffset = installationPhotoGroups
+              .slice(0, groupIdx)
+              .reduce((sum, g) => sum + g.urls.length, 0);
+            return (
+              <div key={group.key} className="space-y-1">
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  {group.label} ({group.urls.length})
+                </p>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {group.urls.map((url, gIdx) => (
+                    <div
+                      key={`${url}-${gIdx}`}
+                      className="overflow-hidden rounded-lg border bg-muted/30"
+                    >
+                      <DrawingPreview
+                        src={url}
+                        alt={`${group.label} — foto ${gIdx + 1} — Vão ${vaoNumber}`}
+                        variant="thumbnail"
+                        gallery={installationGallery}
+                        galleryIndex={galleryOffset + gIdx}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -413,6 +491,18 @@ export function InstallationChecklist({
           className="mx-3 mb-2"
         />
 
+        {item.installationProgress?.completedAt && (
+          <p className="mx-3 mb-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-success" />
+            <span>
+              Concluído em{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {formatBrDateTime(item.installationProgress.completedAt)}
+              </span>
+            </span>
+          </p>
+        )}
+
         {(canAssignInstaller || item.installationProgress?.installerId) && (
           <div className="border-t px-3 py-2">
             <VaoInstallerSelect
@@ -533,7 +623,12 @@ export function InstallationChecklist({
 
         {isExpanded && (
           <div className="px-3 pb-3">
-            <VaoMediaPanel item={item} vaoNumber={vaoNumber} lookups={lookups} />
+            <VaoMediaPanel
+              item={item}
+              vaoNumber={vaoNumber}
+              lookups={lookups}
+              stepPhotos={photos[item.id] ?? item.installationStepPhotos ?? {}}
+            />
           </div>
         )}
       </div>

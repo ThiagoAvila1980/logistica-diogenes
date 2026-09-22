@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, Hammer, GlassWater, Sparkles, BadgeCheck } from "
 import { cn } from "@/lib/utils";
 import { PriorityBadge } from "@/components/dashboard/priority-badge";
 import { STATUS_LABELS } from "@/lib/workflow/status-machine";
+import { formatBrDate, formatBrDateTime } from "@/lib/date-format";
 import type { ConcludedOrderItem } from "@/lib/data/concluded-orders";
 
 type Props = {
@@ -88,6 +89,22 @@ export function ConcludedOrderCard({ order }: Props) {
                 <span className="min-w-0 truncate" title={vao.installerName ?? undefined}>
                   <span className="font-medium">{vao.label}:</span>{" "}
                   {vao.installerName ?? "Instalador não informado"}
+                  {vao.scheduledInstallationDate && (
+                    <span className="text-muted-foreground">
+                      {" · agend. "}
+                      <span className="tabular-nums">
+                        {formatBrDate(vao.scheduledInstallationDate)}
+                      </span>
+                    </span>
+                  )}
+                  {vao.completedAt && (
+                    <span className="text-muted-foreground">
+                      {" · concl. "}
+                      <span className="tabular-nums">
+                        {formatBrDateTime(vao.completedAt)}
+                      </span>
+                    </span>
+                  )}
                 </span>
                 <span
                   className="flex shrink-0 gap-0.5"

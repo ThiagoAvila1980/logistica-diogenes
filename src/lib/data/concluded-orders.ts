@@ -23,6 +23,8 @@ export type VaoInstallationProgress = {
   label: string;
   installerId: string | null;
   installerName: string | null;
+  scheduledInstallationDate: string | null;
+  completedAt: string | null;
   estrutural: boolean;
   vidros: boolean;
   acabamento: boolean;
@@ -173,6 +175,9 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
           installerName: installerId
             ? (installerNamesById.get(installerId) ?? null)
             : null,
+          scheduledInstallationDate:
+            item.installationProgress?.scheduledInstallationDate ?? null,
+          completedAt: item.installationProgress?.completedAt ?? null,
           estrutural: item.installationProgress?.estrutural ?? false,
           vidros: item.installationProgress?.vidros ?? false,
           acabamento: item.installationProgress?.acabamento ?? false,

@@ -79,4 +79,40 @@ describe("applyInstallationStepPhotos", () => {
       applyInstallationStepPhotos(makeItem(), "estrutural", []),
     ).toThrow(/ao menos uma foto/i);
   });
+
+  it("carimba completedAt na primeira fase concluída", () => {
+    const now = new Date("2026-09-20T14:32:00.000Z");
+    const next = applyInstallationStepPhotos(
+      makeItem(),
+      "estrutural",
+      ["/uploads/installation/os-1/a.webp"],
+      now,
+    );
+
+    expect(next.installationProgress?.completedAt).toBe(
+      "2026-09-20T14:32:00.000Z",
+    );
+  });
+
+  it("não altera completedAt em fases seguintes", () => {
+    const item = makeItem({
+      installationProgress: {
+        estrutural: true,
+        vidros: false,
+        acabamento: false,
+        completedAt: "2026-09-20T14:32:00.000Z",
+      },
+    });
+
+    const next = applyInstallationStepPhotos(
+      item,
+      "vidros",
+      ["/uploads/installation/os-1/b.webp"],
+      new Date("2026-09-25T09:00:00.000Z"),
+    );
+
+    expect(next.installationProgress?.completedAt).toBe(
+      "2026-09-20T14:32:00.000Z",
+    );
+  });
 });

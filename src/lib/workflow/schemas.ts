@@ -61,7 +61,18 @@ export const itemInstallationProgressSchema = z.object({
   /** Confirmado explicitamente pelo instalador após todas as fases do vão */
   concluido: z.boolean().default(false).optional(),
   installerId: z.string().uuid().nullable().optional(),
+  /**
+   * Data de agendamento (BD: `data_agendamento`, tipo date — ISO `yyyy-MM-dd`).
+   * Preenchida ao designar o instalador no vão, na tela de instalação.
+   */
   scheduledInstallationDate: z.string().nullable().optional(),
+  /**
+   * Data/hora em que o vão teve sua primeira fase concluída
+   * (BD: `data_finalizacao_vao`, tipo datetime — ISO 8601). Preenchida
+   * automaticamente (oculta) quando o instalador conclui a 1ª fase enviando
+   * fotos; não muda depois.
+   */
+  completedAt: z.string().datetime().nullable().optional(),
 });
 
 export type ItemInstallationProgress = z.infer<typeof itemInstallationProgressSchema>;

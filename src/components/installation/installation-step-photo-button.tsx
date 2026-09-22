@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ResolvedImage } from "@/components/ui/resolved-image";
+import { DrawingPreview } from "@/components/production/drawing-preview";
 import { compressPhotosToJpegFiles } from "@/lib/offline/photo-compress";
 import type { InstallationChecklistStep } from "@/lib/workflow/schemas";
 
@@ -242,10 +242,15 @@ export function InstallationStepPhotoButton({
               <ul className="grid grid-cols-2 gap-2">
                 {photoUrls.map((url, index) => (
                   <li key={`${url}-${index}`}>
-                    <ResolvedImage
+                    <DrawingPreview
                       src={url}
                       alt={`Foto ${index + 1} de ${stepLabel} — Vão ${vaoNumber}`}
-                      className="h-28 w-full rounded-md object-cover"
+                      variant="thumbnail"
+                      gallery={photoUrls.map((photoUrl, gIdx) => ({
+                        src: photoUrl,
+                        alt: `Foto ${gIdx + 1} de ${stepLabel} — Vão ${vaoNumber}`,
+                      }))}
+                      galleryIndex={index}
                     />
                   </li>
                 ))}
