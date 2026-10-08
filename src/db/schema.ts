@@ -161,6 +161,8 @@ export const measurements = pgTable(
     /** Identificador do dispositivo de origem do sync offline */
     deviceId: varchar("device_id", { length: 128 }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** Horário em que o instalador confirmou o último vão e a OS fechou. */
+    concludedAt: timestamp("concluded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

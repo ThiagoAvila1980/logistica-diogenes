@@ -25,6 +25,7 @@ async function getKpiReportPayloadDb(): Promise<KpiReportPayload> {
         id: measurements.id,
         createdAt: measurements.createdAt,
         updatedAt: measurements.updatedAt,
+        concludedAt: measurements.concludedAt,
       })
       .from(measurements),
     db
@@ -52,6 +53,7 @@ async function getKpiReportPayloadDb(): Promise<KpiReportPayload> {
       id: r.id,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
+      concludedAt: r.concludedAt,
     })),
     history,
   };

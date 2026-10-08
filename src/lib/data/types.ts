@@ -30,4 +30,6 @@ export type OrderDetail = OrderListItem & {
   clientAddress: string | null;
   sourcePdfUrl: string | null;
   notes: string | null;
+  /** Preenchido quando o instalador confirma o último vão. */
+  concludedAt: Date | null;
 };

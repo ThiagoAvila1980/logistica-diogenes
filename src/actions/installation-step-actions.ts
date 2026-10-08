@@ -1,12 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { AUDIT_ACTIONS, stepCheckAction } from "@/lib/audit/actions";
 import { revalidateOSRoutes } from "@/lib/revalidate";
 import { getDb } from "@/lib/db";
-import { installationLogs, measurements } from "@/db/schema";
+import { installationLogs, measurements, statusHistory, type OsStatus } from "@/db/schema";
 import { requireRole } from "@/lib/auth/require-role";
 import { getServiceOrderById } from "@/lib/data/orders";
 import { canOperateInstallationModule } from "@/lib/transport-gates";
@@ -23,13 +23,17 @@ import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { recordVaoStepCompletion } from "@/lib/performance/scoring";
 import { parsePhotoFiles, saveUploadedFiles } from "@/lib/upload/save-files";
 import { applyInstallationStepPhotos } from "@/lib/installation/apply-installation-step-photos";
+import {
+  osCloseOnVaoConfirmed,
+  osReopenOnVaoUnchecked,
+} from "@/lib/installation/os-conclusion";
 
 export type UpdateInstallationStepResult =
   | { success: true }
   | { success: false; message: string; reason?: "gate_locked" };
 
 export type CompleteInstallationVaoResult =
-  | { success: true }
+  | { success: true; osConcludedAt?: string }
   | { success: false; message: string };
 
 // ─── Action: atualizar etapa de instalação por vão ───────────────────────────
@@ -73,7 +77,7 @@ export async function updateItemInstallationStepAction(
     // evitando lost update quando dois operadores editam vãos da mesma OS.
     await db.transaction(async (tx) => {
       const [meas] = await tx
-        .select({ items: measurements.items })
+        .select({ items: measurements.items, etapa: measurements.etapa })
         .from(measurements)
         .where(eq(measurements.id, osId))
         .for("update")
@@ -149,10 +153,61 @@ export async function updateItemInstallationStepAction(
         return { ...i, installationProgress: next };
       });
 
+      const now = new Date();
+      const etapa = meas.etapa as OsStatus;
+      let restoreStatus: OsStatus = "transporte_perfil";
+      if (!done && etapa === "concluido") {
+        const [lastClose] = await tx
+          .select({ fromStatus: statusHistory.fromStatus })
+          .from(statusHistory)
+          .where(
+            and(
+              eq(statusHistory.measurementId, osId),
+              eq(statusHistory.toStatus, "concluido"),
+            ),
+          )
+          .orderBy(desc(statusHistory.createdAt))
+          .limit(1);
+        if (lastClose) restoreStatus = lastClose.fromStatus;
+      }
+      const reopenTo =
+        !done
+          ? osReopenOnVaoUnchecked({
+              etapa,
+              items: updatedItems,
+              restoreStatus,
+            })
+          : null;
+
       await tx
         .update(measurements)
-        .set({ items: updatedItems, updatedAt: new Date() })
+        .set({
+          items: updatedItems,
+          updatedAt: now,
+          ...(reopenTo ? { etapa: reopenTo, concludedAt: null } : {}),
+        })
         .where(eq(measurements.id, osId));
+
+      if (reopenTo) {
+        await tx.insert(statusHistory).values({
+          measurementId: osId,
+          fromStatus: etapa,
+          toStatus: reopenTo,
+          changedById: session.userId,
+          metadata: { source: "installation_reopen" },
+        });
+        await recordAuditEvent(tx, {
+          actorId: session.userId,
+          action: AUDIT_ACTIONS.OS_STAGE_CHANGED,
+          measurementId: osId,
+          payload: {
+            fromStatus: etapa,
+            toStatus: reopenTo,
+            source: "installation_reopen",
+            concludedAt: null,
+          },
+        });
+      }
 
       // Sincroniza o aggregate no installation_logs
       const newAggregate = aggregateInstallationStepsFromItems(updatedItems);
@@ -299,10 +354,11 @@ export async function completeInstallationVaoAction(
 
     const db = getDb();
     const isLatePhase = isInstallationOrLater(order.status);
+    let osConcludedAt: string | undefined;
 
     await db.transaction(async (tx) => {
       const [meas] = await tx
-        .select({ items: measurements.items })
+        .select({ items: measurements.items, etapa: measurements.etapa })
         .from(measurements)
         .where(eq(measurements.id, osId))
         .for("update")
@@ -349,10 +405,45 @@ export async function completeInstallationVaoAction(
         };
       });
 
+      const now = new Date();
+      const close = osCloseOnVaoConfirmed({
+        etapa: meas.etapa as OsStatus,
+        items: updatedItems,
+        now,
+      });
+      if (close) osConcludedAt = close.concludedAt.toISOString();
+
       await tx
         .update(measurements)
-        .set({ items: updatedItems, updatedAt: new Date() })
+        .set({
+          items: updatedItems,
+          updatedAt: now,
+          ...(close
+            ? { etapa: "concluido" as const, concludedAt: close.concludedAt }
+            : {}),
+        })
         .where(eq(measurements.id, osId));
+
+      if (close) {
+        await tx.insert(statusHistory).values({
+          measurementId: osId,
+          fromStatus: close.fromStatus,
+          toStatus: "concluido",
+          changedById: session.userId,
+          metadata: { source: "installation_complete" },
+        });
+        await recordAuditEvent(tx, {
+          actorId: session.userId,
+          action: AUDIT_ACTIONS.OS_STAGE_CHANGED,
+          measurementId: osId,
+          payload: {
+            fromStatus: close.fromStatus,
+            toStatus: "concluido",
+            source: "installation_complete",
+            concludedAt: close.concludedAt.toISOString(),
+          },
+        });
+      }
 
       const updatedItem = updatedItems.find((i) => i.id === itemId);
       await recordVaoStepCompletion(tx, {
@@ -369,12 +460,12 @@ export async function completeInstallationVaoAction(
         action: AUDIT_ACTIONS.INSTALLATION_VAO_COMPLETED,
         measurementId: osId,
         itemId,
-        payload: { concluido: true },
+        payload: { concluido: true, osConcludedAt: osConcludedAt ?? null },
       });
     });
 
     revalidateOSRoutes(osId);
-    return { success: true };
+    return { success: true, osConcludedAt };
   } catch (err) {
     if (err instanceof WorkflowActionError) {
       return { success: false, message: err.message };

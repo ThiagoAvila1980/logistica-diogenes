@@ -22,6 +22,7 @@ export type KpiOrderMeta = {
   id: string;
   createdAt: Date;
   updatedAt: Date;
+  concludedAt: Date | null;
 };
 
 export type KpiReportPayload = {
@@ -126,11 +127,12 @@ export function computeKpiSummary(
     const isConcluded = order.status === "concluido";
     const createdAt = meta?.createdAt ?? order.updatedAt;
     const updatedAt = meta?.updatedAt ?? order.updatedAt;
+    const concludedWhen = meta?.concludedAt ?? updatedAt;
 
     if (isConcluded) {
       concludedOrders++;
-      if (updatedAt >= thirtyDaysAgo) concludedLast30++;
-      const mk = monthKey(updatedAt);
+      if (concludedWhen >= thirtyDaysAgo) concludedLast30++;
+      const mk = monthKey(concludedWhen);
       if (concludedMap.has(mk)) concludedMap.set(mk, (concludedMap.get(mk) ?? 0) + 1);
     } else {
       inProgressOrders++;
@@ -234,6 +236,7 @@ export function reviveKpiReportPayload(payload: KpiReportPayload): KpiReportPayl
       ...m,
       createdAt: new Date(m.createdAt),
       updatedAt: new Date(m.updatedAt),
+      concludedAt: m.concludedAt ? new Date(m.concludedAt) : null,
     })),
     history: payload.history.map((h) => ({
       ...h,

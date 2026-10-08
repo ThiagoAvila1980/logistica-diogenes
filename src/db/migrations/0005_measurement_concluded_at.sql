@@ -1,0 +1,1 @@
+ALTER TABLE "measurements" ADD COLUMN "concluded_at" timestamp with time zone;

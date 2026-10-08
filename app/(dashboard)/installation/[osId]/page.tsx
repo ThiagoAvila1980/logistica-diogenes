@@ -136,6 +136,7 @@ export default async function InstallationOsPage({ params }: Props) {
           installers={installers}
           canAssignInstaller={isManager}
           stepAuditMeta={stepAuditMeta}
+          concludedAt={order.concludedAt?.toISOString() ?? null}
         />
 
         <InstallationServicePhotos

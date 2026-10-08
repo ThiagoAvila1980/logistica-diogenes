@@ -271,6 +271,8 @@ type Props = {
   canAssignInstaller?: boolean;
   /** Só preenchido para admin */
   stepAuditMeta?: StepCompletionMetaMap;
+  /** ISO da conclusão da OS, quando o último vão já foi confirmado. */
+  concludedAt?: string | null;
 };
 
 export function InstallationChecklist({
@@ -282,6 +284,7 @@ export function InstallationChecklist({
   installers = [],
   canAssignInstaller = false,
   stepAuditMeta,
+  concludedAt = null,
 }: Props) {
   const isLatePhase =
     osStatus.startsWith("instalacao") || osStatus === "concluido";
@@ -306,6 +309,7 @@ export function InstallationChecklist({
     vaoSpec: string;
   } | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [osConcludedAt, setOsConcludedAt] = useState<string | null>(concludedAt);
 
   const activeItems = items.filter((item) => !concludedIds.has(item.id));
   const concludedItems = items.filter((item) => concludedIds.has(item.id));
@@ -353,6 +357,7 @@ export function InstallationChecklist({
       setStepError("Falha de conexão. Verifique sua internet e tente novamente.");
     } else if (result.success) {
       setConcludedIds((prev) => new Set(prev).add(pendingComplete.itemId));
+      if (result.osConcludedAt) setOsConcludedAt(result.osConcludedAt);
       setPendingComplete(null);
     } else {
       setStepError(result.message);
@@ -717,6 +722,9 @@ export function InstallationChecklist({
             <BadgeCheck className="h-4 w-4" />
             <AlertDescription>
               Instalação concluída! Todos os vãos foram confirmados e enviados para concluídos.
+              {osConcludedAt
+                ? ` OS concluída em ${formatBrDateTime(osConcludedAt)}.`
+                : ""}
             </AlertDescription>
           </Alert>
         )}

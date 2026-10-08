@@ -21,6 +21,7 @@ function makeOrder(
     priority: "normal",
     scheduledDate: null,
     updatedAt: new Date(),
+    concludedAt: null,
     assignedUserId: null,
     vaos: [
       {

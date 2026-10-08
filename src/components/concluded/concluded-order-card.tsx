@@ -39,6 +39,14 @@ export function ConcludedOrderCard({ order }: Props) {
             {order.clientName}
           </p>
           <p className="text-xs text-muted-foreground">{STATUS_LABELS[order.status]}</p>
+          {order.concludedAt && (
+            <p className="text-xs text-muted-foreground">
+              Concluída em{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {formatBrDateTime(order.concludedAt)}
+              </span>
+            </p>
+          )}
         </div>
         {allDone && (
           <BadgeCheck className="h-5 w-5 shrink-0 text-success" aria-label="Instalação concluída" />

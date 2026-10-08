@@ -176,6 +176,7 @@ export async function getServiceOrderByIdDb(
       pedidoFeito: pedidos.pedidoFeito,
       pedidoRecebido: pedidos.pedidoRecebido,
       archivedAt: measurements.archivedAt,
+      concludedAt: measurements.concludedAt,
     })
     .from(measurements)
     .leftJoin(pedidos, eq(pedidos.idMedicao, measurements.id))
@@ -191,5 +192,6 @@ export async function getServiceOrderByIdDb(
     clientAddress: row.clientAddress,
     sourcePdfUrl: row.sourcePdfUrl,
     notes: row.notes ?? null,
+    concludedAt: row.concludedAt,
   };
 }
