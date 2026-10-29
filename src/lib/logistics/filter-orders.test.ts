@@ -58,7 +58,7 @@ describe("isLogisticsIndexCandidate", () => {
     ).toBe(false);
   });
 
-  it("inclui instalação e concluído para admin", () => {
+  it("inclui instalação em andamento para admin e exclui concluído", () => {
     expect(
       isLogisticsIndexCandidate(
         makeOrder({ status: "instalacao_vidros" }),
@@ -67,7 +67,7 @@ describe("isLogisticsIndexCandidate", () => {
     ).toBe(true);
     expect(
       isLogisticsIndexCandidate(makeOrder({ status: "concluido" }), ["admin"]),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -115,18 +115,38 @@ describe("isActiveTransportListing", () => {
     ).toBe(true);
   });
 
-  it("mantém instalação e concluído sem checar transporte", () => {
+  it("mantém instalação enquanto ainda há entrega pendente", () => {
+    expect(
+      isActiveTransportListing(
+        makeOrder({ status: "instalacao_estrutural" }),
+        {
+          ...completedTransport,
+          transporteConcluido: false,
+          levarVidros: false,
+        },
+      ),
+    ).toBe(true);
+  });
+
+  it("remove instalação quando todos os vãos já concluíram o transporte", () => {
     expect(
       isActiveTransportListing(
         makeOrder({ status: "instalacao_estrutural" }),
         completedTransport,
       ),
-    ).toBe(true);
+    ).toBe(false);
+  });
+
+  it("remove OS com status concluído", () => {
     expect(
       isActiveTransportListing(
         makeOrder({ status: "concluido" }),
-        completedTransport,
+        {
+          ...completedTransport,
+          transporteConcluido: false,
+          levarVidros: false,
+        },
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 });

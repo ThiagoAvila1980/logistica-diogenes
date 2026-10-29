@@ -12,6 +12,7 @@ export function isLogisticsIndexCandidate(
   order: OrderListItem,
   roles: readonly UserRole[],
 ): boolean {
+  if (order.status === "concluido") return false;
   if (isTransportPhaseStatus(order.status)) return true;
   if (!canViewAllOrders(roles)) return false;
   return isInstallationPhaseStatus(order.status);
@@ -22,13 +23,17 @@ type OperatorListingOptions = {
   hasOperatorPendingWork?: boolean;
 };
 
-/** Espelha o kanban: transporte concluído some da coluna/módulo de transporte. */
+/**
+ * OS sai da tela de transporte quando todos os vãos concluíram as entregas,
+ * mesmo que o status já tenha avançado para instalação. Status concluído
+ * não permanece na listagem.
+ */
 export function isActiveTransportListing(
   order: OrderListItem,
   transportSteps: TransportSteps | null,
   options?: OperatorListingOptions,
 ): boolean {
-  if (!isTransportPhaseStatus(order.status)) return true;
+  if (order.status === "concluido") return false;
   if (options?.hasOperatorPendingWork !== undefined) {
     return options.hasOperatorPendingWork;
   }
