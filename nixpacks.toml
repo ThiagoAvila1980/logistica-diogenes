@@ -9,6 +9,10 @@
 # .next/cache e o rmSync falha com EBUSY. Aqui usamos `next build` direto.
 providers = ["node"]
 
+# pg_dump entra na imagem para o backup do Postgres (corte + 20:00).
+[phases.setup]
+nixPkgs = ["postgresql"]
+
 # Coolify/Nixpacks define NODE_ENV=production — sem isso o npm omite
 # devDependencies e o build quebra ao carregar @tailwindcss/postcss.
 [phases.install]

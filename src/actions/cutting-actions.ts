@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { z } from "zod";
 import { eq, sql } from "drizzle-orm";
 import { revalidateOSRoutes } from "@/lib/revalidate";
@@ -542,6 +543,11 @@ export async function sendItemsToCuttingAction(
     });
 
     revalidateOSRoutes(osId);
+    after(() => {
+      void import("@/lib/backup/run-database-backup").then((mod) =>
+        mod.requestDatabaseBackup("corte"),
+      );
+    });
     const count = selectedItemIds.length;
     return {
       success: true,

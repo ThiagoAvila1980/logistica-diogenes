@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { getAllowedTransitions } from "@/lib/workflow/measurement-flow";
 import {
@@ -212,6 +213,14 @@ export async function moveOSCard(
     });
 
     revalidateOSRoutes(osId);
+
+    if (target === "cortes") {
+      after(() => {
+        void import("@/lib/backup/run-database-backup").then((mod) =>
+          mod.requestDatabaseBackup("corte"),
+        );
+      });
+    }
 
     return finishKanbanMove(osId, target);
   } catch (error) {
