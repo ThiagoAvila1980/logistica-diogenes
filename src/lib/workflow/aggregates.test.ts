@@ -61,6 +61,50 @@ describe("aggregateCuttingStepsFromItems", () => {
     expect(agg.acessoriosFeitos).toBe(true);
     expect(agg.vidrosFeitos).toBe(false);
   });
+
+  it("vão de espelho só precisa de vidros para concluir o corte", () => {
+    const espelho = new Set(["esp"]);
+    const items = [
+      item("a", {
+        idTipoEnvidracamento: "esp",
+        cuttingProgress: { corte: false, embalagem: false, acessorios: false, vidros: true },
+      }),
+      item("b", {
+        idTipoEnvidracamento: "sac",
+        cuttingProgress: { corte: true, embalagem: true, acessorios: true, vidros: true },
+      }),
+    ];
+    const agg = aggregateCuttingStepsFromItems(items, espelho);
+    expect(agg.corteFeito).toBe(true);
+    expect(agg.embalagemFeita).toBe(true);
+    expect(agg.acessoriosFeitos).toBe(true);
+    expect(agg.vidrosFeitos).toBe(true);
+    expect(hasPendingCuttingWorkOnItems(items, espelho)).toBe(false);
+  });
+
+  it("OS só de espelho conclui o corte quando todos os vidros estão prontos", () => {
+    const espelho = new Set(["esp"]);
+    const pending = [
+      item("a", {
+        idTipoEnvidracamento: "esp",
+        cuttingProgress: { corte: false, embalagem: false, acessorios: false, vidros: false },
+      }),
+    ];
+    expect(aggregateCuttingStepsFromItems(pending, espelho).vidrosFeitos).toBe(false);
+    expect(hasPendingCuttingWorkOnItems(pending, espelho)).toBe(true);
+
+    const done = [
+      item("a", {
+        idTipoEnvidracamento: "esp",
+        cuttingProgress: { corte: false, embalagem: false, acessorios: false, vidros: true },
+      }),
+    ];
+    const agg = aggregateCuttingStepsFromItems(done, espelho);
+    expect(agg.corteFeito).toBe(true);
+    expect(agg.embalagemFeita).toBe(true);
+    expect(agg.acessoriosFeitos).toBe(true);
+    expect(agg.vidrosFeitos).toBe(true);
+  });
 });
 
 describe("hasPendingCuttingWorkOnItems", () => {
@@ -162,6 +206,47 @@ describe("aggregateTransportStepsFromItems", () => {
     const full = { perfilEstrutural: true, perfilTotal: true, acessorios: true, vidros: true };
     const items = [item("a", { transportProgress: full }), item("b", { transportProgress: full })];
     expect(aggregateTransportStepsFromItems(items).transporteConcluido).toBe(true);
+  });
+
+  it("vão de espelho só precisa entregar vidros", () => {
+    const espelho = new Set(["esp"]);
+    const items = [
+      item("a", {
+        idTipoEnvidracamento: "esp",
+        transportProgress: {
+          perfilEstrutural: false,
+          perfilTotal: false,
+          acessorios: false,
+          vidros: true,
+        },
+      }),
+      item("b", {
+        idTipoEnvidracamento: "sac",
+        transportProgress: {
+          perfilEstrutural: true,
+          perfilTotal: true,
+          acessorios: true,
+          vidros: true,
+        },
+      }),
+    ];
+    expect(aggregateTransportStepsFromItems(items, espelho).transporteConcluido).toBe(true);
+  });
+
+  it("OS só de espelho conclui o transporte quando os vidros foram entregues", () => {
+    const espelho = new Set(["esp"]);
+    const items = [
+      item("a", {
+        idTipoEnvidracamento: "esp",
+        transportProgress: {
+          perfilEstrutural: false,
+          perfilTotal: false,
+          acessorios: false,
+          vidros: true,
+        },
+      }),
+    ];
+    expect(aggregateTransportStepsFromItems(items, espelho).transporteConcluido).toBe(true);
   });
 
   it("ignora vãos fora do plano de corte ao calcular transporteConcluido", () => {
@@ -274,6 +359,24 @@ describe("installation vão conclusion", () => {
     expect(
       isVaoInstallationStepsComplete(item("a", { installationProgress: allSteps })),
     ).toBe(true);
+  });
+
+  it("vão de espelho conclui a instalação com vidros e acabamento", () => {
+    const espelho = new Set(["esp"]);
+    const mirror = item("a", {
+      idTipoEnvidracamento: "esp",
+      installationProgress: { estrutural: false, vidros: true, acabamento: true },
+    });
+    expect(isVaoInstallationStepsComplete(mirror, espelho)).toBe(true);
+    expect(
+      aggregateInstallationStepsFromItems([mirror], espelho).instalacaoEstruturalFeita,
+    ).toBe(true);
+
+    const missingFinish = item("b", {
+      idTipoEnvidracamento: "esp",
+      installationProgress: { estrutural: false, vidros: true, acabamento: false },
+    });
+    expect(isVaoInstallationStepsComplete(missingFinish, espelho)).toBe(false);
   });
 
   it("isVaoInstallationConcluded exige flag concluido", () => {

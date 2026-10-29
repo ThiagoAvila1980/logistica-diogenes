@@ -19,6 +19,7 @@ import {
   aggregateCuttingStepsFromItems,
   aggregateInstallationStepsFromItems,
 } from "@/lib/workflow/aggregates";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import { loadClientNotificationContext } from "@/lib/notifications/order-context";
 import {
@@ -74,6 +75,7 @@ async function loadTransitionContext(
   }
 
   const items = (row.items as MeasurementLineItem[]) ?? [];
+  const espelhoTipoIds = await loadEspelhoTipoIds();
   const hasFinalMeasurement = row.measStatus === "medida" || items.length > 0;
 
   // Espelha a regra dos módulos: se há vãos enviados ao corte, considera só esses.
@@ -82,11 +84,11 @@ async function loadTransitionContext(
     ? items.filter((i) => i.sentToCutting === true)
     : items;
 
-  const installation = aggregateInstallationStepsFromItems(items);
+  const installation = aggregateInstallationStepsFromItems(items, espelhoTipoIds);
 
   return {
     hasFinalMeasurement,
-    cuttingSteps: aggregateCuttingStepsFromItems(cuttingItems),
+    cuttingSteps: aggregateCuttingStepsFromItems(cuttingItems, espelhoTipoIds),
     installationComplete:
       installation.instalacaoEstruturalFeita &&
       installation.instalacaoVidrosFeita &&

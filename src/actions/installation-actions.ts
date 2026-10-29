@@ -17,6 +17,7 @@ import {
   effectiveCuttingSteps,
   isInstallationOrLater,
 } from "@/lib/workflow/aggregates";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 
 export type SaveInstallationServicePhotosResult =
   | { success: true; message: string }
@@ -94,7 +95,7 @@ export async function saveInstallationServicePhotos(
 
   const items = (measRow?.items as MeasurementLineItem[]) ?? [];
   const cuttingSteps = effectiveCuttingSteps(
-    aggregateCuttingStepsFromItems(items),
+    aggregateCuttingStepsFromItems(items, await loadEspelhoTipoIds()),
     isInstallationOrLater(order.status),
   );
 
@@ -176,7 +177,7 @@ async function assertCanSaveInstallationData(osId: string): Promise<
 
   const items = (measRow?.items as MeasurementLineItem[]) ?? [];
   const cuttingSteps = effectiveCuttingSteps(
-    aggregateCuttingStepsFromItems(items),
+    aggregateCuttingStepsFromItems(items, await loadEspelhoTipoIds()),
     isInstallationOrLater(order.status),
   );
 

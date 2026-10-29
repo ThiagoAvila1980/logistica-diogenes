@@ -19,6 +19,7 @@ import {
   aggregateInstallationStepsFromItems,
   aggregateTransportStepsFromItems,
 } from "@/lib/workflow/aggregates";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 import { WorkflowActionError } from "@/lib/workflow/errors";
 import { measurementTypePatchForEtapa } from "@/lib/workflow/measurement-actions";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
@@ -157,6 +158,7 @@ export async function revertOSPhaseForVaosAction(
 
   try {
     const db = getDb();
+    const espelhoTipoIds = await loadEspelhoTipoIds();
 
     await db.transaction(async (tx) => {
       const [meas] = await tx
@@ -233,7 +235,10 @@ export async function revertOSPhaseForVaosAction(
       }
 
       if (phase === "instalacao") {
-        const newAggregate = aggregateInstallationStepsFromItems(updatedItems);
+        const newAggregate = aggregateInstallationStepsFromItems(
+          updatedItems,
+          espelhoTipoIds,
+        );
         const [existingLog] = await tx
           .select({ id: installationLogs.id })
           .from(installationLogs)
@@ -255,7 +260,10 @@ export async function revertOSPhaseForVaosAction(
       }
 
       if (phase === "transporte") {
-        const newAggregate = aggregateTransportStepsFromItems(updatedItems);
+        const newAggregate = aggregateTransportStepsFromItems(
+          updatedItems,
+          espelhoTipoIds,
+        );
         const [existingLog] = await tx
           .select({ id: transportLogs.id })
           .from(transportLogs)

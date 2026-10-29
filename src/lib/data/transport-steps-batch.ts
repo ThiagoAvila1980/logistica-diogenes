@@ -4,6 +4,7 @@ import { measurements } from "@/db/schema";
 import type { TransportSteps } from "@/lib/transport-gates";
 import { aggregateTransportStepsFromItems } from "@/lib/workflow/aggregates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 
 export type TransportListingProgress = {
   steps: TransportSteps;
@@ -33,6 +34,8 @@ export async function getTransportListingProgressForOrders(
     .from(measurements)
     .where(inArray(measurements.id, osIds));
 
+  const espelhoTipoIds = await loadEspelhoTipoIds();
+
   return Object.fromEntries(
     rows.map((row) => {
       const items = (row.items as MeasurementLineItem[] | null) ?? [];
@@ -40,7 +43,7 @@ export async function getTransportListingProgressForOrders(
         row.id,
         {
           items,
-          steps: aggregateTransportStepsFromItems(items),
+          steps: aggregateTransportStepsFromItems(items, espelhoTipoIds),
         },
       ];
     }),

@@ -26,6 +26,12 @@ import {
 } from "@/lib/measurement/vao-item-subtitle";
 import { getStepAuditMeta } from "@/components/audit/step-audit-hint";
 import type { StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
+import { aggregateCuttingStepsFromItems } from "@/lib/workflow/aggregates";
+import {
+  applicableCuttingSteps,
+  cuttingStepApplies,
+  espelhoTipoIdsFromDescricoes,
+} from "@/lib/workflow/espelho-vao";
 
 type Step = "corte" | "embalagem" | "acessorios" | "vidros";
 
@@ -82,17 +88,39 @@ export function CuttingChecklist({
   const [stepError, setStepError] = useState<string | null>(null);
   const [isAdvancing, startAdvancing] = useTransition();
 
-  // Progresso agregado
-  const anyCorte = items.some((item) => progress[item.id]?.corte);
-  const allEmbalagem =
-    items.length > 0 && items.every((item) => progress[item.id]?.embalagem);
-  const allAcessorios =
-    items.length > 0 && items.every((item) => progress[item.id]?.acessorios);
-  const allVidros =
-    items.length > 0 && items.every((item) => progress[item.id]?.vidros);
-  const allDone = anyCorte && allEmbalagem && allAcessorios && allVidros;
+  const espelhoTipoIds = espelhoTipoIdsFromDescricoes(
+    lookups?.tipoEnvidracamento ?? [],
+  );
+  const columnSteps = STEPS.filter((step) =>
+    items.some((item) => cuttingStepApplies(item, step.key, espelhoTipoIds)),
+  );
+  const desktopGrid = {
+    gridTemplateColumns: `minmax(0,1fr) repeat(${Math.max(columnSteps.length, 1)}, 56px)`,
+  };
 
-  const corteDoneCount = items.filter((item) => progress[item.id]?.corte).length;
+  const cuttingAggregate = aggregateCuttingStepsFromItems(
+    items.map((item) => ({
+      ...item,
+      cuttingProgress: progress[item.id] ?? getItemProgress(item),
+    })),
+    espelhoTipoIds,
+  );
+  const anyCorte = items.some(
+    (item) =>
+      cuttingStepApplies(item, "corte", espelhoTipoIds) &&
+      progress[item.id]?.corte,
+  );
+  const allDone =
+    cuttingAggregate.corteFeito &&
+    cuttingAggregate.embalagemFeita &&
+    cuttingAggregate.acessoriosFeitos &&
+    cuttingAggregate.vidrosFeitos;
+
+  const corteDoneCount = items.filter(
+    (item) =>
+      cuttingStepApplies(item, "corte", espelhoTipoIds) &&
+      progress[item.id]?.corte,
+  ).length;
 
   async function handleAdvanceToTransport() {
     startAdvancing(async () => {
@@ -141,16 +169,19 @@ export function CuttingChecklist({
           <span>Etapas do corte por vão</span>
           {/* Barra de progresso por etapa */}
           <div className="flex items-center gap-1.5">
-            {STEPS.map(({ key, shortLabel }) => {
-              const doneCount = items.filter(
+            {columnSteps.map(({ key, shortLabel }) => {
+              const applicable = items.filter((item) =>
+                cuttingStepApplies(item, key, espelhoTipoIds),
+              );
+              const doneCount = applicable.filter(
                 (item) => progress[item.id]?.[key],
               ).length;
-              const isAll = doneCount === items.length;
+              const isAll = applicable.length > 0 && doneCount === applicable.length;
               return (
                 <div
                   key={key}
                   className="flex flex-col items-center gap-0.5"
-                  title={`${shortLabel}: ${doneCount}/${items.length}`}
+                  title={`${shortLabel}: ${doneCount}/${applicable.length}`}
                 >
                   <div
                     className={cn(
@@ -179,9 +210,9 @@ export function CuttingChecklist({
         )}
 
         {/* Cabeçalho das colunas (desktop) */}
-        <div className="hidden grid-cols-[1fr_repeat(4,56px)] gap-2 px-3 sm:grid">
+        <div className="hidden gap-2 px-3 sm:grid" style={desktopGrid}>
           <span />
-          {STEPS.map(({ key, shortLabel }) => (
+          {columnSteps.map(({ key, shortLabel }) => (
             <span
               key={key}
               className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
@@ -200,8 +231,12 @@ export function CuttingChecklist({
               acessorios: false,
               vidros: false,
             };
-            const doneSteps = STEPS.filter(({ key }) => itemProgress[key]).length;
-            const itemAllDone = doneSteps === 4;
+            const itemSteps = applicableCuttingSteps(item, espelhoTipoIds);
+            const doneSteps = itemSteps.filter((key) => itemProgress[key]).length;
+            const itemAllDone = doneSteps === itemSteps.length;
+            const showLabelButton = cuttingStepApplies(item, "embalagem", espelhoTipoIds)
+              ? itemProgress.embalagem
+              : itemProgress.vidros;
             const subtitle = buildVaoItemSubtitle(item, index, lookups);
             const fullLabel = formatVaoItemFullLabel(subtitle);
             const vaoNumber = getVaoNumber(item, index);
@@ -221,7 +256,7 @@ export function CuttingChecklist({
                 onClick={() => onItemSelect?.(item.id)}
               >
                 {/* Linha desktop: label + 4 checkboxes em colunas */}
-                <div className="hidden items-center gap-2 sm:grid sm:grid-cols-[1fr_repeat(4,56px)]">
+                <div className="hidden items-center gap-2 sm:grid" style={desktopGrid}>
                   <div className="flex min-w-0 items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <p
@@ -249,7 +284,7 @@ export function CuttingChecklist({
                         </p>
                       ) : null}
                     </div>
-                    {itemProgress.embalagem ? (
+                    {showLabelButton ? (
                       <div onClick={(e) => e.stopPropagation()}>
                         <PrintVaoLabelButton
                           osId={osId}
@@ -260,7 +295,10 @@ export function CuttingChecklist({
                     ) : null}
                   </div>
 
-                  {STEPS.map(({ key, label: stepLabel }) => {
+                  {columnSteps.map(({ key, label: stepLabel }) => {
+                    if (!cuttingStepApplies(item, key, espelhoTipoIds)) {
+                      return <div key={key} />;
+                    }
                     const done = itemProgress[key];
                     return (
                       <div key={key} className="flex justify-center" onClick={(e) => e.stopPropagation()}>
@@ -320,7 +358,7 @@ export function CuttingChecklist({
                       className="flex shrink-0 items-center gap-1.5"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {itemProgress.embalagem ? (
+                      {showLabelButton ? (
                         <PrintVaoLabelButton
                           osId={osId}
                           itemId={item.id}
@@ -331,14 +369,21 @@ export function CuttingChecklist({
                         <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                       ) : (
                         <Badge variant="outline" className="shrink-0 text-xs">
-                          {doneSteps}/4
+                          {doneSteps}/{itemSteps.length}
                         </Badge>
                       )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    {STEPS.map(({ key, label: stepLabel }) => {
+                  <div
+                    className="grid gap-1.5"
+                    style={{
+                      gridTemplateColumns: `repeat(${itemSteps.length}, minmax(0, 1fr))`,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {itemSteps.map((key) => {
+                      const stepLabel = STEPS.find((step) => step.key === key)?.label ?? key;
                       const done = itemProgress[key];
                       return (
                         <div

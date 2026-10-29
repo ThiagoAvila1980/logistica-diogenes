@@ -12,6 +12,7 @@ import {
   getVaoStepAssignment,
 } from "./transport-step-assignment";
 import { selectCuttingLineItems } from "@/lib/workflow/aggregates";
+import { transportStepApplies } from "@/lib/workflow/espelho-vao";
 
 export type TransportDriverOption = { id: string; name: string };
 export function collectDriverIdsFromMeasurementItems(
@@ -143,9 +144,11 @@ export function filterVaoItemsForSession<
 export function hasPendingTransportWorkForDriver(
   items: MeasurementLineItem[],
   driverId: string,
+  espelhoTipoIds: ReadonlySet<string> = new Set(),
 ): boolean {
   for (const item of selectCuttingLineItems(items)) {
     for (const step of TRANSPORT_STEPS) {
+      if (!transportStepApplies(item, step, espelhoTipoIds)) continue;
       if (getVaoStepAssignment(item, step).driverId !== driverId) continue;
       if (item.transportProgress?.[step] !== true) return true;
     }

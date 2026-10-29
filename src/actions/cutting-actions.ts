@@ -30,6 +30,8 @@ import { isDrawingDataUrl } from "@/lib/upload/canvas-export";
 import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
 import { parsePhotoFiles, saveUploadedFiles } from "@/lib/upload/save-files";
 import { applyCuttingStepPhoto } from "@/lib/production/apply-cutting-step-photo";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
+import { cuttingStepApplies } from "@/lib/workflow/espelho-vao";
 import type { DrawingItem } from "@/lib/workflow/schemas";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -69,6 +71,7 @@ export async function updateItemCuttingStepAction(
   const { osId, itemId, step, done, photoUrl } = parsed.data;
 
   try {
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const order = await getServiceOrderById(osId);
     if (!order) return { success: false, message: "OS não encontrada" };
 
@@ -89,8 +92,14 @@ export async function updateItemCuttingStepAction(
       const status = meas.etapa as OsStatus;
       const allItems = (meas.items as MeasurementLineItem[]) ?? [];
 
-      if (!canOperateCuttingForItems(status, allItems)) {
+      if (!canOperateCuttingForItems(status, allItems, espelhoTipoIds)) {
         throw new WorkflowActionError("OS não está em etapa de corte");
+      }
+
+      const target = allItems.find((item) => item.id === itemId);
+      if (!target) throw new WorkflowActionError("Vão não encontrado");
+      if (!cuttingStepApplies(target, step, espelhoTipoIds)) {
+        throw new WorkflowActionError("Esta etapa não se aplica a vão de espelho");
       }
 
       // Atualiza o item específico no array JSONB (preserva todos os items)
@@ -119,9 +128,13 @@ export async function updateItemCuttingStepAction(
       });
 
       const updatedCuttingItems = selectCuttingLineItems(updatedItems);
-      const newAggregate = aggregateCuttingStepsFromItems(updatedCuttingItems);
+      const newAggregate = aggregateCuttingStepsFromItems(
+        updatedCuttingItems,
+        espelhoTipoIds,
+      );
       const aggregate = aggregateCuttingStepsFromItems(
         selectCuttingLineItems(allItems),
+        espelhoTipoIds,
       );
 
       // Pontuação: corte_vao ao marcar/desmarcar step=corte
@@ -267,6 +280,7 @@ export async function advanceCuttingToTransportAction(
   const { osId } = parsed.data;
 
   try {
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const order = await getServiceOrderById(osId);
     if (!order) return { success: false, message: "OS não encontrada" };
 
@@ -287,7 +301,7 @@ export async function advanceCuttingToTransportAction(
     const items = hasSentFlag
       ? allItems.filter((i) => i.sentToCutting === true)
       : allItems;
-    const aggregate = aggregateCuttingStepsFromItems(items);
+    const aggregate = aggregateCuttingStepsFromItems(items, espelhoTipoIds);
 
     if (
       !aggregate.corteFeito ||

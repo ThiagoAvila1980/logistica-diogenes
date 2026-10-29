@@ -5,6 +5,7 @@ import { resolveUploadDisplayUrl } from "@/lib/upload/resolve-display-url";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { CuttingSteps } from "@/lib/transport-gates";
 import { aggregateCuttingStepsFromItems, selectCuttingLineItems } from "@/lib/workflow/aggregates";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 
 /**
  * @deprecated Importe de `@/lib/workflow/aggregates`.
@@ -108,7 +109,10 @@ export async function getCuttingDetailForOs(osId: string): Promise<CuttingDetail
         }
       : null,
     // O progresso agrega somente os vãos enviados para o corte
-    cuttingSteps: aggregateCuttingStepsFromItems(cuttingItems),
+    cuttingSteps: aggregateCuttingStepsFromItems(
+      cuttingItems,
+      await loadEspelhoTipoIds(),
+    ),
     cutterNotes: cut?.cutterNotes ?? null,
   };
 }

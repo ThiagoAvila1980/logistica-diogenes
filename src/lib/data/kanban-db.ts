@@ -22,6 +22,7 @@ import {
   hasPendingCuttingWorkOnItems,
   selectCuttingLineItems,
 } from "@/lib/workflow/aggregates";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
 import type { KanbanOrderItem } from "./kanban";
 
@@ -100,6 +101,7 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
   }
 
   const nameById = await resolveUserNamesByIds([...userIds]);
+  const espelhoTipoIds = await loadEspelhoTipoIds();
 
   return rows.map((r) => {
     const isCortePhase =
@@ -115,7 +117,10 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
     // Espelha a regra da tela de produção: se há vãos marcados para corte,
     // o agregado considera apenas esses; senão, todos os vãos.
     const cuttingItems = selectCuttingLineItems(items);
-    const cuttingAggregate = aggregateCuttingStepsFromItems(cuttingItems);
+    const cuttingAggregate = aggregateCuttingStepsFromItems(
+      cuttingItems,
+      espelhoTipoIds,
+    );
 
     const cuttingStepsData = {
       corte: cuttingAggregate.corteFeito,
@@ -125,15 +130,19 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
     };
 
     const hasPendingCutting =
-      isTransportPhase && hasPendingCuttingWorkOnItems(cuttingItems);
+      isTransportPhase &&
+      hasPendingCuttingWorkOnItems(cuttingItems, espelhoTipoIds);
 
-    const transportStepsData = aggregateTransportStepsFromItems(items);
+    const transportStepsData = aggregateTransportStepsFromItems(
+      items,
+      espelhoTipoIds,
+    );
 
     const hasFirstTransportDelivery =
       isTransportPhase && transportStepsData.levarPerfilEstrutural;
 
     const installationStepsData = {
-      ...aggregateInstallationStepsFromItems(items),
+      ...aggregateInstallationStepsFromItems(items, espelhoTipoIds),
       todosVaosConcluidos: aggregateAllVaosInstallationConcluded(items),
     };
 

@@ -29,6 +29,8 @@ import type { SessionUser } from "@/lib/auth/session-types";
 
 import { recordAuditEvent } from "@/lib/audit/record-audit-event";
 import { AUDIT_ACTIONS, stepCheckAction } from "@/lib/audit/actions";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
+import { transportStepApplies } from "@/lib/workflow/espelho-vao";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -118,6 +120,7 @@ export async function assignVehicleToVaoAction(
       }
     }
 
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isTransportOrLater(order.status);
 
     await db.transaction(async (tx) => {
@@ -132,7 +135,7 @@ export async function assignVehicleToVaoAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 
@@ -217,9 +220,10 @@ export async function assignVehicleToTransportAction(
     const order = await getServiceOrderById(osId);
     if (!order) return { success: false, message: "OS não encontrada" };
 
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const items = await loadMeasurementItems(osId);
     const cuttingSteps = effectiveCuttingSteps(
-      aggregateCuttingStepsFromItems(items),
+      aggregateCuttingStepsFromItems(items, espelhoTipoIds),
       isTransportOrLater(order.status),
     );
 
@@ -295,6 +299,7 @@ export async function updateItemTransportStepAction(
     if (!order) return { success: false, message: "OS não encontrada" };
 
     const db = getDb();
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isTransportOrLater(order.status);
 
     // Leitura + escrita na mesma transação com lock de linha (FOR UPDATE),
@@ -311,7 +316,7 @@ export async function updateItemTransportStepAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 
@@ -323,6 +328,9 @@ export async function updateItemTransportStepAction(
 
       const item = items.find((i) => i.id === itemId);
       if (!item) throw new WorkflowActionError("Vão não encontrado");
+      if (!transportStepApplies(item, step, espelhoTipoIds)) {
+        throw new WorkflowActionError("Esta etapa não se aplica a vão de espelho");
+      }
       if (!canAccessVaoAsSession(session, item)) {
         throw new WorkflowActionError("Vão não encontrado");
       }
@@ -366,7 +374,10 @@ export async function updateItemTransportStepAction(
         .where(eq(measurements.id, osId));
 
       // Atualiza o aggregate no transport_logs (compat. com installation gates)
-      const newAggregate = aggregateTransportStepsFromItems(updatedItems);
+      const newAggregate = aggregateTransportStepsFromItems(
+        updatedItems,
+        espelhoTipoIds,
+      );
       const [existingLog] = await tx
         .select({ id: transportLogs.id })
         .from(transportLogs)
@@ -459,6 +470,7 @@ export async function updateItemTransportNotesAction(
     if (!order) return { success: false, message: "OS não encontrada" };
 
     const db = getDb();
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isTransportOrLater(order.status);
 
     await db.transaction(async (tx) => {
@@ -473,7 +485,7 @@ export async function updateItemTransportNotesAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 
@@ -605,6 +617,7 @@ export async function assignDriverToVaoAction(
       .limit(1);
     if (!orderRow) return { success: false, message: "OS não encontrada" };
 
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isTransportOrLater(orderRow.etapa);
 
     await db.transaction(async (tx) => {
@@ -619,7 +632,7 @@ export async function assignDriverToVaoAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 
@@ -740,6 +753,7 @@ export async function assignDriverToAllVaosAction(
       .limit(1);
     if (!orderRow) return { success: false, message: "OS não encontrada" };
 
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isTransportOrLater(orderRow.etapa);
 
     const { applyDriverToAllVaoSteps } = await import(
@@ -758,7 +772,7 @@ export async function assignDriverToAllVaosAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 
@@ -838,6 +852,7 @@ export async function assignScheduledDateToAllVaosAction(
       .limit(1);
     if (!orderRow) return { success: false, message: "OS não encontrada" };
 
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isTransportOrLater(orderRow.etapa);
 
     const { applyScheduledDateToAllVaoSteps } = await import(
@@ -856,7 +871,7 @@ export async function assignScheduledDateToAllVaosAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 
@@ -950,6 +965,7 @@ export async function assignVehicleToAllVaosAction(
       .limit(1);
     if (!orderRow) return { success: false, message: "OS não encontrada" };
 
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isTransportOrLater(orderRow.etapa);
 
     const { applyVehicleToAllVaoSteps } = await import(
@@ -968,7 +984,7 @@ export async function assignVehicleToAllVaosAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 

@@ -27,6 +27,8 @@ import {
   osCloseOnVaoConfirmed,
   osReopenOnVaoUnchecked,
 } from "@/lib/installation/os-conclusion";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
+import { installationStepApplies } from "@/lib/workflow/espelho-vao";
 
 export type UpdateInstallationStepResult =
   | { success: true }
@@ -71,6 +73,7 @@ export async function updateItemInstallationStepAction(
     if (!order) return { success: false, message: "OS não encontrada" };
 
     const db = getDb();
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isInstallationOrLater(order.status);
 
     // Leitura + escrita na mesma transação com lock de linha (FOR UPDATE),
@@ -87,7 +90,7 @@ export async function updateItemInstallationStepAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 
@@ -99,6 +102,9 @@ export async function updateItemInstallationStepAction(
 
       const item = items.find((i) => i.id === itemId);
       if (!item) throw new WorkflowActionError("Vão não encontrado");
+      if (!installationStepApplies(item, step, espelhoTipoIds)) {
+        throw new WorkflowActionError("Esta etapa não se aplica a vão de espelho");
+      }
 
       // Verifica gate por vão ao marcar como feito
       if (done) {
@@ -210,7 +216,10 @@ export async function updateItemInstallationStepAction(
       }
 
       // Sincroniza o aggregate no installation_logs
-      const newAggregate = aggregateInstallationStepsFromItems(updatedItems);
+      const newAggregate = aggregateInstallationStepsFromItems(
+        updatedItems,
+        espelhoTipoIds,
+      );
 
       const [existingLog] = await tx
         .select({ id: installationLogs.id })
@@ -353,6 +362,7 @@ export async function completeInstallationVaoAction(
     if (!order) return { success: false, message: "OS não encontrada" };
 
     const db = getDb();
+    const espelhoTipoIds = await loadEspelhoTipoIds();
     const isLatePhase = isInstallationOrLater(order.status);
     let osConcludedAt: string | undefined;
 
@@ -368,7 +378,7 @@ export async function completeInstallationVaoAction(
 
       const items = (meas.items as MeasurementLineItem[]) ?? [];
       const cuttingSteps = effectiveCuttingSteps(
-        aggregateCuttingStepsFromItems(items),
+        aggregateCuttingStepsFromItems(items, espelhoTipoIds),
         isLatePhase,
       );
 
@@ -381,7 +391,7 @@ export async function completeInstallationVaoAction(
       const item = items.find((i) => i.id === itemId);
       if (!item) throw new WorkflowActionError("Vão não encontrado");
 
-      if (!isVaoInstallationStepsComplete(item)) {
+      if (!isVaoInstallationStepsComplete(item, espelhoTipoIds)) {
         throw new WorkflowActionError(
           "Conclua todas as fases do vão antes de confirmar",
         );

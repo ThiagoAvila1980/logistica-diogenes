@@ -10,6 +10,13 @@ import {
   isInstallationPhaseStatus,
   isTransportPhaseStatus,
 } from "@/lib/transport-gates";
+import {
+  cuttingStepApplies,
+  installationStepApplies,
+  transportStepApplies,
+} from "@/lib/workflow/espelho-vao";
+
+const NO_ESPELHO_TIPOS: ReadonlySet<string> = new Set();
 
 /**
  * Funções puras de agregação de progresso por vão.
@@ -25,10 +32,12 @@ import {
 /**
  * Progresso de corte a partir dos itens (vãos).
  *
- * - corteFeito      → ALGUM vão tem corte concluído (libera transporte em paralelo)
- * - embalagemFeita  → TODOS os vãos têm embalagem concluída
- * - acessoriosFeitos → TODOS os vãos têm acessórios concluídos
+ * - corteFeito      → ALGUM vão que precisa de corte o concluiu.
+ *   Se nenhum vão precisa (só espelho), a etapa não bloqueia.
+ * - embalagemFeita  → TODOS os vãos que precisam de embalagem a concluíram
+ * - acessoriosFeitos → TODOS os vãos que precisam de acessórios os concluíram
  * - vidrosFeitos    → TODOS os vãos têm vidros concluídos
+ * Vão de espelho só entra em vidros.
  */
 /** Vãos que entram no plano de corte (retrocompat: todos se nenhum tiver flag). */
 export function selectCuttingLineItems(
@@ -61,34 +70,60 @@ export function hasRemainingUnsentMeasurementItems(
   return items.some((i) => i.sentToCutting !== true);
 }
 
+function cuttingStepSatisfied(
+  item: MeasurementLineItem,
+  step: "corte" | "embalagem" | "acessorios" | "vidros",
+  espelhoTipoIds: ReadonlySet<string>,
+): boolean {
+  if (!cuttingStepApplies(item, step, espelhoTipoIds)) return true;
+  return item.cuttingProgress?.[step] === true;
+}
+
+/** Etapa "algum vão" fica satisfeita quando nenhum vão precisa dela. */
+function someApplicableCuttingStep(
+  items: MeasurementLineItem[],
+  step: "corte" | "embalagem" | "acessorios" | "vidros",
+  espelhoTipoIds: ReadonlySet<string>,
+): boolean {
+  const relevant = items.filter((item) =>
+    cuttingStepApplies(item, step, espelhoTipoIds),
+  );
+  if (relevant.length === 0) return items.length > 0;
+  return relevant.some((item) => item.cuttingProgress?.[step] === true);
+}
+
 /** Há algum vão com etapa de corte incompleta (checagem por vão, não por agregado). */
 export function hasPendingCuttingWorkOnItems(
   items: MeasurementLineItem[],
+  espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
 ): boolean {
   if (!items.length) return false;
-  return items.some((item) => {
-    const p = item.cuttingProgress;
-    return (
-      p?.corte !== true ||
-      p?.embalagem !== true ||
-      p?.acessorios !== true ||
-      p?.vidros !== true
-    );
-  });
+  return items.some(
+    (item) =>
+      !cuttingStepSatisfied(item, "corte", espelhoTipoIds) ||
+      !cuttingStepSatisfied(item, "embalagem", espelhoTipoIds) ||
+      !cuttingStepSatisfied(item, "acessorios", espelhoTipoIds) ||
+      !cuttingStepSatisfied(item, "vidros", espelhoTipoIds),
+  );
 }
 
 /** Cortador pode operar na fase de corte ou em transporte paralelo com vãos pendentes. */
 export function canOperateCuttingForItems(
   status: OsStatus,
   items: MeasurementLineItem[],
+  espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
 ): boolean {
   if (isCuttingPhaseStatus(status)) return true;
   if (!isTransportPhaseStatus(status)) return false;
-  return hasPendingCuttingWorkOnItems(selectCuttingLineItems(items));
+  return hasPendingCuttingWorkOnItems(
+    selectCuttingLineItems(items),
+    espelhoTipoIds,
+  );
 }
 
 export function aggregateCuttingStepsFromItems(
   items: MeasurementLineItem[],
+  espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
 ): CuttingSteps {
   if (!items.length) {
     return {
@@ -99,10 +134,16 @@ export function aggregateCuttingStepsFromItems(
     };
   }
   return {
-    corteFeito: items.some((i) => i.cuttingProgress?.corte === true),
-    embalagemFeita: items.every((i) => i.cuttingProgress?.embalagem === true),
-    acessoriosFeitos: items.every((i) => i.cuttingProgress?.acessorios === true),
-    vidrosFeitos: items.every((i) => i.cuttingProgress?.vidros === true),
+    corteFeito: someApplicableCuttingStep(items, "corte", espelhoTipoIds),
+    embalagemFeita: items.every((item) =>
+      cuttingStepSatisfied(item, "embalagem", espelhoTipoIds),
+    ),
+    acessoriosFeitos: items.every((item) =>
+      cuttingStepSatisfied(item, "acessorios", espelhoTipoIds),
+    ),
+    vidrosFeitos: items.every((item) =>
+      cuttingStepSatisfied(item, "vidros", espelhoTipoIds),
+    ),
   };
 }
 
@@ -112,14 +153,37 @@ export function aggregateCuttingStepsFromItems(
  * Considera apenas vãos do plano de corte (mesma regra de `selectCuttingLineItems`),
  * para que vãos só medidos não impeçam o transporte de ser concluído.
  *
- * - levarPerfilEstrutural → ALGUM vão entregou o perfil estrutural
- * - levarPerfilTotal      → TODOS os vãos entregaram os perfis (embalagem)
- * - levarAcessorios       → TODOS os vãos entregaram acessórios
+ * - levarPerfilEstrutural → ALGUM vão que leva perfil estrutural o entregou
+ * - levarPerfilTotal      → TODOS os vãos que levam perfil total o entregaram
+ * - levarAcessorios       → TODOS os vãos que levam acessórios os entregaram
  * - levarVidros           → TODOS os vãos entregaram vidros
- * - transporteConcluido   → as 4 entregas acima completas
+ * - transporteConcluido   → as entregas aplicáveis acima completas
+ * Vão de espelho só entra em vidros.
  */
+function transportStepSatisfied(
+  item: MeasurementLineItem,
+  step: "perfilEstrutural" | "perfilTotal" | "acessorios" | "vidros",
+  espelhoTipoIds: ReadonlySet<string>,
+): boolean {
+  if (!transportStepApplies(item, step, espelhoTipoIds)) return true;
+  return item.transportProgress?.[step] === true;
+}
+
+function someApplicableTransportStep(
+  items: MeasurementLineItem[],
+  step: "perfilEstrutural" | "perfilTotal" | "acessorios" | "vidros",
+  espelhoTipoIds: ReadonlySet<string>,
+): boolean {
+  const relevant = items.filter((item) =>
+    transportStepApplies(item, step, espelhoTipoIds),
+  );
+  if (relevant.length === 0) return items.length > 0;
+  return relevant.some((item) => item.transportProgress?.[step] === true);
+}
+
 export function aggregateTransportStepsFromItems(
   items: MeasurementLineItem[],
+  espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
 ): TransportSteps {
   const scoped = selectCuttingLineItems(items);
   if (!scoped.length) {
@@ -132,16 +196,20 @@ export function aggregateTransportStepsFromItems(
     };
   }
 
-  const levarPerfilEstrutural = scoped.some(
-    (i) => i.transportProgress?.perfilEstrutural === true,
+  const levarPerfilEstrutural = someApplicableTransportStep(
+    scoped,
+    "perfilEstrutural",
+    espelhoTipoIds,
   );
-  const levarPerfilTotal = scoped.every(
-    (i) => i.transportProgress?.perfilTotal === true,
+  const levarPerfilTotal = scoped.every((item) =>
+    transportStepSatisfied(item, "perfilTotal", espelhoTipoIds),
   );
-  const levarAcessorios = scoped.every(
-    (i) => i.transportProgress?.acessorios === true,
+  const levarAcessorios = scoped.every((item) =>
+    transportStepSatisfied(item, "acessorios", espelhoTipoIds),
   );
-  const levarVidros = scoped.every((i) => i.transportProgress?.vidros === true);
+  const levarVidros = scoped.every((item) =>
+    transportStepSatisfied(item, "vidros", espelhoTipoIds),
+  );
   const transporteConcluido =
     levarPerfilEstrutural && levarPerfilTotal && levarAcessorios && levarVidros;
 
@@ -171,15 +239,20 @@ export function selectInstallationLineItems(
  *
  * Considera apenas vãos enviados à instalação (`selectInstallationLineItems`).
  *
- * - instalacaoEstruturalFeita → TODOS os vãos têm estrutural concluído
+ * - instalacaoEstruturalFeita → TODOS os vãos que têm estrutural o concluíram
  * - instalacaoVidrosFeita    → TODOS os vãos têm vidros concluídos
+ * Vão de espelho não exige estrutural.
  */
 export function isVaoInstallationStepsComplete(
   item: MeasurementLineItem,
+  espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
 ): boolean {
   const progress = item.installationProgress;
+  const estrutural =
+    !installationStepApplies(item, "estrutural", espelhoTipoIds) ||
+    progress?.estrutural === true;
   return (
-    progress?.estrutural === true &&
+    estrutural &&
     progress?.vidros === true &&
     progress?.acabamento === true
   );
@@ -191,6 +264,7 @@ export function isVaoInstallationConcluded(item: MeasurementLineItem): boolean {
 
 export function aggregateInstallationStepsFromItems(
   items: MeasurementLineItem[],
+  espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
 ): InstallationSteps {
   const scoped = selectInstallationLineItems(items);
   if (!scoped.length) {
@@ -198,7 +272,9 @@ export function aggregateInstallationStepsFromItems(
   }
   return {
     instalacaoEstruturalFeita: scoped.every(
-      (i) => i.installationProgress?.estrutural === true,
+      (item) =>
+        !installationStepApplies(item, "estrutural", espelhoTipoIds) ||
+        item.installationProgress?.estrutural === true,
     ),
     instalacaoVidrosFeita: scoped.every(
       (i) => i.installationProgress?.vidros === true,

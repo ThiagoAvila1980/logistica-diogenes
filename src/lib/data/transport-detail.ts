@@ -11,6 +11,7 @@ import {
   isTransportOrLater,
   selectCuttingLineItems,
 } from "@/lib/workflow/aggregates";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 
 /**
  * @deprecated Importe de `@/lib/workflow/aggregates`.
@@ -43,6 +44,7 @@ export async function getTransportDetailForOs(
   osStatus: OsStatus,
 ): Promise<TransportDetail> {
   const db = getDb();
+  const espelhoTipoIds = await loadEspelhoTipoIds();
 
   const isLatePhase = isTransportOrLater(osStatus);
 
@@ -85,13 +87,16 @@ export async function getTransportDetailForOs(
 
   // Compute aggregate cutting steps
   const cuttingSteps: CuttingSteps = effectiveCuttingSteps(
-    aggregateCuttingStepsFromItems(items),
+    aggregateCuttingStepsFromItems(items, espelhoTipoIds),
     isLatePhase,
   );
 
   // Compute aggregate transport steps from items (source of truth)
   // Fallback to transport_logs values for data saved before this migration
-  const computedTransport = aggregateTransportStepsFromItems(allItems);
+  const computedTransport = aggregateTransportStepsFromItems(
+    allItems,
+    espelhoTipoIds,
+  );
   const hasPerVaoData = items.some((i) => i.transportProgress !== undefined);
 
   const transportSteps: TransportSteps = hasPerVaoData

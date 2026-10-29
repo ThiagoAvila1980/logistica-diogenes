@@ -42,6 +42,12 @@ import {
   type TransportStep,
 } from "@/lib/logistics/transport-item-gates";
 import { getVaoStepAssignment } from "@/lib/logistics/transport-step-assignment";
+import { aggregateTransportStepsFromItems } from "@/lib/workflow/aggregates";
+import {
+  applicableTransportSteps,
+  espelhoTipoIdsFromDescricoes,
+  transportStepApplies,
+} from "@/lib/workflow/espelho-vao";
 import {
   getStepAuditMeta,
   StepAuditLine,
@@ -99,17 +105,27 @@ export function TransportChecklist({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const espelhoTipoIds = espelhoTipoIdsFromDescricoes(
+    lookups?.tipoEnvidracamento ?? [],
+  );
+  const columnSteps = TRANSPORT_STEPS.filter((step) =>
+    items.some((item) => transportStepApplies(item, step.key, espelhoTipoIds)),
+  );
 
   function toggleExpand(itemId: string) {
     setExpandedId((prev) => (prev === itemId ? null : itemId));
   }
 
-  // Progresso agregado para o banner de status
-  const anyPerfilEst = items.some((i) => progress[i.id]?.perfilEstrutural);
-  const allPerfilTot = items.length > 0 && items.every((i) => progress[i.id]?.perfilTotal);
-  const allAcessorios = items.length > 0 && items.every((i) => progress[i.id]?.acessorios);
-  const allVidros = items.length > 0 && items.every((i) => progress[i.id]?.vidros);
-  const allDone = anyPerfilEst && allPerfilTot && allAcessorios && allVidros;
+  const allDone = aggregateTransportStepsFromItems(
+    items.map((item) => ({
+      ...item,
+      transportProgress: {
+        ...item.transportProgress,
+        ...(progress[item.id] ?? getItemTransportProgress(item)),
+      },
+    })),
+    espelhoTipoIds,
+  ).transporteConcluido;
 
   async function handleToggle(itemId: string, step: TransportStep, done: boolean) {
     const key = `${itemId}-${step}`;
@@ -159,14 +175,17 @@ export function TransportChecklist({
           </span>
           {/* Barra de progresso por etapa */}
           <div className="flex items-center gap-1.5">
-            {TRANSPORT_STEPS.map(({ key, shortLabel }) => {
-              const doneCount = items.filter((i) => progress[i.id]?.[key]).length;
-              const isAll = doneCount === items.length;
+            {columnSteps.map(({ key, shortLabel }) => {
+              const applicable = items.filter((item) =>
+                transportStepApplies(item, key, espelhoTipoIds),
+              );
+              const doneCount = applicable.filter((i) => progress[i.id]?.[key]).length;
+              const isAll = applicable.length > 0 && doneCount === applicable.length;
               return (
                 <div
                   key={key}
                   className="flex flex-col items-center gap-0.5"
-                  title={`${shortLabel}: ${doneCount}/${items.length}`}
+                  title={`${shortLabel}: ${doneCount}/${applicable.length}`}
                 >
                   <div
                     className={cn(
@@ -209,8 +228,9 @@ export function TransportChecklist({
               vidros: false,
             };
             const gates = getItemTransportGates(item, osStatus);
-            const doneSteps = TRANSPORT_STEPS.filter(({ key }) => itemProgress[key]).length;
-            const itemAllDone = doneSteps === 4;
+            const itemSteps = applicableTransportSteps(item, espelhoTipoIds);
+            const doneSteps = itemSteps.filter((key) => itemProgress[key]).length;
+            const itemAllDone = doneSteps === itemSteps.length;
             const subtitle = buildVaoItemSubtitle(item, index, lookups);
             const fullLabel = formatVaoItemFullLabel(subtitle);
             const vaoNumber = getVaoNumber(item, index);
@@ -270,7 +290,7 @@ export function TransportChecklist({
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                     ) : (
                       <Badge variant="outline" className="shrink-0 text-xs">
-                        {doneSteps}/4
+                        {doneSteps}/{itemSteps.length}
                       </Badge>
                     )}
                   </div>
@@ -301,7 +321,7 @@ export function TransportChecklist({
                   <div className="px-3 pb-3">
                     {/* Cada etapa: cabeçalho alinhado + atribuições */}
                     <div className="space-y-2.5">
-                      {TRANSPORT_STEPS.map(({ key, label }, stepIndex) => {
+                      {TRANSPORT_STEPS.filter(({ key }) => itemSteps.includes(key)).map(({ key, label }, stepIndex) => {
                         const done = itemProgress[key];
                         const gate = gates[key];
                         const lKey = `${item.id}-${key}`;

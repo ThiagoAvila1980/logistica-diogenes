@@ -9,6 +9,7 @@ import {
   isLogisticsIndexCandidate,
 } from "@/lib/logistics/filter-orders";
 import { hasPendingTransportWorkForDriver } from "@/lib/logistics/transport-driver-access";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 import { canDeleteMeasurement, canViewAllOrders } from "@/lib/auth/permissions";
 import { Truck } from "lucide-react";
 
@@ -23,9 +24,10 @@ export default async function LogisticsIndexPage() {
     isLogisticsIndexCandidate(order, roles),
   );
 
-  const listingByOs = await getTransportListingProgressForOrders(
-    candidates.map((order) => order.id),
-  );
+  const [listingByOs, espelhoTipoIds] = await Promise.all([
+    getTransportListingProgressForOrders(candidates.map((order) => order.id)),
+    loadEspelhoTipoIds(),
+  ]);
 
   const logisticsOrders = candidates.filter((order) => {
     const entry = listingByOs[order.id];
@@ -35,6 +37,7 @@ export default async function LogisticsIndexPage() {
         hasOperatorPendingWork: hasPendingTransportWorkForDriver(
           entry?.items ?? [],
           session.userId,
+          espelhoTipoIds,
         ),
       });
     }

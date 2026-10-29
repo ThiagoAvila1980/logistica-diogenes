@@ -56,12 +56,14 @@ export function ConcludedOrderCard({ order }: Props) {
       {/* Progresso agregado */}
       {order.totalVaos > 0 && (
         <div className="space-y-1.5">
-          <ProgressRow
-            icon={Hammer}
-            label="Estrutural"
-            done={order.estruturalCount}
-            total={order.totalVaos}
-          />
+          {order.vaos.some((vao) => !vao.espelho) && (
+            <ProgressRow
+              icon={Hammer}
+              label="Estrutural"
+              done={order.estruturalCount}
+              total={order.vaos.filter((vao) => !vao.espelho).length}
+            />
+          )}
           <ProgressRow
             icon={GlassWater}
             label="Vidros"
@@ -116,14 +118,18 @@ export function ConcludedOrderCard({ order }: Props) {
                 </span>
                 <span
                   className="flex shrink-0 gap-0.5"
-                  title={`${vao.estrutural ? "estrutural ✓" : "estrutural ✗"} · ${vao.vidros ? "vidros ✓" : "vidros ✗"} · ${vao.acabamento ? "acabamento ✓" : "acabamento ✗"}`}
+                  title={
+                    vao.espelho
+                      ? `${vao.vidros ? "vidros ✓" : "vidros ✗"} · ${vao.acabamento ? "acabamento ✓" : "acabamento ✗"}`
+                      : `${vao.estrutural ? "estrutural ✓" : "estrutural ✗"} · ${vao.vidros ? "vidros ✓" : "vidros ✗"} · ${vao.acabamento ? "acabamento ✓" : "acabamento ✗"}`
+                  }
                   aria-hidden
                 >
-                  {vao.estrutural ? (
+                  {!vao.espelho && (vao.estrutural ? (
                     <CheckCircle2 className="h-3 w-3 text-success" />
                   ) : (
                     <Circle className="h-3 w-3 opacity-40" />
-                  )}
+                  ))}
                   {vao.vidros ? (
                     <CheckCircle2 className="h-3 w-3 text-success" />
                   ) : (

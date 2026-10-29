@@ -47,6 +47,11 @@ import {
   StepAuditLine,
 } from "@/components/audit/step-audit-hint";
 import type { StepCompletionMetaMap } from "@/lib/audit/format-step-audit";
+import {
+  applicableInstallationSteps,
+  espelhoTipoIdsFromDescricoes,
+  installationStepApplies,
+} from "@/lib/workflow/espelho-vao";
 
 type InstStep = "estrutural" | "vidros" | "acabamento";
 
@@ -288,6 +293,12 @@ export function InstallationChecklist({
 }: Props) {
   const isLatePhase =
     osStatus.startsWith("instalacao") || osStatus === "concluido";
+  const espelhoTipoIds = espelhoTipoIdsFromDescricoes(
+    lookups?.tipoEnvidracamento ?? [],
+  );
+  const columnSteps = INST_STEPS.filter((step) =>
+    items.some((item) => installationStepApplies(item, step.key, espelhoTipoIds)),
+  );
 
   const [progress, setProgress] = useState<Record<string, ItemInstProgress>>(
     () =>
@@ -314,10 +325,11 @@ export function InstallationChecklist({
   const activeItems = items.filter((item) => !concludedIds.has(item.id));
   const concludedItems = items.filter((item) => concludedIds.has(item.id));
 
-  const allEstrutural = activeItems.length > 0 && activeItems.every((i) => progress[i.id]?.estrutural);
-  const allVidros = activeItems.length > 0 && activeItems.every((i) => progress[i.id]?.vidros);
-  const allAcabamento = activeItems.length > 0 && activeItems.every((i) => progress[i.id]?.acabamento);
-  const allActiveStepsDone = activeItems.length === 0 || (allEstrutural && allVidros && allAcabamento);
+  const allActiveStepsDone = activeItems.every((item) =>
+    applicableInstallationSteps(item, espelhoTipoIds).every(
+      (step) => progress[item.id]?.[step],
+    ),
+  );
   const allVaosConcluded = items.length > 0 && concludedIds.size === items.length;
 
   function toggleExpand(itemId: string) {
@@ -368,8 +380,9 @@ export function InstallationChecklist({
   function renderVaoCard(item: MeasurementLineItem, index: number, readOnly = false) {
     const itemProgress = progress[item.id] ?? { estrutural: false, vidros: false, acabamento: false };
     const gates = getItemInstGates(item, isLatePhase, itemProgress);
-    const doneSteps = INST_STEPS.filter(({ key }) => itemProgress[key]).length;
-    const itemStepsComplete = doneSteps === 3;
+    const itemSteps = applicableInstallationSteps(item, espelhoTipoIds);
+    const doneSteps = itemSteps.filter((key) => itemProgress[key]).length;
+    const itemStepsComplete = doneSteps === itemSteps.length;
     const itemConcluded = concludedIds.has(item.id);
     const subtitle = buildVaoItemSubtitle(item, index, lookups);
     const fullLabel = formatVaoItemFullLabel(subtitle);
@@ -426,7 +439,7 @@ export function InstallationChecklist({
           </button>
 
           <div className="hidden items-center gap-3 sm:flex">
-            {INST_STEPS.map(({ key, label: stepLabel, shortLabel }) => {
+            {INST_STEPS.filter(({ key }) => itemSteps.includes(key)).map(({ key, label: stepLabel, shortLabel }) => {
               const done = itemProgress[key];
               const gate = gates[key];
               const isLocked = !readOnly && !gate.unlocked && !done;
@@ -531,7 +544,7 @@ export function InstallationChecklist({
 
         {!readOnly && (
           <div className="grid grid-cols-2 gap-1.5 px-3 pb-2.5 sm:hidden">
-            {INST_STEPS.map(({ key, label: stepLabel, icon: Icon }) => {
+            {INST_STEPS.filter(({ key }) => itemSteps.includes(key)).map(({ key, label: stepLabel, icon: Icon }) => {
               const done = itemProgress[key];
               const gate = gates[key];
               const isLocked = !gate.unlocked && !done;
@@ -660,9 +673,12 @@ export function InstallationChecklist({
           </span>
           {/* Barra de progresso */}
           <div className="flex items-center gap-1.5">
-            {INST_STEPS.map(({ key, shortLabel }) => {
-              const doneCount = activeItems.filter((i) => progress[i.id]?.[key]).length;
-              const totalActive = activeItems.length;
+            {columnSteps.map(({ key, shortLabel }) => {
+              const applicable = activeItems.filter((item) =>
+                installationStepApplies(item, key, espelhoTipoIds),
+              );
+              const doneCount = applicable.filter((i) => progress[i.id]?.[key]).length;
+              const totalActive = applicable.length;
               const isAll = totalActive > 0 && doneCount === totalActive;
               return (
                 <div

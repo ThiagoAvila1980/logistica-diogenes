@@ -220,5 +220,28 @@ describe("transport-driver-access", () => {
 
       expect(hasPendingTransportWorkForDriver(items, "motorista-a")).toBe(true);
     });
+
+    it("vão de espelho não deixa perfil pendente para o motorista", () => {
+      const items = [
+        {
+          id: "a",
+          qty: 1,
+          largura: 1,
+          altura: 1,
+          idTipoEnvidracamento: "esp",
+          transportProgress: {
+            perfilEstrutural: false,
+            perfilTotal: false,
+            acessorios: false,
+            vidros: true,
+            driverId: "motorista-a",
+          },
+        },
+      ] as MeasurementLineItem[];
+
+      expect(
+        hasPendingTransportWorkForDriver(items, "motorista-a", new Set(["esp"])),
+      ).toBe(false);
+    });
   });
 });

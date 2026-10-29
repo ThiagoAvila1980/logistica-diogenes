@@ -7,6 +7,7 @@ import {
   aggregateInstallationStepsFromItems,
 } from "@/lib/workflow/aggregates";
 import type { MeasurementLineItem } from "@/lib/workflow/schemas";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 
 export type InstallationOrderProgress = InstallationSteps & {
   todosVaosConcluidos: boolean;
@@ -42,6 +43,8 @@ export async function getInstallationListingProgressForOrders(
     .from(measurements)
     .where(inArray(measurements.id, osIds));
 
+  const espelhoTipoIds = await loadEspelhoTipoIds();
+
   return Object.fromEntries(
     rows.map((row) => {
       const items = (row.items as MeasurementLineItem[] | null) ?? [];
@@ -49,7 +52,7 @@ export async function getInstallationListingProgressForOrders(
         row.id,
         {
           items,
-          ...aggregateInstallationStepsFromItems(items),
+          ...aggregateInstallationStepsFromItems(items, espelhoTipoIds),
           todosVaosConcluidos: aggregateAllVaosInstallationConcluded(items),
         },
       ];

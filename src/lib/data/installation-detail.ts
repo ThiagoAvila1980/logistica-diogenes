@@ -14,6 +14,7 @@ import {
   selectCuttingLineItems,
   selectInstallationLineItems,
 } from "@/lib/workflow/aggregates";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 
 /**
  * @deprecated Importe de `@/lib/workflow/aggregates`.
@@ -87,6 +88,7 @@ export async function getInstallationDetailForOs(
   osStatus: OsStatus,
 ): Promise<InstallationDetail> {
   const db = getDb();
+  const espelhoTipoIds = await loadEspelhoTipoIds();
 
   const isLatePhase = isInstallationOrLater(osStatus);
 
@@ -138,7 +140,7 @@ export async function getInstallationDetailForOs(
 
   // Cutting steps from items aggregate
   const cuttingSteps: CuttingSteps = effectiveCuttingSteps(
-    aggregateCuttingStepsFromItems(cuttingItems),
+    aggregateCuttingStepsFromItems(cuttingItems, espelhoTipoIds),
     isLatePhase,
   );
 
@@ -147,7 +149,7 @@ export async function getInstallationDetailForOs(
     (i) => i.transportProgress !== undefined,
   );
   const transportSteps: TransportSteps = hasTransportPerVaoData
-    ? aggregateTransportStepsFromItems(rawItems)
+    ? aggregateTransportStepsFromItems(rawItems, espelhoTipoIds)
     : {
         levarPerfilEstrutural: trans?.levarPerfilEstrutural ?? false,
         levarPerfilTotal: trans?.levarPerfilTotal ?? false,
@@ -161,7 +163,7 @@ export async function getInstallationDetailForOs(
     (i) => i.installationProgress !== undefined,
   );
   const installationSteps: InstallationSteps = hasInstPerVaoData
-    ? aggregateInstallationStepsFromItems(rawItems)
+    ? aggregateInstallationStepsFromItems(rawItems, espelhoTipoIds)
     : {
         instalacaoEstruturalFeita: inst?.instalacaoEstruturalFeita ?? false,
         instalacaoVidrosFeita: inst?.instalacaoVidrosFeita ?? false,

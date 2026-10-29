@@ -16,6 +16,8 @@ import {
   canViewAllConcludedOrders,
   hasRole,
 } from "@/lib/auth/permissions";
+import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
+import { isEspelhoVao } from "@/lib/workflow/espelho-vao";
 
 export type VaoInstallationProgress = {
   id: string;
@@ -29,6 +31,8 @@ export type VaoInstallationProgress = {
   vidros: boolean;
   acabamento: boolean;
   concluido: boolean;
+  /** Tipo de envidraçamento é espelho: a instalação não tem etapa estrutural. */
+  espelho?: boolean;
 };
 
 export type ConcludedOrderItem = {
@@ -160,7 +164,10 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
     if (perVaoIds.length > 0) return perVaoIds;
     return r.assignedUserId ? [r.assignedUserId] : [];
   });
-  const installerNamesById = await resolveUserNamesByIds(installerIds);
+  const [installerNamesById, espelhoTipoIds] = await Promise.all([
+    resolveUserNamesByIds(installerIds),
+    loadEspelhoTipoIds(),
+  ]);
 
   return rows
     .map((r) => {
@@ -184,6 +191,7 @@ export async function listConcludedOrdersDb(): Promise<ConcludedOrderItem[]> {
           vidros: item.installationProgress?.vidros ?? false,
           acabamento: item.installationProgress?.acabamento ?? false,
           concluido: item.installationProgress?.concluido ?? false,
+          espelho: isEspelhoVao(item, espelhoTipoIds),
         };
       });
 
