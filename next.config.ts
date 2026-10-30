@@ -79,7 +79,16 @@ const nextConfig: NextConfig = {
     },
   },
   turbopack: {},
-  webpack: (config, { dev }) => {
+  webpack: (config, { dev, nextRuntime, webpack }) => {
+    // O instrumentation também gera bundle edge. Esse runtime não entende
+    // node:child_process do backup, e o next build inteiro falha.
+    if (nextRuntime === "edge") {
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /backup\/(?:daily-schedule|run-database-backup)/,
+        }),
+      );
+    }
     if (dev) {
       // Windows: evita rebuild parcial que deixa chunks órfãos no .next
       config.watchOptions = {
