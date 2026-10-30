@@ -9,9 +9,11 @@
 # .next/cache e o rmSync falha com EBUSY. Aqui usamos `next build` direto.
 providers = ["node"]
 
-# pg_dump entra na imagem para o backup do Postgres (corte + 20:00).
+# Esta lista substitui os pacotes do provider. Sem nodejs_22 o build
+# quebra com "npm: command not found" e o Coolify mantém a versão antiga.
+# postgresql traz o pg_dump do backup (corte + 20:00).
 [phases.setup]
-nixPkgs = ["postgresql"]
+nixPkgs = ["nodejs_22", "postgresql"]
 
 # Coolify/Nixpacks define NODE_ENV=production — sem isso o npm omite
 # devDependencies e o build quebra ao carregar @tailwindcss/postcss.
