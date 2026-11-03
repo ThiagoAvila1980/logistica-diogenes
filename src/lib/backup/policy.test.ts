@@ -3,6 +3,7 @@ import {
   backupObjectKey,
   hasDailyBackupOnDay,
   keysToDelete,
+  pgDumpTarget,
   resolveBackupConfig,
   shouldCatchUpDailyBackup,
   shouldRunScheduledDailyBackup,
@@ -70,6 +71,24 @@ describe("backup do banco", () => {
         directUrl: "postgresql://postgres:senha@localhost:5432/db_logistica",
       })?.databaseUrl,
     ).toContain("localhost");
+  });
+
+  it("manda o pg_dump para o host da URL, não para o socket local", () => {
+    const target = pgDumpTarget(
+      "postgresql://postgres:se%40nha@ai8aub8cn3b7xiev03a3ar1i:5432/db_logistica",
+    );
+    expect(target?.args).toEqual([
+      "--host",
+      "ai8aub8cn3b7xiev03a3ar1i",
+      "--port",
+      "5432",
+      "--username",
+      "postgres",
+      "--dbname",
+      "db_logistica",
+    ]);
+    expect(target?.password).toBe("se@nha");
+    expect(target?.args.join(" ")).not.toContain("se@nha");
   });
 
   it("guarda uma semana e nunca apaga o backup mais novo", () => {

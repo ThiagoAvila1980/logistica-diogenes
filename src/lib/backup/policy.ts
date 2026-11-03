@@ -89,6 +89,38 @@ export function databaseHost(url: string): string | null {
   }
 }
 
+export type PgDumpTarget = {
+  args: string[];
+  password: string;
+};
+
+/** Host e porta separados. O pg_dump do Debian ignora a URL e cai no socket local. */
+export function pgDumpTarget(databaseUrl: string): PgDumpTarget | null {
+  let url: URL;
+  try {
+    url = new URL(databaseUrl);
+  } catch {
+    return null;
+  }
+
+  const database = decodeURIComponent(url.pathname.replace(/^\//, ""));
+  if (!url.hostname || !database) return null;
+
+  return {
+    args: [
+      "--host",
+      url.hostname,
+      "--port",
+      url.port || "5432",
+      "--username",
+      decodeURIComponent(url.username),
+      "--dbname",
+      database,
+    ],
+    password: decodeURIComponent(url.password),
+  };
+}
+
 function isLocalHost(host: string | null): boolean {
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }

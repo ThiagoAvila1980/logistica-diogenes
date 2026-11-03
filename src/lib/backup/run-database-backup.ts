@@ -16,6 +16,7 @@ import {
   BACKUP_KEY_PREFIX,
   backupObjectKey,
   keysToDelete,
+  pgDumpTarget,
   resolveBackupConfig,
   type BackupConfig,
   type BackupEnv,
@@ -58,12 +59,20 @@ function createClient(config: BackupConfig): S3Client {
 }
 
 function dumpDatabase(databaseUrl: string, filePath: string): Promise<void> {
+  const target = pgDumpTarget(databaseUrl);
+  if (!target) {
+    return Promise.reject(new Error("URL do banco sem host ou nome do database."));
+  }
+
   return new Promise((resolve, reject) => {
     const out = createWriteStream(filePath);
     const child = spawn(
       "pg_dump",
-      ["--format=plain", "--no-owner", "--no-privileges", "--dbname", databaseUrl],
-      { stdio: ["ignore", "pipe", "pipe"] },
+      ["--format=plain", "--no-owner", "--no-privileges", ...target.args],
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env, PGPASSWORD: target.password },
+      },
     );
     let stderr = "";
     let settled = false;
