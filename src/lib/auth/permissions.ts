@@ -267,6 +267,7 @@ export const SETTINGS_NAV_ITEMS: NavItem[] = [
     label: "Tipo de envidraçamento",
     match: "/admin/tipo-envidracamento",
   },
+  { href: "/admin/servicos", label: "Serviços", match: "/admin/servicos" },
   {
     href: "/admin/scoring",
     label: "Pontuação",

@@ -10,6 +10,7 @@ import {
   Palette,
   PanelTop,
   Settings2,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const SETTINGS_ICONS: Record<string, LucideIcon> = {
   "/admin/ambientes": DoorOpen,
   "/admin/tipo-vidro": Layers,
   "/admin/tipo-envidracamento": PanelTop,
+  "/admin/servicos": Wrench,
 };
 
 type SettingsNavSectionProps = {

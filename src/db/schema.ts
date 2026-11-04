@@ -8,6 +8,7 @@ import {
   varchar,
   boolean,
   integer,
+  numeric,
   index,
   uniqueIndex,
   primaryKey,
@@ -106,6 +107,39 @@ export const ambientes = pgTable("ambientes", {
   idAmbiente: uuid("id_ambiente").defaultRandom().primaryKey(),
   descricao: varchar("descricao", { length: 255 }).notNull(),
 });
+
+/** Onde o serviço entra na operação: no vão da medição ou avulso no dia. */
+export const servicoEscopo = pgEnum("servico_escopo", ["vao", "avulso"]);
+
+export type ServicoEscopo = (typeof servicoEscopo.enumValues)[number];
+
+/** Catálogo de comissão dos serviços que não são o tipo de envidraçamento. */
+export const servicos = pgTable(
+  "servicos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    descricao: varchar("descricao", { length: 255 }).notNull(),
+    /** Valor da peça ou do atendimento, em reais. */
+    valor: numeric("valor", { precision: 12, scale: 2 }).notNull(),
+    /** Duração prevista, texto livre (ex.: "2 h", "1,5 h"). */
+    tempo: varchar("tempo", { length: 64 }),
+    /** Meta para liberar o bônus (ex.: "4 por dia", "por peça"). */
+    meta: varchar("meta", { length: 64 }),
+    /** Bônus em reais quando a meta fecha. Vazio quando o serviço não tem bônus. */
+    bonus: numeric("bonus", { precision: 12, scale: 2 }),
+    escopo: servicoEscopo("escopo").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_servicos_descricao").on(t.descricao),
+    index("idx_servicos_escopo").on(t.escopo),
+  ],
+);
 
 // ─── Core ──────────────────────────────────────────────────────────────────────
 

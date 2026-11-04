@@ -43,6 +43,13 @@
       "when": 1791467677040,
       "tag": "0005_measurement_concluded_at",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793832577958,
+      "tag": "0006_servicos",
+      "breakpoints": true
     }
   ]
 }

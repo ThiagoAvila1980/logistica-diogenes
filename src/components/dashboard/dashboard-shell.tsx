@@ -23,6 +23,7 @@ function getMobileTitle(pathname: string): string {
   if (pathname.startsWith("/admin/tipo-envidracamento")) {
     return "Tipo de envidraçamento";
   }
+  if (pathname.startsWith("/admin/servicos")) return "Serviços";
   if (pathname.startsWith("/admin/permissions")) return "Visualização de telas";
   if (pathname.startsWith("/admin/auditoria")) return "Auditoria";
   if (pathname.startsWith("/reports/services")) return "Jornada dos serviços";
