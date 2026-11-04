@@ -1,5 +1,9 @@
 import type { KanbanOrderItem } from "@/lib/data/kanban";
-import { isTransportPhaseStatus } from "@/lib/transport-gates";
+import {
+  hasPendingCuttingSteps,
+  isInstallationPhaseStatus,
+  isTransportPhaseStatus,
+} from "@/lib/transport-gates";
 import { KANBAN_PHASES, getPhaseIdForStatus } from "./column-groups";
 
 const DRAGGABLE_SEP = "::";
@@ -69,7 +73,11 @@ export function getKanbanPhaseIdsForOrder(os: KanbanOrderItem): string[] {
   }
 
   const cutting = toCuttingStepsGate(os);
-  if (cutting && isTransportPhaseStatus(os.status)) {
+  if (
+    cutting &&
+    hasPendingCuttingSteps(cutting) &&
+    (isTransportPhaseStatus(os.status) || isInstallationPhaseStatus(os.status))
+  ) {
     phases.add("plano_corte");
   }
 

@@ -50,15 +50,20 @@ describe("isInstallationIndexCandidate", () => {
     ).toBe(true);
   });
 
-  it("exclui concluído para todos os papéis", () => {
+  it("inclui concluído como candidato para admin e instalador reavaliarem vãos pendentes", () => {
     expect(
       isInstallationIndexCandidate(makeOrder({ status: "concluido" }), [
         "instalador",
       ]),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isInstallationIndexCandidate(makeOrder({ status: "concluido" }), [
         "admin",
+      ]),
+    ).toBe(true);
+    expect(
+      isInstallationIndexCandidate(makeOrder({ status: "concluido" }), [
+        "cortador",
       ]),
     ).toBe(false);
   });
@@ -144,12 +149,21 @@ describe("isActiveInstallationListing", () => {
     ).toBe(true);
   });
 
-  it("remove OS com status concluído", () => {
+  it("remove OS concluída quando todos os vãos enviados à instalação foram confirmados", () => {
     expect(
       isActiveInstallationListing(
         makeOrder({ status: "concluido" }),
         completedInstallation,
       ),
     ).toBe(false);
+  });
+
+  it("mantém OS concluída quando ainda há vão de instalação sem confirmar", () => {
+    expect(
+      isActiveInstallationListing(
+        makeOrder({ status: "concluido" }),
+        stepsDoneButNotConfirmed,
+      ),
+    ).toBe(true);
   });
 });

@@ -9,6 +9,7 @@ import {
   isLogisticsIndexCandidate,
 } from "@/lib/logistics/filter-orders";
 import { hasPendingTransportWorkForDriver } from "@/lib/logistics/transport-driver-access";
+import { hasPendingLogisticsWorkOnItems } from "@/lib/workflow/aggregates";
 import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 import { canDeleteMeasurement, canViewAllOrders } from "@/lib/auth/permissions";
 import { Truck } from "lucide-react";
@@ -32,6 +33,26 @@ export default async function LogisticsIndexPage() {
   const logisticsOrders = candidates.filter((order) => {
     const entry = listingByOs[order.id];
     const steps = entry?.steps ?? null;
+    if (order.status === "concluido") {
+      const pending = hasPendingLogisticsWorkOnItems(
+        entry?.items ?? [],
+        espelhoTipoIds,
+      );
+      if (!viewAll && session) {
+        return isActiveTransportListing(order, steps, {
+          hasOperatorPendingWork:
+            pending &&
+            hasPendingTransportWorkForDriver(
+              entry?.items ?? [],
+              session.userId,
+              espelhoTipoIds,
+            ),
+        });
+      }
+      return isActiveTransportListing(order, steps, {
+        hasPendingTransportWork: pending,
+      });
+    }
     if (!viewAll && session) {
       return isActiveTransportListing(order, steps, {
         hasOperatorPendingWork: hasPendingTransportWorkForDriver(

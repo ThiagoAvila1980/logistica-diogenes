@@ -119,6 +119,23 @@ describe("getKanbanPhaseIdsForOrder", () => {
     expect(phases).toContain("concluidos");
   });
 
+  it("coloca no plano de corte a OS concluída que ainda tem vão sem cortar", () => {
+    const phases = getKanbanPhaseIdsForOrder(
+      makeOrder({
+        status: "concluido",
+        cuttingSteps: {
+          corte: false,
+          embalagem: false,
+          acessorios: false,
+          vidros: false,
+        },
+        installationSteps: completedInstallationSteps,
+      }),
+    );
+
+    expect(phases).toContain("plano_corte");
+  });
+
   it("envia OS em transporte paralelo para concluídos quando instalação concluída", () => {
     const phases = getKanbanPhaseIdsForOrder(
       makeOrder({

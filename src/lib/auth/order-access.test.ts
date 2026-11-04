@@ -177,7 +177,36 @@ describe("canAccessOrder — instalador", () => {
       }),
     ).toBe(false);
   });
+});
 
+const cortador: SessionUser = {
+  userId: "cortador-1",
+  email: "cortador@example.com",
+  name: "Cortador",
+  roles: ["cortador"],
+};
+
+describe("canAccessOrder — cortador", () => {
+  it("abre OS concluída sem responsável para cortar vão atrasado", () => {
+    expect(
+      canAccessOrder(cortador, {
+        assignedUserId: null,
+        status: "concluido",
+      }),
+    ).toBe(true);
+  });
+
+  it("não abre OS concluída atribuída a outra pessoa", () => {
+    expect(
+      canAccessOrder(cortador, {
+        assignedUserId: "outra-pessoa",
+        status: "concluido",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("canAccessOrder — admin na instalação", () => {
   it("admin continua vendo qualquer instalação", () => {
     expect(
       canAccessOrder(admin, {

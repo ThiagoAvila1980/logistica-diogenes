@@ -11,7 +11,9 @@ export function isInstallationIndexCandidate(
   order: OrderListItem,
   roles: readonly UserRole[],
 ): boolean {
-  if (order.status === "concluido") return false;
+  if (order.status === "concluido") {
+    return canViewAllOrders(roles) || hasRole(roles, "instalador");
+  }
   if (order.status.startsWith("instalacao")) return true;
   if (isTransportPhaseStatus(order.status)) {
     // Admin/gerente: pool para designar. Instalador: só chega aqui se já
@@ -26,15 +28,20 @@ type OperatorListingOptions = {
   hasOperatorPendingWork?: boolean;
 };
 
-/** OS some de /installation quando todos os vãos foram confirmados como concluídos. */
+/**
+ * OS some de /installation quando todos os vãos enviados à instalação foram
+ * confirmados. Etapa concluído não esconde um vão que ainda falta confirmar.
+ */
 export function isActiveInstallationListing(
   order: OrderListItem,
   progress: InstallationOrderProgress | null,
   options?: OperatorListingOptions,
 ): boolean {
-  if (order.status === "concluido") return false;
   if (options?.hasOperatorPendingWork !== undefined) {
     return options.hasOperatorPendingWork;
+  }
+  if (order.status === "concluido") {
+    return progress ? !progress.todosVaosConcluidos : false;
   }
   if (!progress) return true;
   return !progress.todosVaosConcluidos;

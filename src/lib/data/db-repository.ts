@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, or, isNull, isNotNull, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
-import { measurements, pedidos } from "@/db/schema";
+import { measurements, pedidos, type OsStatus } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/session-types";
 import { getVisibleStatusesForRoles } from "@/lib/auth/order-access";
 import { canViewAllOrders } from "@/lib/auth/permissions";
@@ -18,9 +18,14 @@ import type { OrderDetail, OrderListItem } from "./types";
 
 export type ListOrdersOptions = {
   archiveFilter?: ArchiveFilter;
+  /** Inclui etapas fora do papel, para achar vão atrasado depois que a OS avançou. */
+  extraStatuses?: readonly OsStatus[];
 };
 
-function buildOrderAccessWhere(session: SessionUser | null): SQL | undefined {
+function buildOrderAccessWhere(
+  session: SessionUser | null,
+  extraStatuses?: readonly OsStatus[],
+): SQL | undefined {
   if (!session || canViewAllOrders(session.roles)) return undefined;
 
   const visibleStatuses = getVisibleStatusesForRoles(session.roles);
@@ -57,7 +62,11 @@ function buildOrderAccessWhere(session: SessionUser | null): SQL | undefined {
     return assignedClause;
   }
 
-  return and(assignedClause, inArray(measurements.etapa, visibleStatuses));
+  const statuses = [
+    ...new Set([...visibleStatuses, ...(extraStatuses ?? [])]),
+  ];
+
+  return and(assignedClause, inArray(measurements.etapa, statuses));
 }
 
 function mapMeasurementRow(r: {
@@ -105,7 +114,10 @@ export async function listServiceOrdersDb(
 ): Promise<OrderListItem[]> {
   const db = getDb();
   const archiveFilter = options?.archiveFilter ?? "active";
-  const accessWhere = buildOrderAccessWhere(session ?? null);
+  const accessWhere = buildOrderAccessWhere(
+    session ?? null,
+    options?.extraStatuses,
+  );
 
   const archiveClause =
     archiveFilter === "all"

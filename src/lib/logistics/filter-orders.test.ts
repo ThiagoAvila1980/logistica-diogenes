@@ -44,7 +44,7 @@ describe("isLogisticsIndexCandidate", () => {
     ).toBe(true);
   });
 
-  it("exclui instalação e concluído para motorista", () => {
+  it("exclui instalação para motorista e inclui concluído para reavaliar entrega pendente", () => {
     expect(
       isLogisticsIndexCandidate(
         makeOrder({ status: "instalacao_estrutural" }),
@@ -55,10 +55,10 @@ describe("isLogisticsIndexCandidate", () => {
       isLogisticsIndexCandidate(makeOrder({ status: "concluido" }), [
         "motorista",
       ]),
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it("inclui instalação em andamento para admin e exclui concluído", () => {
+  it("inclui instalação em andamento e concluído para admin reavaliar vãos pendentes", () => {
     expect(
       isLogisticsIndexCandidate(
         makeOrder({ status: "instalacao_vidros" }),
@@ -67,7 +67,7 @@ describe("isLogisticsIndexCandidate", () => {
     ).toBe(true);
     expect(
       isLogisticsIndexCandidate(makeOrder({ status: "concluido" }), ["admin"]),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 
@@ -137,7 +137,7 @@ describe("isActiveTransportListing", () => {
     ).toBe(false);
   });
 
-  it("remove OS com status concluído", () => {
+  it("mantém OS concluída quando ainda há trabalho de transporte", () => {
     expect(
       isActiveTransportListing(
         makeOrder({ status: "concluido" }),
@@ -146,6 +146,17 @@ describe("isActiveTransportListing", () => {
           transporteConcluido: false,
           levarVidros: false,
         },
+        { hasPendingTransportWork: true },
+      ),
+    ).toBe(true);
+  });
+
+  it("remove OS concluída quando não há trabalho de transporte", () => {
+    expect(
+      isActiveTransportListing(
+        makeOrder({ status: "concluido" }),
+        completedTransport,
+        { hasPendingTransportWork: false },
       ),
     ).toBe(false);
   });

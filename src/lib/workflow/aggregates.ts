@@ -107,14 +107,38 @@ export function hasPendingCuttingWorkOnItems(
   );
 }
 
-/** Cortador pode operar na fase de corte ou em transporte paralelo com vãos pendentes. */
+/**
+ * O plano de corte continua mostrando a OS enquanto algum vão enviado
+ * ainda tem etapa de corte pendente, mesmo que outro vão já tenha
+ * levado a OS para transporte, instalação ou concluído.
+ */
+export function shouldListOrderInCutting(
+  status: OsStatus,
+  items: MeasurementLineItem[],
+  espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
+): boolean {
+  const cuttingItems = selectCuttingLineItems(items);
+  const pending = hasPendingCuttingWorkOnItems(cuttingItems, espelhoTipoIds);
+  if (!pending) {
+    return cuttingItems.length === 0 && isCuttingPhaseStatus(status);
+  }
+  return (
+    isCuttingPhaseStatus(status) ||
+    isTransportPhaseStatus(status) ||
+    isInstallationPhaseStatus(status)
+  );
+}
+
+/** Cortador pode operar na fase de corte ou enquanto ainda houver vão pendente. */
 export function canOperateCuttingForItems(
   status: OsStatus,
   items: MeasurementLineItem[],
   espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
 ): boolean {
   if (isCuttingPhaseStatus(status)) return true;
-  if (!isTransportPhaseStatus(status)) return false;
+  if (!isTransportPhaseStatus(status) && !isInstallationPhaseStatus(status)) {
+    return false;
+  }
   return hasPendingCuttingWorkOnItems(
     selectCuttingLineItems(items),
     espelhoTipoIds,
@@ -292,6 +316,58 @@ export function aggregateAllVaosInstallationConcluded(
   const scoped = selectInstallationLineItems(items);
   if (!scoped.length) return false;
   return scoped.every(isVaoInstallationConcluded);
+}
+
+/**
+ * A OS só pode fechar quando cada vão foi confirmado na instalação.
+ * Vão ainda na medição, no corte ou no transporte não entra em
+ * `selectInstallationLineItems` e por isso não pode ser ignorado aqui.
+ */
+export function aggregateEveryItemInstallationConcluded(
+  items: MeasurementLineItem[],
+): boolean {
+  if (!items.length) return false;
+  return items.every(isVaoInstallationConcluded);
+}
+
+function itemCuttingComplete(
+  item: MeasurementLineItem,
+  espelhoTipoIds: ReadonlySet<string>,
+): boolean {
+  return (
+    cuttingStepSatisfied(item, "corte", espelhoTipoIds) &&
+    cuttingStepSatisfied(item, "embalagem", espelhoTipoIds) &&
+    cuttingStepSatisfied(item, "acessorios", espelhoTipoIds) &&
+    cuttingStepSatisfied(item, "vidros", espelhoTipoIds)
+  );
+}
+
+function itemTransportComplete(
+  item: MeasurementLineItem,
+  espelhoTipoIds: ReadonlySet<string>,
+): boolean {
+  return (
+    transportStepSatisfied(item, "perfilEstrutural", espelhoTipoIds) &&
+    transportStepSatisfied(item, "perfilTotal", espelhoTipoIds) &&
+    transportStepSatisfied(item, "acessorios", espelhoTipoIds) &&
+    transportStepSatisfied(item, "vidros", espelhoTipoIds)
+  );
+}
+
+/**
+ * Trabalho que ainda pertence ao transporte: vão já cortado com entrega
+ * pendente, ou corte pronto e ainda não enviado à instalação.
+ * Vão que nem foi cortado fica no plano de corte, não aqui.
+ */
+export function hasPendingLogisticsWorkOnItems(
+  items: MeasurementLineItem[],
+  espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
+): boolean {
+  return selectCuttingLineItems(items).some((item) => {
+    if (!itemCuttingComplete(item, espelhoTipoIds)) return false;
+    if (!itemTransportComplete(item, espelhoTipoIds)) return true;
+    return item.installationProgress == null;
+  });
 }
 
 /**

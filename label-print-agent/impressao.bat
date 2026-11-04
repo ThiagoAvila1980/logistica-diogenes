@@ -10,8 +10,12 @@ set LABEL_PRINT_PRINTER=Thermal LABEL
 REM URL do site em producao (sem barra no final)
 set LABEL_PRINT_API_URL=https://www.diogenesvidros.com.br
 
-REM DEVE ser o mesmo valor de LABEL_PRINT_AGENT_TOKEN no servidor (Coolify / .env)
-set LABEL_PRINT_AGENT_TOKEN=x8yItnWNoVPwpYwdnTZaMVqyjApJmY0HvlNc9ksbYiU
+REM DEVE ser o mesmo valor de LABEL_PRINT_AGENT_TOKEN no servidor (Coolify / .env).
+REM NAO coloque o token real aqui (este arquivo vai para o git).
+REM Crie label-print-agent\impressao.local.bat (ignorado pelo git) com a linha:
+REM   set LABEL_PRINT_AGENT_TOKEN=seu-token
+set LABEL_PRINT_AGENT_TOKEN=troque-pelo-mesmo-token-do-servidor
+if exist "%~dp0impressao.local.bat" call "%~dp0impressao.local.bat"
 
 echo.
 echo ========================================

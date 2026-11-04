@@ -43,6 +43,19 @@ describe("osCloseOnVaoConfirmed", () => {
     ).toBeNull();
   });
 
+  it("não fecha enquanto existe vão que ainda não entrou na instalação", () => {
+    expect(
+      osCloseOnVaoConfirmed({
+        etapa: "transporte_perfil",
+        items: [
+          vao("a", true),
+          { id: "b", qty: 1, largura: 1000, altura: 1000 },
+        ],
+        now,
+      }),
+    ).toBeNull();
+  });
+
   it("não gera outro fechamento se a OS já está concluída", () => {
     expect(
       osCloseOnVaoConfirmed({

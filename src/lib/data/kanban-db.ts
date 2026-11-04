@@ -129,9 +129,10 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       vidros: cuttingAggregate.vidrosFeitos,
     };
 
-    const hasPendingCutting =
-      isTransportPhase &&
-      hasPendingCuttingWorkOnItems(cuttingItems, espelhoTipoIds);
+    const hasPendingCutting = hasPendingCuttingWorkOnItems(
+      cuttingItems,
+      espelhoTipoIds,
+    );
 
     const transportStepsData = aggregateTransportStepsFromItems(
       items,
@@ -146,7 +147,9 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
       todosVaosConcluidos: aggregateAllVaosInstallationConcluded(items),
     };
 
-    const showCutting = isCortePhase || hasPendingCutting;
+    const showCutting =
+      isCortePhase ||
+      ((isTransportPhase || isInstallationPhase) && hasPendingCutting);
     const showTransport = isTransportPhase;
     const showInstallationProfessionals =
       isInstallationPhase || r.status === "concluido";

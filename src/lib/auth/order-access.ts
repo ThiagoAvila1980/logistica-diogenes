@@ -104,6 +104,14 @@ export function canAccessOrder(
     order.assignedUserId === null || order.assignedUserId === session.userId;
   if (!assigned) return false;
 
+  if (
+    hasAnyRole(session.roles, ["cortador"]) &&
+    (isTransportPhaseStatus(order.status) ||
+      isInstallationPhaseStatus(order.status))
+  ) {
+    return true;
+  }
+
   return isStatusVisibleToRoles(session.roles, order.status);
 }
 

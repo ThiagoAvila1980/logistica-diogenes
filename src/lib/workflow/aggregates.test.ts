@@ -13,6 +13,8 @@ import {
   canOperateCuttingForItems,
   effectiveCuttingSteps,
   hasPendingCuttingWorkOnItems,
+  hasPendingLogisticsWorkOnItems,
+  shouldListOrderInCutting,
   isTransportOrLater,
   isInstallationOrLater,
 } from "./aggregates";
@@ -177,6 +179,115 @@ describe("canOperateCuttingForItems", () => {
     } as const;
     const items = [item("a", { cuttingProgress: done }), item("b", { cuttingProgress: done })];
     expect(canOperateCuttingForItems("transporte_perfil", items)).toBe(false);
+  });
+
+  it("permite cortar um vão atrasado mesmo com a OS já concluída", () => {
+    const done = {
+      corte: true,
+      embalagem: true,
+      acessorios: true,
+      vidros: true,
+    } as const;
+    const items = [
+      item("atrasado", { sentToCutting: true }),
+      item("pronto", { sentToCutting: true, cuttingProgress: done }),
+    ];
+    expect(canOperateCuttingForItems("concluido", items)).toBe(true);
+  });
+});
+
+describe("shouldListOrderInCutting", () => {
+  const done = {
+    corte: true,
+    embalagem: true,
+    acessorios: true,
+    vidros: true,
+  } as const;
+
+  it("mantém no plano de corte o vão enviado que ainda não foi cortado, com a OS concluída", () => {
+    const items = [
+      item("vao-1", { sentToCutting: true }),
+      item("vao-2", {
+        sentToCutting: true,
+        cuttingProgress: done,
+        installationProgress: {
+          estrutural: true,
+          vidros: true,
+          acabamento: true,
+          concluido: true,
+        },
+      }),
+    ];
+    expect(shouldListOrderInCutting("concluido", items)).toBe(true);
+  });
+
+  it("não lista OS concluída quando todos os vãos enviados já foram cortados", () => {
+    const items = [
+      item("a", { sentToCutting: true, cuttingProgress: done }),
+      item("b", { sentToCutting: true, cuttingProgress: done }),
+    ];
+    expect(shouldListOrderInCutting("concluido", items)).toBe(false);
+  });
+
+  it("não lista medição que ainda não foi enviada ao corte", () => {
+    expect(
+      shouldListOrderInCutting("medicao_final", [item("a"), item("b")]),
+    ).toBe(false);
+  });
+});
+
+describe("hasPendingLogisticsWorkOnItems", () => {
+  const cutDone = {
+    corte: true,
+    embalagem: true,
+    acessorios: true,
+    vidros: true,
+  } as const;
+  const transportDone = {
+    perfilEstrutural: true,
+    perfilTotal: true,
+    acessorios: true,
+    vidros: true,
+  } as const;
+
+  it("não trata como transporte o vão que ainda está no corte", () => {
+    const items = [
+      item("atrasado", { sentToCutting: true }),
+      item("pronto", {
+        sentToCutting: true,
+        cuttingProgress: cutDone,
+        transportProgress: transportDone,
+        installationProgress: {
+          estrutural: true,
+          vidros: true,
+          acabamento: true,
+          concluido: true,
+        },
+      }),
+    ];
+    expect(hasPendingLogisticsWorkOnItems(items)).toBe(false);
+  });
+
+  it("mantém no transporte o vão já cortado que ainda não foi enviado à instalação", () => {
+    const items = [
+      item("atrasado", {
+        sentToCutting: true,
+        cuttingProgress: cutDone,
+        transportProgress: transportDone,
+      }),
+      item("pronto", {
+        sentToCutting: true,
+        cuttingProgress: cutDone,
+        transportProgress: transportDone,
+        installationProgress: {
+          estrutural: true,
+          vidros: true,
+          acabamento: true,
+          concluido: true,
+        },
+      }),
+    ];
+    expect(hasPendingLogisticsWorkOnItems(items)).toBe(true);
   });
 });
 

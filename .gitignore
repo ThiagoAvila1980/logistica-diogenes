@@ -63,3 +63,6 @@ next-env.d.ts
 *.aab
 
 # lockfile versionado para installs reproduzíveis no Coolify/CI.
+
+# Token local do agente de impressao (nao versionar)
+label-print-agent/impressao.local.bat
