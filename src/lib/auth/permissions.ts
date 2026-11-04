@@ -191,8 +191,28 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/production", label: "Corte e Logística", match: "/production" },
   { href: "/logistics", label: "Transporte", match: "/logistics" },
   { href: "/installation", label: "Instalação", match: "/installation" },
+  { href: "/installation/agenda", label: "Agenda", match: "/installation/agenda" },
   { href: "/concluded", label: "Concluídos", match: "/concluded" },
 ];
+
+/** Destaque do menu: rota mais específica ganha (Agenda vs Instalação). */
+export function isNavItemActive(
+  pathname: string,
+  item: Pick<NavItem, "match">,
+  items: readonly Pick<NavItem, "match">[],
+): boolean {
+  const matches = (match: string) =>
+    pathname === match || pathname.startsWith(`${match}/`);
+
+  if (!matches(item.match)) return false;
+
+  return !items.some(
+    (other) =>
+      other.match !== item.match &&
+      other.match.startsWith(`${item.match}/`) &&
+      matches(other.match),
+  );
+}
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: "/admin/users", label: "Usuários", match: "/admin/users" },

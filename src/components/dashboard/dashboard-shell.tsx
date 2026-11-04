@@ -13,6 +13,7 @@ function getMobileTitle(pathname: string): string {
   if (pathname === "/dashboard") return "Painel";
   if (pathname.startsWith("/production")) return "Corte e Logística";
   if (pathname.startsWith("/logistics")) return "Transporte";
+  if (pathname.startsWith("/installation/agenda")) return "Agenda do dia";
   if (pathname.startsWith("/installation")) return "Instalação";
   if (pathname.startsWith("/concluded")) return "Concluídos";
   if (pathname.startsWith("/admin/users")) return "Usuários";

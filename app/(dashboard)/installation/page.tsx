@@ -1,8 +1,11 @@
+import Link from "next/link";
+import { CalendarDays, Hammer } from "lucide-react";
 import { listServiceOrders } from "@/lib/data/orders";
 import { getInstallationListingProgressForOrders } from "@/lib/data/installation-steps-batch";
 import { getInstallationSummaries } from "@/lib/data/installation";
 import { InstallationOrderIndex } from "@/components/installation/installation-order-index";
 import { PageHeading } from "@/components/dashboard/page-heading";
+import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/auth/session";
 import {
   isActiveInstallationListing,
@@ -10,7 +13,6 @@ import {
 } from "@/lib/installation/filter-orders";
 import { hasPendingInstallationWorkForInstaller } from "@/lib/installation/installation-installer-access";
 import { canViewAllOrders } from "@/lib/auth/permissions";
-import { Hammer } from "lucide-react";
 
 export default async function InstallationIndexPage() {
   const session = await getSession();
@@ -69,7 +71,14 @@ export default async function InstallationIndexPage() {
         count={installationOrders.length}
         description="Checklist de etapas e registro fotográfico do serviço na obra."
         icon={Hammer}
-      />
+      >
+        <Button asChild variant="outline" size="sm">
+          <Link href="/installation/agenda">
+            <CalendarDays className="h-4 w-4" />
+            Agenda do dia
+          </Link>
+        </Button>
+      </PageHeading>
 
       <InstallationOrderIndex
         orders={installationOrders}

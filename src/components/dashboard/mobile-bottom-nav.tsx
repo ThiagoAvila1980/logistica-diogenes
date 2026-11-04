@@ -7,11 +7,12 @@ import {
   Scissors,
   Truck,
   Hammer,
+  CalendarDays,
   BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { NavItem } from "@/lib/auth/permissions";
+import { isNavItemActive, type NavItem } from "@/lib/auth/permissions";
 
 const MOBILE_ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutDashboard,
@@ -19,6 +20,7 @@ const MOBILE_ICONS: Record<string, LucideIcon> = {
   "/production": Scissors,
   "/logistics": Truck,
   "/installation": Hammer,
+  "/installation/agenda": CalendarDays,
   "/concluded": BadgeCheck,
 };
 
@@ -28,6 +30,7 @@ const MOBILE_LABELS: Record<string, string> = {
   "/production": "Corte",
   "/logistics": "Transporte",
   "/installation": "Instalação",
+  "/installation/agenda": "Agenda",
   "/concluded": "Concluídos",
 };
 
@@ -38,7 +41,7 @@ export function MobileBottomNav({
   pathname: string;
   navItems: NavItem[];
 }) {
-  const items = navItems.slice(0, 6);
+  const items = navItems;
 
   return (
     <nav
@@ -49,11 +52,11 @@ export function MobileBottomNav({
         className="grid h-14"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
-        {items.map(({ href, match }) => {
+        {items.map((item) => {
+          const { href, match } = item;
           const Icon = MOBILE_ICONS[match] ?? LayoutDashboard;
           const label = MOBILE_LABELS[match] ?? match.replace("/", "");
-          const active =
-            pathname === match || pathname.startsWith(`${match}/`);
+          const active = isNavItemActive(pathname, item, items);
 
           return (
             <li key={href} className="min-w-0">

@@ -5,12 +5,13 @@ import {
   Scissors,
   Truck,
   Hammer,
+  CalendarDays,
   BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth/session-types";
-import { formatRolesLabel, type NavItem } from "@/lib/auth/permissions";
+import { formatRolesLabel, isNavItemActive, type NavItem } from "@/lib/auth/permissions";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { SettingsNavSection } from "@/components/dashboard/settings-nav-section";
@@ -23,6 +24,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   "/production": Scissors,
   "/logistics": Truck,
   "/installation": Hammer,
+  "/installation/agenda": CalendarDays,
   "/concluded": BadgeCheck,
 };
 
@@ -83,10 +85,10 @@ export function AppSidebar({
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-        {navItems.map(({ href, label, match }) => {
+        {navItems.map((item) => {
+          const { href, label, match } = item;
           const Icon = NAV_ICONS[match] ?? LayoutDashboard;
-          const active =
-            pathname === match || pathname.startsWith(`${match}/`);
+          const active = isNavItemActive(pathname, item, navItems);
 
           return (
             <Link

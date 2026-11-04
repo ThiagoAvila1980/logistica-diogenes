@@ -4,6 +4,8 @@ import {
   canDeleteMeasurement,
   canAddVaosAfterCutting,
   canAssignTransport,
+  getNavItemsForRoles,
+  isNavItemActive,
 } from "./permissions";
 
 describe("canArchiveMeasurement", () => {
@@ -67,5 +69,52 @@ describe("canAssignTransport", () => {
     expect(canAssignTransport(["cortador"])).toBe(false);
     expect(canAssignTransport(["instalador"])).toBe(false);
     expect(canAssignTransport([])).toBe(false);
+  });
+});
+
+describe("isNavItemActive", () => {
+  const items = [
+    { match: "/installation" },
+    { match: "/installation/agenda" },
+    { match: "/concluded" },
+  ];
+
+  it("marca Agenda só em /installation/agenda", () => {
+    expect(
+      isNavItemActive("/installation/agenda", { match: "/installation/agenda" }, items),
+    ).toBe(true);
+    expect(
+      isNavItemActive("/installation", { match: "/installation/agenda" }, items),
+    ).toBe(false);
+    expect(
+      isNavItemActive("/installation/abc", { match: "/installation/agenda" }, items),
+    ).toBe(false);
+  });
+
+  it("marca Instalação na listagem e na OS, não na agenda", () => {
+    expect(
+      isNavItemActive("/installation", { match: "/installation" }, items),
+    ).toBe(true);
+    expect(
+      isNavItemActive("/installation/abc", { match: "/installation" }, items),
+    ).toBe(true);
+    expect(
+      isNavItemActive("/installation/agenda", { match: "/installation" }, items),
+    ).toBe(false);
+  });
+});
+
+describe("getNavItemsForRoles", () => {
+  it("inclui Agenda para quem acessa Instalação", () => {
+    const hrefs = getNavItemsForRoles(["instalador"]).map((item) => item.href);
+    expect(hrefs).toContain("/installation");
+    expect(hrefs).toContain("/installation/agenda");
+    expect(hrefs).toContain("/concluded");
+  });
+
+  it("não inclui Agenda para medidor", () => {
+    expect(getNavItemsForRoles(["medidor"]).map((item) => item.href)).not.toContain(
+      "/installation/agenda",
+    );
   });
 });
