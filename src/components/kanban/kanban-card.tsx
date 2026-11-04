@@ -292,7 +292,7 @@ export function KanbanCard({
                     })}
                   </div>
                   <KanbanProfessionalNames
-                    names={os.professionalNames}
+                    names={os.installerNames ?? os.professionalNames}
                     className={text.badge}
                   />
                 </>

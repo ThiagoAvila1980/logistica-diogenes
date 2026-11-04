@@ -300,7 +300,8 @@ export async function updateItemTransportStepAction(
 
     const db = getDb();
     const espelhoTipoIds = await loadEspelhoTipoIds();
-    const isLatePhase = isTransportOrLater(order.status);
+    const isLatePhase =
+      order.status !== "concluido" && isTransportOrLater(order.status);
 
     // Leitura + escrita na mesma transação com lock de linha (FOR UPDATE),
     // evitando lost update quando dois operadores editam vãos da mesma OS.

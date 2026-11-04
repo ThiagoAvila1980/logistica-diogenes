@@ -12,6 +12,7 @@ import { hasPendingTransportWorkForDriver } from "@/lib/logistics/transport-driv
 import { hasPendingLogisticsWorkOnItems } from "@/lib/workflow/aggregates";
 import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
 import { canDeleteMeasurement, canViewAllOrders } from "@/lib/auth/permissions";
+import { isCuttingPhaseStatus } from "@/lib/transport-gates";
 import { Truck } from "lucide-react";
 
 export default async function LogisticsIndexPage() {
@@ -33,7 +34,7 @@ export default async function LogisticsIndexPage() {
   const logisticsOrders = candidates.filter((order) => {
     const entry = listingByOs[order.id];
     const steps = entry?.steps ?? null;
-    if (order.status === "concluido") {
+    if (order.status === "concluido" || isCuttingPhaseStatus(order.status)) {
       const pending = hasPendingLogisticsWorkOnItems(
         entry?.items ?? [],
         espelhoTipoIds,

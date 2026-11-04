@@ -250,6 +250,32 @@ describe("hasPendingLogisticsWorkOnItems", () => {
     vidros: true,
   } as const;
 
+  it("leva ao transporte cada etapa de corte já ticada, sem esperar o corte inteiro", () => {
+    const items = [
+      item("atrasado", {
+        sentToCutting: true,
+        cuttingProgress: {
+          corte: true,
+          embalagem: false,
+          acessorios: true,
+          vidros: false,
+        },
+      }),
+      item("pronto", {
+        sentToCutting: true,
+        cuttingProgress: cutDone,
+        transportProgress: transportDone,
+        installationProgress: {
+          estrutural: true,
+          vidros: true,
+          acabamento: true,
+          concluido: true,
+        },
+      }),
+    ];
+    expect(hasPendingLogisticsWorkOnItems(items)).toBe(true);
+  });
+
   it("não trata como transporte o vão que ainda está no corte", () => {
     const items = [
       item("atrasado", { sentToCutting: true }),

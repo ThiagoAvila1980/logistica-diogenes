@@ -20,6 +20,7 @@ import {
   aggregateInstallationStepsFromItems,
   aggregateAllVaosInstallationConcluded,
   hasPendingCuttingWorkOnItems,
+  hasPendingLogisticsWorkOnItems,
   selectCuttingLineItems,
 } from "@/lib/workflow/aggregates";
 import { loadEspelhoTipoIds } from "@/lib/data/espelho-tipos";
@@ -141,18 +142,26 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
 
     const hasFirstTransportDelivery =
       isTransportPhase && transportStepsData.levarPerfilEstrutural;
+    const hasSentToInstallation = items.some(
+      (item) => item.installationProgress !== undefined,
+    );
 
     const installationStepsData = {
       ...aggregateInstallationStepsFromItems(items, espelhoTipoIds),
       todosVaosConcluidos: aggregateAllVaosInstallationConcluded(items),
     };
 
+    const pendingLogistics = hasPendingLogisticsWorkOnItems(
+      items,
+      espelhoTipoIds,
+    );
+
     const showCutting =
       isCortePhase ||
       ((isTransportPhase || isInstallationPhase) && hasPendingCutting);
-    const showTransport = isTransportPhase;
-    const showInstallationProfessionals =
-      isInstallationPhase || r.status === "concluido";
+    const showTransport = isTransportPhase || pendingLogistics;
+    const showInstallationColumn =
+      isInstallationPhase || hasFirstTransportDelivery || hasSentToInstallation;
 
     const driverIds = [
       ...collectDriverIdsFromMeasurementItems(items),
@@ -184,9 +193,9 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
           : { pedidoFeito: r.pedidoFeito, pedidoRecebido: r.pedidoRecebido ?? false },
       ),
       cuttingSteps: showCutting ? cuttingStepsData : null,
-      transportSteps: isTransportPhase ? transportStepsData : null,
+      transportSteps: showTransport ? transportStepsData : null,
       installationSteps:
-        isInstallationPhase || hasFirstTransportDelivery
+        isInstallationPhase || hasFirstTransportDelivery || hasSentToInstallation
           ? installationStepsData
           : null,
       cutterName: showCutting
@@ -196,9 +205,12 @@ export async function listKanbanOrdersDb(): Promise<KanbanOrderItem[]> {
         : null,
       professionalNames: showTransport
         ? namesFromIds(driverIds, nameById)
-        : showInstallationProfessionals
+        : showInstallationColumn
           ? namesFromIds(installerIds, nameById)
           : null,
+      installerNames: showInstallationColumn
+        ? namesFromIds(installerIds, nameById)
+        : null,
     };
   });
 }

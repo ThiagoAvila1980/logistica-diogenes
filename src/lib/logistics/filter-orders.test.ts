@@ -35,6 +35,15 @@ const completedTransport: TransportSteps = {
 };
 
 describe("isLogisticsIndexCandidate", () => {
+  it("inclui plano de corte para admin quando uma etapa já pode ir ao transporte", () => {
+    expect(
+      isLogisticsIndexCandidate(makeOrder({ status: "cortes" }), ["admin"]),
+    ).toBe(true);
+    expect(
+      isLogisticsIndexCandidate(makeOrder({ status: "cortes" }), ["medidor"]),
+    ).toBe(false);
+  });
+
   it("inclui etapas de transporte para motorista", () => {
     expect(
       isLogisticsIndexCandidate(

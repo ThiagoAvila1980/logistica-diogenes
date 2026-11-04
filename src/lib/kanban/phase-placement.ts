@@ -1,6 +1,7 @@
 import type { KanbanOrderItem } from "@/lib/data/kanban";
 import {
   hasPendingCuttingSteps,
+  isCuttingPhaseStatus,
   isInstallationPhaseStatus,
   isTransportPhaseStatus,
 } from "@/lib/transport-gates";
@@ -81,12 +82,18 @@ export function getKanbanPhaseIdsForOrder(os: KanbanOrderItem): string[] {
     phases.add("plano_corte");
   }
 
-  const transport = os.transportSteps;
   if (
-    transport &&
-    transport.levarPerfilEstrutural &&
-    isTransportPhaseStatus(os.status)
+    os.transportSteps &&
+    !isTransportKanbanPhaseComplete(os) &&
+    (isCuttingPhaseStatus(os.status) || isInstallationPhaseStatus(os.status))
   ) {
+    phases.add("transporte");
+  }
+
+  const transport = os.transportSteps;
+  const openedInstallation =
+    Boolean(transport?.levarPerfilEstrutural) || os.installationSteps != null;
+  if (openedInstallation && isTransportPhaseStatus(os.status)) {
     phases.add(installationComplete ? "concluidos" : "instalacao");
   }
 

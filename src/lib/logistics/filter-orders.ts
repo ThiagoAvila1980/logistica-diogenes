@@ -2,6 +2,7 @@ import type { OrderListItem } from "@/lib/data/types";
 import type { UserRole } from "@/lib/auth/permissions";
 import { canViewAllOrders } from "@/lib/auth/permissions";
 import {
+  isCuttingPhaseStatus,
   isInstallationPhaseStatus,
   isTransportPhaseStatus,
   type TransportSteps,
@@ -13,6 +14,7 @@ export function isLogisticsIndexCandidate(
   roles: readonly UserRole[],
 ): boolean {
   if (isTransportPhaseStatus(order.status)) return true;
+  if (isCuttingPhaseStatus(order.status)) return canViewAllOrders(roles);
   if (order.status === "concluido") {
     return canViewAllOrders(roles) || roles.includes("motorista");
   }

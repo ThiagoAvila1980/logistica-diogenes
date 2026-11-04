@@ -11,6 +11,7 @@ export type TransportStepGate = { unlocked: boolean; reason: string | null };
 
 function isTransportOrLater(status: OsStatus | string): boolean {
   const osStatus = status as OsStatus;
+  if (osStatus === "concluido") return false;
   return isTransportPhaseStatus(osStatus) || isInstallationPhaseStatus(osStatus);
 }
 

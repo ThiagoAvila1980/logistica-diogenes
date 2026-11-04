@@ -43,6 +43,25 @@ describe("getItemTransportGates", () => {
     expect(gates.vidros.reason).toBeNull();
   });
 
+  it("em OS concluída libera só a entrega da etapa de corte já ticada", () => {
+    const gates = getItemTransportGates(
+      item("a", {
+        cuttingProgress: {
+          corte: true,
+          embalagem: false,
+          acessorios: true,
+          vidros: false,
+        },
+      }),
+      "concluido",
+    );
+    expect(gates.perfilEstrutural.unlocked).toBe(true);
+    expect(gates.acessorios.unlocked).toBe(true);
+    expect(gates.perfilTotal.unlocked).toBe(false);
+    expect(gates.perfilTotal.reason).toBe("Aguardando embalagem deste vão");
+    expect(gates.vidros.unlocked).toBe(false);
+  });
+
   it("bloqueia vidros na fase de corte enquanto vidros do vão pendente", () => {
     const gates = getItemTransportGates(
       item("a", { cuttingProgress: { corte: true, embalagem: true, acessorios: true, vidros: false } }),

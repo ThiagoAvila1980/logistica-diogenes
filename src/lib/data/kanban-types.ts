@@ -53,6 +53,8 @@ export type KanbanOrderItem = {
   cutterName?: string | null;
   /** Motorista(s) ou instalador(es) — vírgula se houver mais de um */
   professionalNames?: string | null;
+  /** Instalador(es) quando o card também aparece na coluna de instalação */
+  installerNames?: string | null;
 };
 
 /** Restaura `Date` após serialização de Server Actions. */

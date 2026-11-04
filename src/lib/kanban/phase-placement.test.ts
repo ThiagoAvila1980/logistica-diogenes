@@ -42,6 +42,30 @@ const stepsDoneNotConfirmed = {
 };
 
 describe("getKanbanPhaseIdsForOrder", () => {
+  it("coloca na instalação a OS enviada mesmo sem perfil estrutural entregue", () => {
+    const phases = getKanbanPhaseIdsForOrder(
+      makeOrder({
+        status: "transporte_perfil",
+        transportSteps: {
+          levarPerfilEstrutural: false,
+          levarPerfilTotal: false,
+          levarAcessorios: false,
+          levarVidros: false,
+          transporteConcluido: false,
+        },
+        installationSteps: {
+          instalacaoEstruturalFeita: false,
+          instalacaoVidrosFeita: false,
+          instalacaoAcabamentoFeito: false,
+          todosVaosConcluidos: false,
+        },
+      }),
+    );
+
+    expect(phases).toContain("transporte");
+    expect(phases).toContain("instalacao");
+  });
+
   it("mantém OS na coluna transporte enquanto entregas pendentes", () => {
     const phases = getKanbanPhaseIdsForOrder(
       makeOrder({
@@ -117,6 +141,23 @@ describe("getKanbanPhaseIdsForOrder", () => {
 
     expect(phases).not.toContain("instalacao");
     expect(phases).toContain("concluidos");
+  });
+
+  it("coloca no transporte a OS concluída com entrega ainda pendente", () => {
+    const phases = getKanbanPhaseIdsForOrder(
+      makeOrder({
+        status: "concluido",
+        transportSteps: {
+          levarPerfilEstrutural: false,
+          levarPerfilTotal: false,
+          levarAcessorios: false,
+          levarVidros: false,
+          transporteConcluido: false,
+        },
+      }),
+    );
+
+    expect(phases).toContain("transporte");
   });
 
   it("coloca no plano de corte a OS concluída que ainda tem vão sem cortar", () => {

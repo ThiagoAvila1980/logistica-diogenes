@@ -354,16 +354,49 @@ function itemTransportComplete(
   );
 }
 
+const TRANSPORT_STEP_BY_CUTTING = {
+  perfilEstrutural: "corte",
+  perfilTotal: "embalagem",
+  acessorios: "acessorios",
+  vidros: "vidros",
+} as const;
+
+type TransportChecklistStep = keyof typeof TRANSPORT_STEP_BY_CUTTING;
+
 /**
- * Trabalho que ainda pertence ao transporte: vão já cortado com entrega
- * pendente, ou corte pronto e ainda não enviado à instalação.
- * Vão que nem foi cortado fica no plano de corte, não aqui.
+ * A etapa de transporte libera quando a etapa de corte correspondente
+ * daquele vão foi ticada. Não espera o checklist de corte inteiro.
+ */
+function transportStepUnlockedByCutting(
+  item: MeasurementLineItem,
+  step: TransportChecklistStep,
+  espelhoTipoIds: ReadonlySet<string>,
+): boolean {
+  if (!transportStepApplies(item, step, espelhoTipoIds)) return false;
+  return cuttingStepSatisfied(
+    item,
+    TRANSPORT_STEP_BY_CUTTING[step],
+    espelhoTipoIds,
+  );
+}
+
+/**
+ * Trabalho que ainda pertence ao transporte: alguma etapa de corte já
+ * ticada cuja entrega correspondente não foi feita, ou corte completo
+ * ainda não enviado à instalação.
  */
 export function hasPendingLogisticsWorkOnItems(
   items: MeasurementLineItem[],
   espelhoTipoIds: ReadonlySet<string> = NO_ESPELHO_TIPOS,
 ): boolean {
+  const steps = Object.keys(TRANSPORT_STEP_BY_CUTTING) as TransportChecklistStep[];
   return selectCuttingLineItems(items).some((item) => {
+    const unlockedPending = steps.some(
+      (step) =>
+        transportStepUnlockedByCutting(item, step, espelhoTipoIds) &&
+        !transportStepSatisfied(item, step, espelhoTipoIds),
+    );
+    if (unlockedPending) return true;
     if (!itemCuttingComplete(item, espelhoTipoIds)) return false;
     if (!itemTransportComplete(item, espelhoTipoIds)) return true;
     return item.installationProgress == null;
