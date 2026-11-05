@@ -1,7 +1,7 @@
 import "server-only";
 
 import { spawn } from "node:child_process";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, existsSync } from "node:fs";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -58,6 +58,15 @@ function createClient(config: BackupConfig): S3Client {
   });
 }
 
+const PG_DUMP_18 = "/usr/lib/postgresql/18/bin/pg_dump";
+
+function pgDumpBinary(): string {
+  const fromEnv = process.env.BACKUP_PG_DUMP?.trim();
+  if (fromEnv) return fromEnv;
+  if (existsSync(PG_DUMP_18)) return PG_DUMP_18;
+  return "pg_dump";
+}
+
 function dumpDatabase(databaseUrl: string, filePath: string): Promise<void> {
   const target = pgDumpTarget(databaseUrl);
   if (!target) {
@@ -67,7 +76,7 @@ function dumpDatabase(databaseUrl: string, filePath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const out = createWriteStream(filePath);
     const child = spawn(
-      "pg_dump",
+      pgDumpBinary(),
       ["--format=plain", "--no-owner", "--no-privileges", ...target.args],
       {
         stdio: ["ignore", "pipe", "pipe"],
